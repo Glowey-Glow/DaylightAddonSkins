@@ -163,6 +163,24 @@ local pages = {
 			  desc = "On: every addon's windows follow your DaylightUI font, colors, accent and window opacity, except an addon whose own page has \"Use my own settings\" on." },
 		} },
 		{ label = "Addon windows", items = switches },
+		{ label = "DaylightUI Override",
+		  desc = "When your addons do something DaylightUI already does, DaylightUI handles it unless you picked the addon. Each addon's own DaylightUI tab has a switch per feature and a button to give everything back.",
+		  items = {
+			-- The button alone, centred under the text: no name of its own (it would only say the
+			-- button's words again); the button's words are its text.
+			{ type = "button", label = "", text = "Show the choices again",
+			  desc = "Opens the window from your first login, with every feature and your current picks.",
+			  func = function() if ns.ShowChoices then ns.ShowChoices(true) end end,
+			  built = function(b, row)
+				local function centre()
+					b:ClearAllPoints()
+					b:SetPoint("CENTER", row, "CENTER", 0, 0)
+				end
+				-- (After the row has put its control on the right.)
+				C_Timer.After(0, centre)
+				row:HookScript("OnShow", function() C_Timer.After(0, centre) end)
+			  end },
+		} },
 	  } },
 }
 for _, addon in ipairs(ns.order) do

@@ -79,6 +79,9 @@ local function Forget()
 	skinsOn = nil
 end
 
+-- A setting of this plugin's as it is saved, whatever the "own settings" switches say.
+ns.Setting = Setting
+
 function ns.Enabled(key)
 	local on = skinsOn
 	if on == nil then
@@ -132,6 +135,46 @@ local function Look(key, name)
 	return LookDefault(key, name)
 end
 ns.Look = Look
+
+-- ---------------------------------------------------------------------------------------------
+-- Small helpers the packs share
+-- ---------------------------------------------------------------------------------------------
+
+-- The accent `key`'s windows use: its own, when picked on its page, or DaylightUI's.
+function ns.AccentOf(key)
+	if key and Look(key, "daylightAccent") == false then
+		local own = Look(key, "accent")
+		if type(own) == "table" and type(own[1]) == "number" then return own[1], own[2], own[3] end
+	end
+	return API.Accent()
+end
+
+-- Whether one of DaylightUI's modules is on.
+function ns.ModuleOn(name)
+	local ok, on = pcall(API.IsModuleEnabled, name)
+	return ok and on == true
+end
+
+-- The game hands an addon's own image files a number of its own for the session, and a texture
+-- reports that number rather than the path. `paths` = { path = value }: answers { number = value }
+-- (and { lower-case path = value }, for a client that does report paths), each file set once on
+-- one hidden texture to learn its number.
+local scratch
+function ns.FileIDs(paths)
+	if not scratch then
+		scratch = UIParent:CreateTexture(nil, "BACKGROUND")
+		scratch:Hide()
+	end
+	local out = {}
+	for path, value in pairs(paths) do
+		out[string.lower(path)] = value
+		scratch:SetTexture(path)
+		local ok, id = pcall(scratch.GetTexture, scratch)
+		if ok and id ~= nil then out[id] = value end
+	end
+	scratch:SetTexture(nil)
+	return out
+end
 
 -- The addon whose windows are being dressed right now: set round a pack's function and a watch's,
 -- so the shared helpers below know whose look to read without being told each time.
@@ -530,7 +573,7 @@ local function WalkChildren(Kit, opts, depth, key, controls, fonts, ...)
 				walk = false
 			elseif kind == "ScrollFrame" then
 				local bar = child.ScrollBar
-				if controls and bar and not done[bar] and Usable(bar) then
+				if controls and opts.scrollBars ~= false and bar and not done[bar] and Usable(bar) then
 					done[bar] = true
 					Guard(Kit.ScrollBar, bar)
 				end
@@ -558,7 +601,8 @@ end
 -- Walks a custom-drawn window and dresses the controls made from the game's templates, one by one:
 -- UIPanelButtonTemplate, InputBoxTemplate / SearchBoxTemplate, check buttons, template scroll bars.
 -- Buttons an addon drew itself (rows, tiles, icons) are left as they are.
--- opts: skip (a set of frames left alone, their children too), checks = false, soften = true
+-- opts: skip (a set of frames left alone, their children too), checks = false, scrollBars = false
+-- (the addon draws its own and they are left as they are), soften = true
 -- (flat backdrop boxes become quiet wells), fonts = true (the player's font on every string).
 -- key = the addon whose look it follows (left out: the one being dressed right now): its text look
 -- goes on the strings when it has one, and its controls are left alone when it says so.
@@ -614,6 +658,221 @@ function ns.PlainWindow(frame, opts, key)
 	return ns.DressOnShow(frame, opts, nil, key)
 end
 
+-- ---------------------------------------------------------------------------------------------
+-- Conflicts: what an addon does that DaylightUI already does (or that fights a frame DaylightUI
+-- owns). The rule for every pack: DaylightUI's copy wins by default. Each pack lists its
+-- conflicts (ns.Handover); on first load the player is asked about each one that is live (both
+-- copies on) in one window (Choices.lua), DaylightUI picked for each unless they say otherwise.
+-- A feature given to DaylightUI is switched off through the addon's own setting, and what it was
+-- is kept per account (DaylightAddonSkinsDB.handed): given back (on the addon's page, or with its
+-- "give everything back" button), with DaylightUI's copy turned off, or with this plugin's switch
+-- for the addon off, exactly that comes back. Nothing is switched before the player has answered
+-- (DaylightAddonSkinsDB.asked). One the player turns back on in the addon itself is left on.
+-- The choice: look.<addon>.use.<key> (true = DaylightUI, the default).
+-- ns.Handover(addon, { list = { { key = "x", label = "Loot feed", daylight = "Loot feed (Quality of
+--   Life)", ours = function() return DaylightUI's copy is on end, off = false }, ... },
+--   ready = function() end, get = function(key) end, set = function(key, value) end })
+-- An entry with `switch` instead is a plain option of the pack's (look.<addon>.<switch>), not a
+-- conflict: not asked about, applied while that switch is on.
+-- ---------------------------------------------------------------------------------------------
+
+local handovers = {}
+ns.handovers = handovers
+
+local function SV()
+	local db = _G.DaylightAddonSkinsDB
+	if type(db) ~= "table" then
+		db = {}
+		_G.DaylightAddonSkinsDB = db
+	end
+	return db
+end
+
+local function Part(name, addon)
+	local db = SV()
+	if type(db[name]) ~= "table" then db[name] = {} end
+	if type(db[name][addon]) ~= "table" then db[name][addon] = {} end
+	return db[name][addon], db[name]
+end
+
+local function Handed(addon) return Part("handed", addon) end
+local function Asked(addon) return (Part("asked", addon)) end
+
+local function UsePath(addon, key) return "look." .. addon .. ".use." .. key end
+ns.UsePath = UsePath
+
+local function Ours(item)
+	local ok, v = pcall(item.ours)
+	return ok and v == true
+end
+
+-- Whether the player gave `item` to DaylightUI (the default).
+local function Chosen(addon, item)
+	return Setting(UsePath(addon, item.key)) ~= false
+end
+
+local function ApplyHandover(addon, h, repair)
+	if type(h.ready) == "function" and not h.ready() then return false end
+	local rec, all = Handed(addon)
+	local asked = Asked(addon)
+	local enabled = ns.Enabled(addon)
+	for _, item in ipairs(h.list) do
+		local want = false
+		if enabled then
+			if item.switch then
+				want = Setting("look." .. addon .. "." .. item.switch) == true and Ours(item)
+			else
+				want = asked[item.key] == true and Chosen(addon, item) and Ours(item)
+			end
+		end
+		-- What "off" is for this setting (false, unless it says otherwise: 0 for a timer).
+		local off = item.off
+		if off == nil then off = false end
+		if want then
+			if rec[item.key] == nil then
+				local cur = h.get(item.key)
+				if cur and cur ~= off then
+					rec[item.key] = cur
+					h.set(item.key, off)
+				end
+			elseif repair then
+				-- (Once: before 1.5.0's fix these were left empty, and the addon read its default.)
+				local cur = h.get(item.key)
+				if cur and cur ~= off then h.set(item.key, off) end
+			end
+		elseif rec[item.key] ~= nil then
+			local back = rec[item.key]
+			rec[item.key] = nil
+			h.set(item.key, back)
+		end
+	end
+	if next(rec) == nil then all[addon] = nil end
+	return true
+end
+
+local handQueued = false
+local function ApplyAllHandovers()
+	handQueued = false
+	if not ready then return end
+	local waiting = false
+	local sv = SV()
+	-- One repair pass: settings given to DaylightUI before the fix were cleared instead of switched
+	-- off (so the addon read its default, on). Each addon's own pass, once its settings are there.
+	if type(sv.repaired) ~= "table" then sv.repaired = {} end
+	for addon, h in pairs(handovers) do
+		local repair = not sv.repaired[addon]
+		local ok, done = xpcall(ApplyHandover, geterrorhandler(), addon, h, repair)
+		if ok and done == false then
+			waiting = true
+		elseif ok and repair then
+			sv.repaired[addon] = true
+		end
+	end
+	return waiting
+end
+-- Once, a moment after the last change: a slider being dragged in DaylightUI's options changes
+-- its setting on every step.
+local function QueueHandovers()
+	if handQueued then return end
+	handQueued = true
+	C_Timer.After(0.3, ApplyAllHandovers)
+end
+
+function ns.Handover(addon, def)
+	if type(def) ~= "table" or type(def.list) ~= "table" then return end
+	handovers[addon] = def
+	if ready then QueueHandovers() end
+end
+
+-- Whether DaylightUI's own copy of something is on: a setting of one of its modules (nil while
+-- that module is off), or a test of the value.
+function ns.DaylightHas(scope, path, test)
+	local ok, value = pcall(API.GetSetting, scope, path)
+	if not ok or value == nil then return false end
+	if test then return test(value) == true end
+	return value == true
+end
+
+-- The conflicts to show: `all` = every one that is live or was given to DaylightUI; otherwise only
+-- the live ones not answered yet. Each: { addon, item, daylight = the current pick }.
+function ns.Conflicts(all)
+	local out = {}
+	for _, addon in ipairs(ns.order) do
+		local h = handovers[addon]
+		if h and ns.Enabled(addon) and (type(h.ready) ~= "function" or h.ready()) then
+			local asked, rec = Asked(addon), Handed(addon)
+			for _, item in ipairs(h.list) do
+				if not item.switch then
+					local live = false
+					if Ours(item) then
+						local ok, cur = pcall(h.get, item.key)
+						live = rec[item.key] ~= nil or (ok and cur and cur ~= item.off) and true or false
+					end
+					if live and (all or not asked[item.key]) then
+						out[#out + 1] = { addon = addon, item = item, daylight = not asked[item.key] or Chosen(addon, item) }
+					end
+				end
+			end
+		end
+	end
+	return out
+end
+
+-- The player's pick for one conflict (true = DaylightUI); applied at once.
+function ns.Choose(addon, key, daylight)
+	Asked(addon)[key] = true
+	Guard(function() DUI:Set(ADDON, UsePath(addon, key), daylight and true or false) end)
+	QueueHandovers()
+end
+
+-- Everything of `addon`'s given to DaylightUI, back to the addon as it was.
+function ns.GiveBack(addon)
+	local h = handovers[addon]
+	if not h then return end
+	for _, item in ipairs(h.list) do
+		if not item.switch then ns.Choose(addon, item.key, false) end
+	end
+end
+
+me.On("Login", function()
+	-- Some addons read their settings a little after login: asked again for a while.
+	local tries = 0
+	local function try()
+		tries = tries + 1
+		if ApplyAllHandovers() and tries < 20 then C_Timer.After(0.5, try) end
+	end
+	C_Timer.After(0.5, try)
+end)
+-- Any setting (DaylightUI's own copy turned on or off, a pick on a page of ours: that counts as
+-- answered).
+me.On("SettingChanged", function(scope, path)
+	if scope == ADDON and type(path) == "string" then
+		local addon, key = string.match(path, "^look%.([^.]+)%.use%.(.+)$")
+		if addon and key then Asked(addon)[key] = true end
+	end
+	if ready then QueueHandovers() end
+end)
+
+-- The group on an addon's page: one switch per conflict, and the way back.
+function ns.HandoverGroup(addon)
+	local h = handovers[addon]
+	local label = ns.targets[addon] or addon
+	local items = {}
+	for _, item in ipairs(h and h.list or {}) do
+		if not item.switch then
+			items[#items + 1] = { type = "toggle", key = UsePath(addon, item.key),
+				label = item.label or item.key,
+				desc = "On: DaylightUI does this" .. (item.daylight and (" (" .. item.daylight .. ")") or "")
+					.. " and " .. label .. "'s own is switched off. Off: " .. label .. "'s own, as it was.",
+				reload = item.reload or nil }
+		end
+	end
+	items[#items + 1] = { type = "button", label = "Give everything back to " .. label,
+		desc = "Puts back every one of " .. label .. "'s settings this plugin switched off, as they were.",
+		func = function() ns.GiveBack(addon) end }
+	return { label = "DaylightUI or " .. label, items = items }
+end
+
 -- Got the Kit as early as DaylightUI will give it.
 ns.Pack("DaylightUI_Skins")
 
@@ -640,6 +899,13 @@ function ns.RegisterSettings(pages)
 				else
 					look[name] = value
 				end
+			end
+		end
+		local h = handovers[addon]
+		if h then
+			look.use = {}
+			for _, item in ipairs(h.list) do
+				if not item.switch then look.use[item.key] = true end
 			end
 		end
 		defaults.look[addon] = look

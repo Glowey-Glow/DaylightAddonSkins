@@ -48,8 +48,42 @@ end
 
 local origWindow, origPanel, origDropdown, origFont = Look.Window, Look.Panel, Look.Dropdown, Look.Font
 
+-- A window OpenMap lays on the map itself (the quill's Draw on the map tray): made as wide as its
+-- tools, centred on the map, it ran past both sides of DaylightUI's narrower map. Shrunk to the
+-- map's width (never grown) each time it shows and whenever the map is resized.
+local function FitOnMap(frame)
+	local map = _G.WorldMapFrame
+	local sc = map and map.ScrollContainer
+	if not ns.Usable(sc) or not frame:IsShown() then return end
+	local own = frame:GetScale() or 1
+	local w = frame:GetWidth() or 0
+	if w <= 0 then return end
+	local room = (sc:GetWidth() or 0) * sc:GetEffectiveScale() - 16 * sc:GetEffectiveScale()
+	local needed = w * frame:GetEffectiveScale() / own
+	if room <= 0 or needed <= 0 then return end
+	local s = math.min(1, room / needed)
+	if math.abs(s - own) > 0.005 then frame:SetScale(s) end
+end
+
+local function FitLater(frame)
+	C_Timer.After(0, function() ns.Guard(FitOnMap, frame) end)
+end
+
+local function OnMap(frame)
+	local map = _G.WorldMapFrame
+	if not map or frame:GetParent() ~= map or frame.dasFit then return end
+	frame.dasFit = true
+	frame:HookScript("OnShow", function(self) FitLater(self) end)
+	frame:HookScript("OnSizeChanged", function(self) FitLater(self) end)
+	if ns.Usable(map.ScrollContainer) then
+		map.ScrollContainer:HookScript("OnSizeChanged", function() if frame:IsShown() then FitLater(frame) end end)
+	end
+	FitLater(frame)
+end
+
 Look.Window = function(self, frame, title, onClose)
 	if type(frame) ~= "table" or not frame.GetChildren then return origWindow(self, frame, title, onClose) end
+	if ns.Enabled(KEY) then pcall(OnMap, frame) end
 	local before = Snapshot(frame)
 	local top, text, close = Call(origWindow, self, frame, title, onClose)
 	local keep = {}
