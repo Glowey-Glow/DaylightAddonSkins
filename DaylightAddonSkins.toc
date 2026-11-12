@@ -3,6 +3,7 @@
 ## Notes: A DaylightUI plugin: dresses the windows of your other addons (Keep or Toss, DoesItDie, Camping Kit, LootTriage, OpenMap, Spoken, Forever Fishing, Polestar, Forever Leveling BiS, Journey Guides) in the DaylightUI look. Needs DaylightUI and its Window Skins module.
 ## Author: Glowey
 ## X-License: All Rights Reserved
+## X-Curse-Project-ID: 1799579
 ## Version: @project-version@
 ## Dependencies: DaylightUI
 ## OptionalDeps: DaylightUI_Skins, CampingKit, DoesItDie, KeepOrToss, LootTriage, OpenMap, Spoken, ForeverFishing, Polestar, ForeverLevelingBiS, Journey
