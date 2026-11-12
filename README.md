@@ -2,7 +2,7 @@
 
 A plugin for DaylightUI on WoW: Forever. It dresses your other addons' windows in the DaylightUI look: the window shell, your font, text colours and accent, and DaylightUI's buttons, boxes and scroll bars.
 
-**Addons it skins:** Keep or Toss, DoesItDie, Camping Kit, LootTriage, OpenMap, Spoken, Forever Fishing, Polestar, Forever Leveling BiS, Journey Guides, OneForAll, Questie, Dialogue UI, Shortest Path Forever.
+**Addons it skins:** Keep or Toss, DoesItDie, Camping Kit, LootTriage, OpenMap, Spoken, Forever Fishing, Polestar, Forever Leveling BiS, Journey Guides, OneForAll, Questie, Dialogue UI, Shortest Path Forever, Dungeon Journal, Total RP 3.
 
 ## What it does for each
 
@@ -10,6 +10,8 @@ A plugin for DaylightUI on WoW: Forever. It dresses your other addons' windows i
 - **Questie:** alongside DaylightUI's own Questie support: its settings window (side tabs, switches, radios, sliders, dropdowns, buttons), its right-click menus, popups and tutorial, and its own tracker when you use Questie's.
 - **Dialogue UI:** a DaylightUI theme over either of its own themes: the talk and settings windows on the DaylightUI shell, its text in DaylightUI's colours and your font, its controls in its Dark art.
 - **Shortest Path Forever:** its Nearby services panel, ForeverCore's report, leaderboards and thanks windows and its right-click menu. Its tracker sections (lifts, boats, journey steps, and any other Forever addon's) sit right under DaylightUI's quest tracker in the same look, and follow it as it grows, moves and fades.
+- **Dungeon Journal:** alongside DaylightUI's own Dungeon Journal skin: its Character Logs window (run list, stat tiles, loot cards, party list) and its Loot Filter popup and menus on the DaylightUI shell.
+- **Total RP 3:** every window of its own on the DaylightUI shell (main window, toolbar, target frame, glance bar, browsers, profile and import dialogs), its parchment and wooden art gone, its sidebar as plain rows with the picked page in your accent, its panels as quiet wells, its buttons, tabs, switches, boxes and scroll bars DaylightUI's, its text in your font and DaylightUI's colours. Portraits, icons and the About page's pictures stay yours.
 - **OpenMap:** its windows and panels, and the quill's drawing tray sized to fit DaylightUI's world map.
 - **The rest:** Keep or Toss, DoesItDie, Camping Kit, LootTriage, Spoken, Forever Fishing, Polestar, Forever Leveling BiS and Journey Guides in the DaylightUI look.
 
@@ -20,6 +22,7 @@ When one of these addons does something DaylightUI already does, DaylightUI hand
 - **Questie:** its nameplate icons, tooltip lines, sound and auto quests.
 - **Shortest Path Forever:** its map pins, destination pin and arrow.
 - **Dialogue UI:** its auto turn-in, book window and reward tooltip.
+- **Total RP 3:** its RP card hiding the game's unit tooltip (DaylightUI's stays, the RP card beside it) and its own name colours in chat.
 
 On first load a window lists each one that's live, with DaylightUI picked for all; switch any to the addon you'd rather keep. The addon's own setting is switched off and its old value is kept, so nothing is lost. Each addon's **DaylightUI** tab has a switch per feature and a **Give everything back** button, and **Show the choices again** on the All windows page opens the window again.
 
