@@ -186,7 +186,25 @@ local function LootFilter(win)
 	end
 end
 
-ns.Pack(KEY, nil, function()
+-- Both windows are made the first time they open, through its exported toggles. Dressing them right
+-- after the toggle runs puts the look on in the same frame they first show; the look-out for them
+-- by name (which checks only every 2 seconds once the first minute after login has passed, so the
+-- window showed undressed that long) stays as the fallback. Each is dressed once either way.
+ns.Pack(KEY, nil, function(Kit)
 	ns.Watch(KEY, "ForeverDungeonJournalRunLog", RunLog)
 	ns.Watch(KEY, "ForeverDungeonJournalLootFilter", LootFilter)
+	local FDJ = _G.ForeverDungeonJournal_NS
+	if type(FDJ) ~= "table" then return end
+	if type(FDJ.ToggleRunLog) == "function" then
+		hooksecurefunc(FDJ, "ToggleRunLog", function()
+			local win = _G.ForeverDungeonJournalRunLog
+			if ns.Enabled(KEY) and ns.Usable(win) then ns.Guard(RunLog, win, Kit) end
+		end)
+	end
+	if type(FDJ.ToggleLootFilterWindow) == "function" then
+		hooksecurefunc(FDJ, "ToggleLootFilterWindow", function(frame)
+			local win = type(frame) == "table" and frame.lootFilterWindow or _G.ForeverDungeonJournalLootFilter
+			if ns.Enabled(KEY) and ns.Usable(win) then ns.Guard(LootFilter, win) end
+		end)
+	end
 end)

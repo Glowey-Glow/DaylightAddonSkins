@@ -1,5 +1,8 @@
 # DaylightUI Addon Skins
 
+## 1.6.1
+- Dungeon Journal: the Character Logs window and the Loot Filter popup take the DaylightUI look the moment they first open, instead of a couple of seconds later.
+
 ## 1.6.0
 - Fix: the game's pop-up menus (the quest map's and world map's Show: filters, right-click menus) keep DaylightUI's font when you tick an option, instead of the text switching to the game's wider font until the menu is reopened.
 - New: Dungeon Journal, beside DaylightUI's own skin of it. Its Character Logs window now has the DaylightUI shell (it was left in the game's portrait frame): the run list with the picked run in your accent, flat stat tiles and loot cards (loot keeps its quality edge), headings and lines in DaylightUI's colours, its buttons, scroll bars and party list. Each dungeon's faint picture stays.
