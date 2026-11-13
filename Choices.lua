@@ -16,7 +16,7 @@ local rows = {}       -- the rows on show: { addon, key, switch }
 local pool = {}       -- made rows and headings, reused
 
 local function Ink(fs, role)
-	local c = API.Colors()[role]
+	local c = ns.Colors()[role]
 	if type(c) == "table" then fs:SetTextColor(c[1], c[2], c[3]) end
 end
 

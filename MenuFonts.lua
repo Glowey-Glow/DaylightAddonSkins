@@ -28,31 +28,54 @@ local function MenuFont(size)
 	return _G["DaylightUIMenuFont" .. math.floor((size or 12) + 0.5)]
 end
 
-local function FixText(fs, font)
-	local file, size = fs:GetFont()
-	if file == font then return end
-	local object = MenuFont(size)
-	if not object then return end
-	-- Setting a font object resets the colour: the game's (a class colour, a grey disabled entry)
-	-- goes back on.
+-- Setting a font object resets the colour: the game's (a class colour, a grey disabled entry)
+-- goes back on.
+local function FixText(fs, object)
 	local r, g, b, a = fs:GetTextColor()
 	fs:SetFontObject(object)
 	fs:SetTextColor(r, g, b, a)
 end
 
-local function FixFrame(frame, font, depth)
-	if blocked or type(frame) ~= "table" or not frame.GetRegions then return end
-	if frame.IsForbidden and frame:IsForbidden() then return end
-	for _, r in ipairs({ frame:GetRegions() }) do
+-- (This runs every frame while a menu is open: the regions and children are gone through as the
+-- game hands them back, with no table made for them. A text still in the menu font is only read,
+-- and the protected call is made only for one that lost it.)
+local FixFrame
+
+local function FixRegions(font, ...)
+	for i = 1, select("#", ...) do
+		local r = select(i, ...)
 		if r.GetObjectType and r:GetObjectType() == "FontString" then
-			if not pcall(FixText, r, font) then
+			-- (Read under a protected call too: a string the game won't let us read stops the
+			-- fix for good, as one it won't let us change does, instead of erroring every frame.)
+			local ok, file, size = pcall(r.GetFont, r)
+			if not ok then
 				blocked = true
 				return
 			end
+			if file ~= font then
+				local object = MenuFont(size)
+				if object and not pcall(FixText, r, object) then
+					blocked = true
+					return
+				end
+			end
 		end
 	end
-	if depth > 0 and frame.GetChildren then
-		for _, child in ipairs({ frame:GetChildren() }) do FixFrame(child, font, depth - 1) end
+end
+
+local function FixChildren(font, depth, ...)
+	for i = 1, select("#", ...) do
+		if blocked then return end
+		FixFrame(select(i, ...), font, depth)
+	end
+end
+
+FixFrame = function(frame, font, depth)
+	if blocked or type(frame) ~= "table" or not frame.GetRegions then return end
+	if frame.IsForbidden and frame:IsForbidden() then return end
+	FixRegions(font, frame:GetRegions())
+	if not blocked and depth > 0 and frame.GetChildren then
+		FixChildren(font, depth - 1, frame:GetChildren())
 	end
 end
 

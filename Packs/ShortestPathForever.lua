@@ -178,7 +178,7 @@ local function ForgetQuests() wipe(qcache) end
 local function QColor(name, fallback)
 	local v = Quests("colors." .. name)
 	if type(v) == "table" and type(v[1]) == "number" then return v[1], v[2], v[3] end
-	local c = API.Colors()[fallback]
+	local c = ns.Colors()[fallback]
 	if type(c) == "table" then return c[1], c[2], c[3] end
 	return 1, 1, 1
 end
@@ -418,10 +418,24 @@ local function Column()
 		box:Show()
 	end
 
-	local list, lastSig, settled, boxX, boxY
+	local list, settled, boxX, boxY
+	-- The last look's place, size, alpha and scales; empty = look again.
+	local last = {}
+	local function Moved(...)
+		local moved = false
+		for i = 1, select("#", ...) do
+			local v = select(i, ...)
+			if last[i] ~= v then
+				last[i] = v
+				moved = true
+			end
+		end
+		return moved
+	end
 
 	local function Undock()
-		lastSig, settled, boxX, boxY = nil, nil, nil, nil
+		wipe(last)
+		settled, boxX, boxY = nil, nil, nil
 		if db.foreverDocked then
 			db.foreverDocked = nil
 			pcall(api.SetAttached, true)
@@ -447,12 +461,12 @@ local function Column()
 		list = list or TrackerList(holder)
 		local list = list or holder
 		-- Nothing moved, grew, faded or changed size since the last look: nothing to do.
-		local sig = (list:GetRight() or 0) .. ":" .. (list:GetTop() or 0) .. ":" .. (list:GetBottom() or 0)
-			.. ":" .. (host:GetWidth() or 0) .. ":" .. (host:GetHeight() or 0) .. ":" .. (holder:GetAlpha() or 1)
-			.. ":" .. (host:GetLeft() or 0) .. ":" .. (host:GetTop() or 0) .. ":" .. list:GetEffectiveScale()
-			.. ":" .. host:GetEffectiveScale()
-		if sig == lastSig then return end
-		lastSig = sig
+		-- (Compared value by value: a string of them, made four times a second, was garbage.)
+		if not Moved(list:GetRight() or 0, list:GetTop() or 0, list:GetBottom() or 0, host:GetWidth() or 0,
+			host:GetHeight() or 0, holder:GetAlpha() or 1, host:GetLeft() or 0, host:GetTop() or 0,
+			list:GetEffectiveScale(), host:GetEffectiveScale()) then
+			return
+		end
 		local le = list:GetEffectiveScale() / uiScale()
 		local he = host:GetEffectiveScale() / uiScale()
 		local right, top, bottom = list:GetRight(), list:GetTop(), list:GetBottom()
@@ -522,14 +536,14 @@ local function Column()
 	ns.Guard(Tick)
 	ns.me.On("StyleChanged", function()
 		ForgetQuests()
-		lastSig = nil
+		wipe(last)
 		ns.Guard(PaintBox)
 		ns.Guard(Restyle, host)
 	end)
 	ns.me.On("SettingChanged", function(scope)
 		if scope == "Quests" or scope == "general" or scope == "DaylightAddonSkins" then
 			ForgetQuests()
-			lastSig = nil
+			wipe(last)
 			ns.Guard(PaintBox)
 			ns.Guard(Restyle, host)
 		end

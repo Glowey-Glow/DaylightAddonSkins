@@ -35,7 +35,7 @@ local function Set(p, name, r, g, b, a)
 end
 
 local function Overlay(p)
-	local colors = API.Colors()
+	local colors = ns.Colors()
 	local ar, ag, ab = API.Accent()
 	local value, text, off = colors.VALUE, colors.TEXT, colors.OFF
 

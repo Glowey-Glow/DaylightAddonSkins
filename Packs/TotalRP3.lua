@@ -100,7 +100,7 @@ local function IsBand(tex) local f = FileOf(tex) return f ~= nil and BANDS[f] ==
 local function Ink(fs, role)
 	if not ns.Usable(fs) or not fs.SetTextColor then return end
 	if ns.Look(KEY, "daylightColors") == false then return end
-	local c = API.Colors()[role]
+	local c = ns.Colors()[role]
 	if type(c) == "table" then fs:SetTextColor(c[1], c[2], c[3]) end
 end
 
@@ -397,7 +397,7 @@ end
 local function Grey(tex, ink)
 	if not ns.Usable(tex) then return end
 	if tex.SetDesaturated then tex:SetDesaturated(true) end
-	local c = API.Colors()[ink or "TEXT"]
+	local c = ns.Colors()[ink or "TEXT"]
 	if type(c) == "table" then tex:SetVertexColor(c[1], c[2], c[3]) end
 end
 

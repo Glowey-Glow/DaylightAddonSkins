@@ -58,6 +58,7 @@ local NONE = {}          -- stands for "asked, and there is none"
 local cache = {}         -- path -> value or NONE
 local texts = {}         -- key -> the resolved text look (Text below)
 local skinsOn            -- DaylightUI's Skins module: true / false, nil = not asked yet
+local colors             -- DaylightUI's inks (ns.Colors below), nil = not asked yet
 
 local function Setting(path)
 	local value = cache[path]
@@ -77,10 +78,23 @@ local function Forget()
 	wipe(cache)
 	wipe(texts)
 	skinsOn = nil
+	colors = nil
 end
 
 -- A setting of this plugin's as it is saved, whatever the "own settings" switches say.
 ns.Setting = Setting
+
+-- DaylightUI's inks ({ VALUE = { r, g, b }, ... }, as API.Colors gives them). API.Colors makes a
+-- fresh copy of every ink on each call, and the packs ask for one on every colour they set: the
+-- copy is kept until DaylightUI's style changes. Read it only; it is shared.
+function ns.Colors()
+	local c = colors
+	if not c then
+		c = API.Colors()
+		colors = c
+	end
+	return c
+end
 
 function ns.Enabled(key)
 	local on = skinsOn
@@ -119,18 +133,35 @@ local function LookDefault(key, name)
 end
 ns.LookDefault = LookDefault
 
+-- The path of one of `key`'s look settings ("look.<key>.<name>"), joined once: a font hook asks for
+-- these many times a second, and a new string each time would be thrown away at once.
+local lookPaths = {}     -- key -> name -> path
+local function LookPath(key, name)
+	local byName = lookPaths[key]
+	if not byName then
+		byName = {}
+		lookPaths[key] = byName
+	end
+	local path = byName[name]
+	if not path then
+		path = "look." .. key .. "." .. name
+		byName[name] = path
+	end
+	return path
+end
+
 -- Whether `key`'s windows follow DaylightUI's settings: yes, unless the player turned on "Use my own
 -- settings" on its page. (No key: the switch for all windows alone.) The switch for all windows only
 -- holds the addons that weren't given settings of their own.
 local function Following(key)
-	if key and Setting("look." .. key .. ".own") == true then return false end
+	if key and Setting(LookPath(key, "own")) == true then return false end
 	return Setting("followDaylight") ~= false
 end
 ns.Following = Following
 
 local function Look(key, name)
 	if not key or Following(key) then return LookDefault(key, name) end
-	local value = Setting("look." .. key .. "." .. name)
+	local value = Setting(LookPath(key, name))
 	if value ~= nil then return value end
 	return LookDefault(key, name)
 end
@@ -425,13 +456,33 @@ local function Reshell(frame)
 	if s and Usable(frame) then Guard(API.Skin, frame, ShellOpts(s.key, s.opts)) end
 end
 
+-- The frames resized this frame are reshelled together on the next (one timer, not one per frame,
+-- while a window is being dragged to a new size). They are listed first: a reshell that resizes a
+-- frame marks it again, for the frame after.
+local resizeQueued = false
+local resizing = {}      -- reused list of the frames being reshelled
+local function ReshellResized()
+	resizeQueued = false
+	local n = 0
+	for frame in pairs(dirty) do
+		n = n + 1
+		resizing[n] = frame
+	end
+	for i = 1, n do
+		local frame = resizing[i]
+		resizing[i] = nil
+		dirty[frame] = nil
+		Reshell(frame)
+	end
+end
+
 local function Resized(self)
 	if dirty[self] then return end
 	dirty[self] = true
-	C_Timer.After(0, function()
-		dirty[self] = nil
-		Reshell(self)
-	end)
+	if not resizeQueued then
+		resizeQueued = true
+		C_Timer.After(0, ReshellResized)
+	end
 end
 
 -- DaylightUI's shell on a frame; redone when the frame changes size, and when the look changes.
@@ -525,6 +576,126 @@ local function CloseAmong(frame, ...)
 end
 function ns.FindClose(frame)
 	return CloseAmong(frame, frame:GetChildren())
+end
+
+-- The world map's round corner buttons DaylightUI's own map skin doesn't dress (the map pin button,
+-- the quest "!" and the like) wear the game's gold tracking ring: off, the icon alone. Found by the
+-- ring's file, on the map's overlay buttons and the buttons along its edge. Shared by the packs
+-- whose addons put buttons in that corner (OpenMap, RareScanner), so the corner looks the same
+-- with either loaded; with both, each button is still looked over once.
+-- (Each button looked over once, ring or not: the map refreshes its overlays on every zoom and map
+-- change, and the buttons never take a ring later.)
+local ringed = setmetatable({}, { __mode = "k" })
+local RING_IDS
+local function IsRing(tex)
+	if not RING_IDS then RING_IDS = ns.FileIDs({ ["Interface\\Minimap\\MiniMap-TrackingBorder"] = true }) end
+	local ok, file = pcall(tex.GetTexture, tex)
+	if not ok or file == nil then return false end
+	if type(file) == "string" then file = string.lower(file) end
+	return RING_IDS[file] == true
+end
+
+-- The dark round ground behind such a button's icon is placed for the ring (a fixed spot from the
+-- button's corner, each button's a little different), so with the ring gone it sits off to one
+-- side of the icon. It's centred on the icon instead (and moves with it as it's pressed).
+local GROUND_IDS
+local function IsGround(tex)
+	if not GROUND_IDS then GROUND_IDS = ns.FileIDs({ ["Interface\\Minimap\\UI-Minimap-Background"] = true }) end
+	local ok, file = pcall(tex.GetTexture, tex)
+	if not ok or file == nil then return false end
+	if type(file) == "string" then file = string.lower(file) end
+	return GROUND_IDS[file] == true
+end
+
+-- The first ground among a button's regions, gone through as the game hands them back.
+local function GroundAmong(icon, ...)
+	for i = 1, select("#", ...) do
+		local r = select(i, ...)
+		if r:GetObjectType() == "Texture" and r ~= icon and IsGround(r) then return r end
+	end
+end
+
+local grounded = setmetatable({}, { __mode = "k" })
+function ns.MapIconGround(btn)
+	if not Usable(btn) or grounded[btn] or not btn.GetRegions then return end
+	local icon = btn.Icon or btn.icon
+	if not (Usable(icon) and icon.GetObjectType and icon:GetObjectType() == "Texture") then return end
+	local ground = btn.Background
+	if not (Usable(ground) and ground.GetObjectType and ground:GetObjectType() == "Texture" and IsGround(ground)) then
+		ground = GroundAmong(icon, btn:GetRegions())
+	end
+	if not ground then return end
+	grounded[btn] = true
+	ground:ClearAllPoints()
+	ground:SetPoint("CENTER", icon, "CENTER", 0, 0)
+end
+
+local function RingOff(btn, ...)
+	for i = 1, select("#", ...) do
+		local r = select(i, ...)
+		if r:GetObjectType() == "Texture" and (r == btn.Border or IsRing(r)) then
+			ringed[btn] = true
+			r:SetAlpha(0)
+		end
+	end
+end
+
+local function Ring(btn)
+	-- (Asked first: a button already looked over is most of them, on every map change.)
+	if ringed[btn] ~= nil or not Usable(btn) or not btn.GetRegions then return end
+	ringed[btn] = false
+	RingOff(btn, btn:GetRegions())
+	if ringed[btn] then ns.MapIconGround(btn) end
+end
+
+local function RingChildren(filter, ...)
+	for i = 1, select("#", ...) do
+		local c = select(i, ...)
+		if c ~= filter and ringed[c] == nil and Usable(c) and c:GetObjectType() == "Button" then Ring(c) end
+	end
+end
+
+function ns.MapRings()
+	local map = _G.WorldMapFrame
+	if not Usable(map) then return end
+	local filter = map.WorldMapTrackingOptionsButton
+	local overlays = map.overlayFrames
+	if type(overlays) == "table" then
+		for i = 1, #overlays do
+			local o = overlays[i]
+			if o ~= filter then Ring(o) end
+		end
+	end
+	RingChildren(filter, map:GetChildren())
+	local sc = map.ScrollContainer
+	if Usable(sc) then RingChildren(filter, sc:GetChildren()) end
+end
+
+-- The passes over the map's corner, for every pack that asks: hooked once (on the map's showing and
+-- each refresh of its corner buttons), and run while any of the packs that asked is on. With both
+-- OpenMap and RareScanner loaded, the corner is looked over once each time, not once for each.
+local ringKeys = {}      -- the packs that asked
+local ringsFollowed = false
+
+local function RingsWanted()
+	for key in pairs(ringKeys) do
+		if ns.Enabled(key) then return true end
+	end
+	return false
+end
+
+local function RingsNow()
+	if RingsWanted() then Guard(ns.MapRings) end
+end
+
+function ns.FollowMapRings(key)
+	ringKeys[key] = true
+	if ringsFollowed then return end
+	local map = _G.WorldMapFrame
+	if not Usable(map) or not map.HookScript then return end
+	ringsFollowed = true
+	map:HookScript("OnShow", RingsNow)
+	if type(map.RefreshOverlayFrames) == "function" then hooksecurefunc(map, "RefreshOverlayFrames", RingsNow) end
 end
 
 local function IsPanelButton(b)
@@ -720,7 +891,7 @@ local function ApplyHandover(addon, h, repair)
 		local want = false
 		if enabled then
 			if item.switch then
-				want = Setting("look." .. addon .. "." .. item.switch) == true and Ours(item)
+				want = Setting(LookPath(addon, item.switch)) == true and Ours(item)
 			else
 				want = asked[item.key] == true and Chosen(addon, item) and Ours(item)
 			end

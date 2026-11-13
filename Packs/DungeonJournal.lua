@@ -16,7 +16,6 @@ local _, ns = ...
 if not ns.ok then return end
 
 local KEY = "ForeverDungeonJournal"
-local API = ns.API
 
 ns.Target(KEY, "Dungeon Journal", { window = true, controls = true, text = true, shadow = true })
 
@@ -24,7 +23,7 @@ local FLAT = { bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\B
 
 local function Ink(fs, name)
 	if not ns.Usable(fs) then return end
-	local c = API.Colors()[name]
+	local c = ns.Colors()[name]
 	if c then fs:SetTextColor(c[1], c[2], c[3]) end
 end
 
@@ -44,13 +43,20 @@ end
 
 -- The textures a frame draws behind itself: its backdrop pieces and any border or ground
 -- DaylightUI's journal skin put on it. Its own icons, ticks and lines are ARTWORK and above.
-local function ClearGround(frame)
-	for _, region in ipairs({ frame:GetRegions() }) do
+-- (Run four times on each show: the regions are gone through as the game hands them back, with no
+-- table made of them.)
+local function ClearAmong(...)
+	for i = 1, select("#", ...) do
+		local region = select(i, ...)
 		if region:GetObjectType() == "Texture" then
 			local layer = region:GetDrawLayer()
 			if layer == "BACKGROUND" or layer == "BORDER" then region:SetAlpha(0) end
 		end
 	end
+end
+
+local function ClearGround(frame)
+	ClearAmong(frame:GetRegions())
 end
 
 -- Runs fn now and over the next few frames: DaylightUI's journal skin dresses what it walks a
@@ -201,10 +207,56 @@ ns.Pack(KEY, nil, function(Kit)
 			if ns.Enabled(KEY) and ns.Usable(win) then ns.Guard(RunLog, win, Kit) end
 		end)
 	end
+	-- The boss icon size control on its dungeon maps (the journal's, and the world map's in a
+	-- dungeon): a flat box, DaylightUI's - and + buttons, its label in the label ink.
+	if type(FDJ.UpdateMapBossSizer) == "function" then
+		hooksecurefunc(FDJ, "UpdateMapBossSizer", function(panel)
+			local c = type(panel) == "table" and panel.fdjBossSizer
+			if not ns.Enabled(KEY) or not ns.Usable(c) or c.dasSized then return end
+			c.dasSized = true
+			Flat(c, 0.6)
+			Ink(c.label, "LABEL")
+			Ink(c.value, "VALUE")
+			if ns.Controls(KEY) then
+				for _, b in ipairs({ c.minus, c.plus }) do
+					if ns.Usable(b) then ns.Guard(Kit.Button, b) end
+				end
+			end
+		end)
+	end
 	if type(FDJ.ToggleLootFilterWindow) == "function" then
 		hooksecurefunc(FDJ, "ToggleLootFilterWindow", function(frame)
 			local win = type(frame) == "table" and frame.lootFilterWindow or _G.ForeverDungeonJournalLootFilter
 			if ns.Enabled(KEY) and ns.Usable(win) then ns.Guard(LootFilter, win) end
+		end)
+	end
+	-- Inside a dungeon, both Dungeon Journal and OpenMap lay a dungeon map over the world map, one on
+	-- top of the other (its floor buttons, its "World Map" toggle and its boss icon size poking
+	-- through OpenMap's). The player picked OpenMap's (2026-11-12): while OpenMap is loaded, each
+	-- time the journal puts its overlay up it's taken back down at once (through its own
+	-- DetachWorldMapOverlay, so its map panel goes home to the journal), and its toggle and Scarlet
+	-- Monastery wing buttons are hidden. Its own setting is left as it is: without OpenMap its
+	-- overlay works as before.
+	if type(FDJ.RefreshWorldMapOverlay) == "function" and type(FDJ.DetachWorldMapOverlay) == "function" then
+		-- (Whether OpenMap is loaded is asked until it is, then kept: an addon loaded stays loaded.)
+		local openMap = false
+		local function hideWings(...)
+			for i = 1, select("#", ...) do
+				local child = select(i, ...)
+				if ns.Usable(child) and child.fdjWing then child:Hide() end
+			end
+		end
+		hooksecurefunc(FDJ, "RefreshWorldMapOverlay", function()
+			if not ns.Enabled() then return end
+			if not openMap then
+				openMap = (C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("OpenMap")) and true or false
+				if not openMap then return end
+			end
+			pcall(FDJ.DetachWorldMapOverlay)
+			local toggle = _G.ForeverDungeonJournalWorldMapToggle
+			if ns.Usable(toggle) then toggle:Hide() end
+			local map = _G.WorldMapFrame
+			if ns.Usable(map) then hideWings(map:GetChildren()) end
 		end)
 	end
 end)

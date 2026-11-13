@@ -152,7 +152,7 @@ local function Accent()
 end
 
 local function TextColor(name)
-	local ok, colors = pcall(API.Colors)
+	local ok, colors = pcall(ns.Colors)
 	local c = ok and type(colors) == "table" and (colors[name] or colors.VALUE)
 	return RGB(c, { 1, 1, 1 })
 end

@@ -25,7 +25,6 @@ ns.Target(KEY, "Dialogue UI", { window = true, text = true, colors = true, font 
 
 if type(_G.DUIQuestFrame) ~= "table" then return end
 
-local API = ns.API
 local lower, find, sub = string.lower, string.find, string.sub
 
 local function On()
@@ -148,7 +147,7 @@ local function Accent() return ns.AccentOf(KEY) end
 local function RoleColor(role)
 	if role == "accent" then return Accent() end
 	if ns.Look(KEY, "daylightColors") == false then return nil end
-	local c = API.Colors()[role]
+	local c = ns.Colors()[role]
 	if type(c) == "table" then return c[1], c[2], c[3] end
 end
 

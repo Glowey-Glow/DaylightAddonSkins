@@ -44,14 +44,12 @@ end
 -- dressed as Questie makes it (QuestieOptionsControls.Create) rather than found afterwards.
 -- ---------------------------------------------------------------------------------------------
 
-local API = ns.API
-
 local function Accent() return ns.AccentOf(KEY) end
 
 local function Ink(fs, role)
 	if not ns.Usable(fs) or not fs.SetTextColor then return end
 	if ns.Look(KEY, "daylightColors") == false then return end
-	local c = API.Colors()[role]
+	local c = ns.Colors()[role]
 	if type(c) == "table" then fs:SetTextColor(c[1], c[2], c[3]) end
 end
 
