@@ -4,7 +4,7 @@
 -- frame names: one walk over a window finds each template by its pieces and dresses it.
 --   * Windows and popups: its main window (wooden border, neutral and parchment grounds, sidebar)
 --     and every free-standing frame with a backdrop or NineSlice of its own (the toolbar, target
---     frame, glance bar, "Currently" and NPC speech frames, the icon, colour, image, music, pet,
+--     frame, glance bar, "Currently" and NPC speech frames, the icon, color, image, music, pet,
 --     companion and background browsers, the profile and import dialogs, the link copy dialog)
 --     get DaylightUI's window shell. Boxes inside a window (page panels, group boxes, the about and
 --     characteristics panels, list frames) become quiet flat wells. Its dimming overlay behind
@@ -13,23 +13,23 @@
 --     glows) is hidden by file, wherever it turns up.
 --   * The sidebar's category buttons become plain rows, the picked one in the accent. Its red text
 --     buttons are DaylightUI buttons, its red art buttons (close, resize, condense, edit) a close X
---     or a neutral grey, its framed icon buttons keep their icon inside a thin outline.
+--     or a neutral gray, its framed icon buttons keep their icon inside a thin outline.
 --   * List rows drawn with its slice art (profiles, modules, relations, music, backgrounds) are
 --     DaylightUI's plain list lines (no box on each, a hairline between them), the picked one
 --     in the accent.
 --   * The game's own templates inside (buttons, tabs, check boxes, edit boxes, dropdowns, scroll
 --     bars, insets) are dressed by DaylightUI's Kit.Auto, and its text takes the player's font and
---     DaylightUI's colours.
+--     DaylightUI's colors.
 -- Hooked: each window on show, each page as Total RP 3 opens it (PAGE_OPENED), each panel inside a
 -- window on show, each scroll child as it grows (lines added in edit mode), each ScrollBox list's
 -- rows as they are filled, and its category buttons as the sidebar is rebuilt.
 -- Left as it is: what the player put in it (portraits, icons, the About page's pictures and text,
--- colour swatches), map markers, its tooltips (DaylightUI's Tooltip module dresses every game
+-- color swatches), map markers, its tooltips (DaylightUI's Tooltip module dresses every game
 -- tooltip, these included), its right-click and dropdown menus (the game's menus, which
 -- DaylightUI's skins dress), the game's static popups, and its sliders' tracks.
 --
 -- "Hand over to DaylightUI": its unit tooltip hiding the game's (DaylightUI's tooltip stays, its
--- RP card shows beside it) and its own name colours in chat (DaylightUI's class colours).
+-- RP card shows beside it) and its own name colors in chat (DaylightUI's class colors).
 local _, ns = ...
 if not ns.ok then return end
 
@@ -119,7 +119,7 @@ local function Font(fs)
 end
 
 -- Its gold (headings, field titles: GameFontNormal's and its own 0.95, 0.75, 0.1) becomes the
--- label tan. Other colours are its meaning (status, relations, quality) and stay.
+-- label tan. Other colors are its meaning (status, relations, quality) and stay.
 local function Gold(fs)
 	local r, g, b = fs:GetTextColor()
 	return type(r) == "number" and r > 0.85 and g > 0.6 and g < 0.88 and b < 0.4
@@ -275,7 +275,7 @@ local function RedTextButton(Kit, b)
 	if ns.Controls(KEY) then ns.Guard(Kit.Button, b) end
 end
 
--- A red art button: an X is DaylightUI's close button; the rest keep their picture, in grey.
+-- A red art button: an X is DaylightUI's close button; the rest keep their picture, in gray.
 local function CloseLike(b)
 	local key = b.GetParentKey and b:GetParentKey()
 	local name = b:GetName() or ""
@@ -393,7 +393,7 @@ local function Pixel(tex, h)
 	if PixelUtil and PixelUtil.SetHeight then PixelUtil.SetHeight(tex, h) else tex:SetHeight(h) end
 end
 
--- A picture kept, in grey: its own shape in the text colour (lighter under the mouse).
+-- A picture kept, in gray: its own shape in the text color (lighter under the mouse).
 local function Grey(tex, ink)
 	if not ns.Usable(tex) then return end
 	if tex.SetDesaturated then tex:SetDesaturated(true) end
@@ -447,7 +447,7 @@ local function SliderLook(slider, withTrack)
 	slider:HookScript("OnDisable", paint)
 end
 
--- The stepper arrows beside a slider: kept, grey.
+-- The stepper arrows beside a slider: kept, gray.
 local function Stepper(b)
 	if not ns.Usable(b) or not ns.Once(b) then return end
 	for _, r in ipairs({ b:GetRegions() }) do
@@ -469,7 +469,7 @@ local function FixArt(Kit, r)
 		fixedArt[r] = true
 		Kill(r)
 		-- The bar gets a thin edge; a plain progress bar also takes DaylightUI's bar look (the
-		-- personality bars keep the colours the player picked).
+		-- personality bars keep the colors the player picked).
 		if ns.Usable(parent) and parent:GetObjectType() == "StatusBar" and not barsDone[parent] then
 			barsDone[parent] = true
 			if not parent.OppositeFill and Kit.StatusBar then ns.Guard(Kit.StatusBar, parent) end
@@ -493,7 +493,7 @@ local function FixArt(Kit, r)
 		fixedArt[r] = true
 		SliderLook(parent, false)
 	elseif key then
-		-- Small buttons drawn with the game's arrows and icons: their shape, in grey.
+		-- Small buttons drawn with the game's arrows and icons: their shape, in gray.
 		fixedArt[r] = true
 		Grey(r, (key == "reorderDown" or key == "collapseDown" or key == "expandDown") and "VALUE" or "TEXT")
 	elseif atlas == "Minimal_SliderBar_Left" or atlas == "_Minimal_SliderBar_Middle" or atlas == "Minimal_SliderBar_Right" then
@@ -525,7 +525,7 @@ local function FixArt(Kit, r)
 	end
 end
 
--- Its colour picker button (TRP3_ColorPickerButton): the colour in a thin edge, not in the
+-- Its color picker button (TRP3_ColorPickerButton): the color in a thin edge, not in the
 -- achievement icon frame; a soft light under the mouse instead of its big glow.
 local function ColorPicker(f)
 	Kill(f.Border)
@@ -599,7 +599,7 @@ local function Pieces(Kit, f)
 		StretchButton(Kit, f)
 		return
 	end
-	-- The slider's arrows (MinimalSliderWithSteppersTemplate): kept, grey. Its track and thumb are
+	-- The slider's arrows (MinimalSliderWithSteppersTemplate): kept, gray. Its track and thumb are
 	-- found by their art, below.
 	if ns.Usable(f.Slider) and ns.Usable(f.Back) and ns.Usable(f.Forward) then
 		Stepper(f.Back)
@@ -931,8 +931,8 @@ ns.Handover(KEY, {
 		{ key = "tooltip_char_HideOriginal", label = "Unit tooltip (its RP card replacing the game's)",
 		  daylight = "its unit tooltip; Total RP 3's RP card then shows beside it",
 		  ours = function() return ns.DaylightHas("Tooltip", "anchor", function() return true end) end },
-		{ key = "chat_color", label = "Name colours in chat",
-		  daylight = "class-coloured names in chat",
+		{ key = "chat_color", label = "Name colors in chat",
+		  daylight = "class-colored names in chat",
 		  ours = function() return ns.DaylightHas("Chat", "classColors") end },
 	},
 })

@@ -4,16 +4,16 @@
 -- so its frames are not hunted for: its CreateFrame is followed, and each frame it makes is dressed
 -- the frame after it was made, once Journey has set it up. What is dressed:
 --   the guide header, the step boxes and the "something should be here" box: DaylightUI's shell in
---     place of the glue-tooltip backdrop; a box the guide marks with a colour gets a bar in it
---   the progress bar (the accent, its own colour, or Journey's blue), the logo (shown or not)
---   the step buttons: flat in the step's own colour, DaylightUI's buttons, or Journey's art
+--     place of the glue-tooltip backdrop; a box the guide marks with a color gets a bar in it
+--   the progress bar (the accent, its own color, or Journey's blue), the logo (shown or not)
+--   the step buttons: flat in the step's own color, DaylightUI's buttons, or Journey's art
 --   the item / target buttons beside the guide: square icons with a thin border
 --   the guide menu and its submenu, Advanced Options, the link popup: shells, buttons, text box;
 --     menu rows lit and checked in the accent
 --   the guide tooltip: DaylightUI's shell
 --   the HUD arrow's labels: the player's font, its distance in the accent
---   every string: the player's font, size, outline and shadow, and DaylightUI's text colours
---   the colours of quests, NPCs, items, places, flights and levels in the step text (optional)
+--   every string: the player's font, size, outline and shadow, and DaylightUI's text colors
+--   the colors of quests, NPCs, items, places, flights and levels in the step text (optional)
 -- Journey's sliders and its header arrows and gear are left as it draws them.
 -- Nothing is written to Journey's saved settings, and none of its files are touched.
 local _, ns = ...
@@ -25,12 +25,12 @@ local KEY = "Journey"
 -- Its page: the settings of its own, under the "Journey" tab
 -- ---------------------------------------------------------------------------------------------
 
--- Journey's own colours, the defaults of the link colours.
+-- Journey's own colors, the defaults of the link colors.
 local function Hex(s)
 	return { tonumber(s:sub(1, 2), 16) / 255, tonumber(s:sub(3, 4), 16) / 255, tonumber(s:sub(5, 6), 16) / 255 }
 end
 
--- setting = { label, Journey's colour names it stands for, its default }
+-- setting = { label, Journey's color names it stands for, its default }
 local LINKS = {
 	{ "linkQuest", "Quests to do", { "QUEST", "QUEST_DO" }, Hex("0084EB") },
 	{ "linkAccept", "Quests to accept", { "QUEST_ACCEPT" }, Hex("FFFF00") },
@@ -173,7 +173,7 @@ local GAME_FONTS = {
 	"GameFontDisableTiny2",
 }
 
--- Which DaylightUI text colour a font takes: gold headings TITLE, white VALUE, grey OFF.
+-- Which DaylightUI text color a font takes: gold headings TITLE, white VALUE, gray OFF.
 local function Role(name)
 	if name:find("Disable") then return "OFF" end
 	if name:find("Normal") then return "TITLE" end
@@ -323,7 +323,7 @@ local function GuideFrame()
 	return c and c.frame
 end
 
--- A box the guide marks: Journey drew its border in a colour of the guide's.
+-- A box the guide marks: Journey drew its border in a color of the guide's.
 local function PaintGroup(f)
 	local bar = groups[f]
 	if not bar then return end
@@ -415,7 +415,7 @@ local function PaintFlat(b)
 	s.fill:SetColorTexture(s.r, s.g, s.b, alpha)
 end
 
--- Journey hands the button's colour to its art as hex / 128.
+-- Journey hands the button's color to its art as hex / 128.
 local function FromArt(v) return min(1, (v or 0) * 128 / 255) end
 
 local function HideArt(b)
@@ -532,8 +532,8 @@ local function Arrow(f)
 	PaintArrow()
 end
 
--- The link colours, and the highlighted step buttons' colour. Journey's Color table is looked up
--- each time (it could make a new one), and its own colours are taken from it at login, before any
+-- The link colors, and the highlighted step buttons' color. Journey's Color table is looked up
+-- each time (it could make a new one), and its own colors are taken from it at login, before any
 -- of ours go in.
 local original, originalOf = {}, nil
 

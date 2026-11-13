@@ -2,21 +2,21 @@
 --   * The alert (RARESCANNER_BUTTON, a secure button): its parchment, dark tooltip edge and the
 --     achievement header under the name give way to a flat DaylightUI panel, a quiet band under
 --     the name, the name in the bright ink and "click to target" in the label ink. The edge lights
---     up under the mouse instead of its own white border (it recolours that border on every
+--     up under the mouse instead of its own white border (it recolors that border on every
 --     enter and leave, so its pieces are kept out of sight each time). Its close button is
 --     DaylightUI's X; the stop / go filter buttons keep their red and green icons (they say which
---     it is) with a soft wash for a hover; the yellow navigation arrows keep their shape, in grey.
+--     it is) with a soft wash for a hover; the yellow navigation arrows keep their shape, in gray.
 --     The loot icons under it are cropped, in a thin edge. A secure button can't be laid out in a
 --     fight, so everything that makes or places a frame on it waits for the fight to end: it's
 --     done once at load, again as it shows (its ShowButton, which only runs out of combat), and
---     for the loot icons as they're filled, through ns.OutOfCombat. Colours and fonts go on any
+--     for the loot icons as they're filled, through ns.OutOfCombat. Colors and fonts go on any
 --     time.
 --   * Its tooltips: the map pins' and chat links' tooltips (LibQTip-1.0RS, plain frames the game's
 --     tooltip skin never sees) take DaylightUI's tooltip look; the library lays its own border
 --     again on every Acquire, so it's put out of sight after each Acquire and on every show (the
 --     library refuses HookScript on these, so its Show is hooked instead). Its
 --     gold separator lines become a faint hairline, the gold wash behind its achievement line a
---     quiet grey. The link tooltip's close button is DaylightUI's X. Its game tooltips made after
+--     quiet gray. The link tooltip's close button is DaylightUI's X. Its game tooltips made after
 --     login (the stop / go hints, the explorer's, the explorer's comparison tooltips, the addon
 --     compartment's) get the same look the moment they're made, unless DaylightUI's tooltip skin
 --     got there first; those made while it loads are DaylightUI's tooltip skin's own. All of it
@@ -25,7 +25,7 @@
 --   * On the world map: its search box moves up into the map's top bar, left of the filter
 --     button, slimmed to the bar and in DaylightUI's input look with a faint hint; the dark round
 --     grounds behind the corner
---     buttons' icons are centred on their icons (ns.MapIconGround); the
+--     buttons' icons are centered on their icons (ns.MapIconGround); the
 --     round corner buttons all lose the game's gold ring, the icon alone: the game's own ones
 --     through ns.MapRings (shared with the OpenMap pack, so the corner looks the same with either
 --     addon loaded), RareScanner's here (a dropdown button, which that pass doesn't look at, so
@@ -38,7 +38,7 @@
 --     frame, DaylightUI's close button; the rare list, loot list, info and custom loot panels as
 --     quiet wells with their stone frames off; the loot cards' parchment off (a well of their
 --     own); the filters, continent and group dropdowns, check boxes, red buttons (the loot
---     toggle's arrow in grey), search and input boxes and scroll bars through DaylightUI's
+--     toggle's arrow in gray), search and input boxes and scroll bars through DaylightUI's
 --     Kit.Auto; the lists' rows as DaylightUI's plain lines with a hairline between them, the
 --     picked rare and picked group in the accent; the loot icons cropped in a thin edge (both
 --     icon pools and the loot list's); the group names and field labels in DaylightUI's inks
@@ -65,7 +65,7 @@
 -- RegisterAsWidget and the marker picker's SetDisabled (which paints its label gold again); the
 -- addon compartment's hover; DaylightUI's SettingChanged (tooltip opacity).
 -- Left as it is: the 3D model over the alert, every item and loot icon's own picture and the loot
--- names' quality colours, the rare list's name colours (a level's difficulty colour, gold for a
+-- names' quality colors, the rare list's name colors (a level's difficulty color, gold for a
 -- rare without a level: the two golds are too close to tell apart), its portraits with their
 -- silver and gold dragon rings (rare or custom) and the mount, pet, toy, appearance and custom
 -- badges on its rows, the filtered mark, the achievement shield, the explorer's map and the icons
@@ -167,7 +167,7 @@ local function PixelWide(tex, w)
 	if PixelUtil and PixelUtil.SetWidth then PixelUtil.SetWidth(tex, w) else tex:SetWidth(w) end
 end
 
--- A picture kept, in grey: its own shape in one of DaylightUI's inks.
+-- A picture kept, in gray: its own shape in one of DaylightUI's inks.
 local function Grey(tex, ink)
 	if not ns.Usable(tex) then return end
 	if tex.SetDesaturated then tex:SetDesaturated(true) end
@@ -345,7 +345,7 @@ local function AlertText()
 	Ink(BUTTON.Description_text, "LABEL")
 end
 
--- Its border recoloured on enter and leave: its pieces kept out of sight, our edge lit instead.
+-- Its border recolored on enter and leave: its pieces kept out of sight, our edge lit instead.
 local function AlertHover(over)
 	local Kit = ns.Kit
 	if not Kit then return end
@@ -850,7 +850,7 @@ end
 
 -- The rare list's rows: plain lines, the picked one in the accent. Its collection badges and the
 -- filtered mark stay; its portrait frame is a frame of its own and stays too. The names keep its
--- colours: a level's difficulty colour, its gold for a rare without one (the two golds are too
+-- colors: a level's difficulty color, its gold for a rare without one (the two golds are too
 -- close to tell apart, and the difficulty one means something).
 local RARE_KEEP = { "MountTexture", "PetTexture", "ToyTexture", "AppearanceTexture", "DecorTexture",
 	"CustomTexture", "StateIcon" }
@@ -940,7 +940,7 @@ local function RareRow(Kit, row)
 end
 
 -- The loot list's rows: plain lines; the icon cropped in a thin edge, its filter check
--- DaylightUI's switch, the name in its quality colour.
+-- DaylightUI's switch, the name in its quality color.
 local function LootRow(Kit, row)
 	if not ns.Usable(row) then return end
 	RowArt(row)
@@ -1244,7 +1244,7 @@ local function Markers(Kit, w)
 	Font(f.label)
 	Ink(f.label, w.disabled and "OFF" or "LABEL")
 	Font(f.text)
-	-- Its SetDisabled paints the label gold again (or grey): ours goes back on each time.
+	-- Its SetDisabled paints the label gold again (or gray): ours goes back on each time.
 	if type(w.SetDisabled) == "function" then
 		hooksecurefunc(w, "SetDisabled", function(self, disabled)
 			if not ns.Enabled(KEY) or type(self.frame) ~= "table" then return end
@@ -1384,7 +1384,7 @@ ns.Pack(KEY, nil, function(Kit)
 			end)
 		end
 		if type(proto) == "table" and type(proto.AddSeparator) == "function" then
-			-- Its separators, gold unless given a colour: a faint hairline.
+			-- Its separators, gold unless given a color: a faint hairline.
 			hooksecurefunc(proto, "AddSeparator", function(self, _, r)
 				if r ~= nil or not OursQT(self) or not ns.Enabled(KEY) or not qtShelled[self] then return end
 				local lines = self.lines
@@ -1393,7 +1393,7 @@ ns.Pack(KEY, nil, function(Kit)
 			end)
 		end
 		if type(proto) == "table" and type(proto.SetLineColor) == "function" then
-			-- The gold wash behind its achievement line: a quiet grey.
+			-- The gold wash behind its achievement line: a quiet gray.
 			hooksecurefunc(proto, "SetLineColor", function(self, lineNum, r, g, b)
 				if not OursQT(self) or not ns.Enabled(KEY) or not qtShelled[self] then return end
 				if not GoldRGB(r, g, b) then return end

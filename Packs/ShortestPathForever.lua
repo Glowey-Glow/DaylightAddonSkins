@@ -152,7 +152,7 @@ end)
 -- off): its spot is handed to ForeverCore's own settings (ForeverTrackerHost.SetAttached(false),
 -- SavePosition), the way its own grip does, and kept up as the tracker grows, shrinks or moves. The
 -- tracker is only read, never moved or anchored to (the same way ForeverCore follows Questie's).
--- Its sections take the tracker's look: heads like its Quests header (caps, the header colour and
+-- Its sections take the tracker's look: heads like its Quests header (caps, the header color and
 -- size, a line under it), each entry's name like a quest title, each line like an objective, all
 -- from DaylightUI's Quests settings, in the tracker's font. It fades with the tracker.
 -- ---------------------------------------------------------------------------------------------
@@ -205,8 +205,8 @@ local function LineColor()
 	return QColor("headerLine", "LABEL")
 end
 
--- Blizzard's tracker colours (OBJECTIVE_TRACKER_COLOR): a text in one of these is the section's
--- plain text and takes the tracker's colours; any other (a warning, a countdown) is kept.
+-- Blizzard's tracker colors (OBJECTIVE_TRACKER_COLOR): a text in one of these is the section's
+-- plain text and takes the tracker's colors; any other (a warning, a countdown) is kept.
 local function Plain(fs)
 	local r, g, b = fs:GetTextColor()
 	local set = _G.OBJECTIVE_TRACKER_COLOR

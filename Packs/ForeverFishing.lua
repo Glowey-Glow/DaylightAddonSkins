@@ -2,7 +2,7 @@
 -- window, the catch recap) and its text in the player's font.
 -- Left alone: the Journal's parchment page and everything on it (dark ink on paper, rebuilt on
 -- every render), the inside of the Settings window (every control is its own drawing with its own
--- state colours), the fishing bar, tool bar, flyouts, cast bar and key capture (secure / HUD).
+-- state colors), the fishing bar, tool bar, flyouts, cast bar and key capture (secure / HUD).
 -- The Journal, Settings and Session Goals roots are protected frames: they are dressed out of
 -- combat only, and never moved, sized, shown or hidden from here.
 local _, ns = ...

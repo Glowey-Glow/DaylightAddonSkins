@@ -1,11 +1,11 @@
 -- Dungeon Journal (ForeverDungeonJournal): what DaylightUI's own Dungeon Journal skin leaves as it
--- is. DaylightUI dresses the journal, its favourites and settings windows; none of that is touched
+-- is. DaylightUI dresses the journal, its favorites and settings windows; none of that is touched
 -- here.
 -- Dressed here:
 --   * Character Logs (ForeverDungeonJournalRunLog): a ButtonFrameTemplate window of its own that
 --     DaylightUI's skin never sees. The window shell, its run list (picked run in the accent), its
 --     stat tiles, loot cards and delete buttons as quiet flat boxes (loot cards keep their quality
---     edge), its gold headings and lines in DaylightUI's colours, its buttons and scroll bars, and
+--     edge), its gold headings and lines in DaylightUI's colors, its buttons and scroll bars, and
 --     the party list that drops from the Party button. Each dungeon's faint picture behind a run
 --     stays.
 --   * Loot Filter (ForeverDungeonJournalLootFilter): a popup inside the journal. DaylightUI's skin
@@ -34,7 +34,7 @@ local function Quiet(tex)
 end
 
 -- Its tooltip-border boxes (tiles, loot cards, the delete X): a flat one-pixel box, a dark well.
--- A loot card's edge is recoloured by quality on every refresh, which the flat edge keeps.
+-- A loot card's edge is recolored by quality on every refresh, which the flat edge keeps.
 local function Flat(frame, alpha)
 	if not ns.Usable(frame) or not frame.SetBackdrop or not ns.Once(frame) then return end
 	frame:SetBackdrop(FLAT)

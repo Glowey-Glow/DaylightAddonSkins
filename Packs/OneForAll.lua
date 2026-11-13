@@ -48,10 +48,10 @@ local function KillAdded(frame, before)
 end
 
 -- ---------------------------------------------------------------------------------------------
--- Colours: it hands almost every colour it draws (lines, text, grounds, its tabs and rows)
+-- Colors: it hands almost every color it draws (lines, text, grounds, its tabs and rows)
 -- through one function of its own, OneForAll.SkinC, a pass-through left for re-skinning. Its gold
--- comes back in DaylightUI's colours: strong gold as the accent, pale gold text as plain light
--- text, and its warm brown grounds as neutral darks. Every other colour (item qualities, the
+-- comes back in DaylightUI's colors: strong gold as the accent, pale gold text as plain light
+-- text, and its warm brown grounds as neutral darks. Every other color (item qualities, the
 -- green and red of its numbers) passes as it was.
 -- ---------------------------------------------------------------------------------------------
 
@@ -110,8 +110,8 @@ if type(origSkinC) == "function" then
 end
 
 -- Its button plates (gold art: at rest, picked, the glow round a picked one) are files, not
--- colours. The game hands its files a number of its own for the session: each is set once on a
--- hidden texture here to learn it, and a plate showing one is greyed and tinted.
+-- colors. The game hands its files a number of its own for the session: each is set once on a
+-- hidden texture here to learn it, and a plate showing one is grayed and tinted.
 local ASSETS = "Interface\\AddOns\\OneForAll\\Assets\\"
 local plateKind = ns.FileIDs({ [ASSETS .. "btn_m_normal"] = "rest", [ASSETS .. "btn_m_active"] = "picked",
 	[ASSETS .. "btn_glow"] = "picked" })
@@ -127,7 +127,7 @@ local function PaintPlate(tex, kind)
 	end
 end
 
--- A colour it set straight on a piece (not through SkinC: its side lists' headings, some lines
+-- A color it set straight on a piece (not through SkinC: its side lists' headings, some lines
 -- and arrows), when it is gold.
 local function Regold(r, g, b)
 	if type(r) ~= "number" then return nil end
@@ -162,7 +162,7 @@ local function Plates(root, depth)
 	for _, child in ipairs({ root:GetChildren() }) do Plates(child, depth + 1) end
 end
 
--- It sets a plate's grey on and off as a button is enabled and disabled: kept grey.
+-- It sets a plate's gray on and off as a button is enabled and disabled: kept gray.
 if type(OFA.Desat) == "function" then
 	local origDesat = OFA.Desat
 	OFA.Desat = function(t, v, ...)
@@ -354,7 +354,7 @@ ns.Handover(KEY, {
 		C("infoBar", "OneForAll's info bar", "the data texts (Info Panel)",
 			function() return has("InfoPanel", "data.enabled") end),
 		-- The game's frames DaylightUI hides: work done on bars no one sees.
-		C("classColors", "Class colours on the game's unit frames", "its own unit frames (Unit Frames)",
+		C("classColors", "Class colors on the game's unit frames", "its own unit frames (Unit Frames)",
 			moduleOn("UnitFrames")),
 		C("bagSlots", "Free slots on the game's backpack button", "the bags data text and its bags (Bags)",
 			moduleOn("Bags")),

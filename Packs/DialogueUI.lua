@@ -1,14 +1,14 @@
 -- Dialogue UI: a DaylightUI theme for it, laid over whichever of its own two themes is picked.
 -- Its talk window (DUIQuestFrame: gossip, quest text, rewards) and settings window
 -- (DUIDialogSettings) stand on DaylightUI's shell in place of its paper and tiled ground; its text
--- takes DaylightUI's text colours, accent and font (a font picked in Dialogue UI's own settings is
+-- takes DaylightUI's text colors, accent and font (a font picked in Dialogue UI's own settings is
 -- kept); and its controls (option rows, hotkey labels, reward and item buttons, dividers, the
 -- settings' checkboxes and arrows) take the art of its own Dark theme wherever its Brown theme's
 -- would show, since those are drawn for dark text on paper.
 -- It has no license (all rights reserved to its authors): none of its files are changed and none
 -- of its art copied. Its internals are private, so it is followed from outside: its global
 -- mixins and the two windows' own methods (after each theme load, page and tab), and its global
--- font objects (DUIFont_*), which get DaylightUI's font and colours each time it sets them.
+-- font objects (DUIFont_*), which get DaylightUI's font and colors each time it sets them.
 -- Left as it draws them: the portrait model, each quest's background picture, its own tooltip,
 -- the book window (paper or metal on purpose), the camera and its hide-the-UI mode.
 -- Nothing is written to its saved settings.
@@ -126,11 +126,11 @@ After(_G.DUIDialogOptionButtonLockMixin, "LoadTheme", Tree)
 After(_G.DUIDialogInputBoxMixin, "SetBackgroundTexture", Tree)
 
 -- ---------------------------------------------------------------------------------------------
--- Colours: its font objects (it sets their colour on each theme load) and the item names it
--- colours itself.
+-- Colors: its font objects (it sets their color on each theme load) and the item names it
+-- colors itself.
 -- ---------------------------------------------------------------------------------------------
 
--- Each font object's role: a DaylightUI text colour, or "accent".
+-- Each font object's role: a DaylightUI text color, or "accent".
 local ROLE = {
 	DUIFont_Quest_Title_18 = "VALUE", DUIFont_Quest_Title_16 = "VALUE", DUIFont_Quest_SubHeader = "VALUE",
 	DUIFont_Quest_Paragraph = "TEXT", DUIFont_Quest_Gossip = "LABEL", DUIFont_Quest_Quest = "VALUE",
@@ -143,7 +143,7 @@ local ROLE = {
 
 local function Accent() return ns.AccentOf(KEY) end
 
--- r, g, b for a role, or nil while its own colours are kept.
+-- r, g, b for a role, or nil while its own colors are kept.
 local function RoleColor(role)
 	if role == "accent" then return Accent() end
 	if ns.Look(KEY, "daylightColors") == false then return nil end
@@ -181,7 +181,7 @@ local function RecolorAll()
 	for font in pairs(ownColor) do ns.Guard(Recolor, font) end
 end
 
--- Item names: its Brown theme writes them all in dark brown. The item's quality colour, or the
+-- Item names: its Brown theme writes them all in dark brown. The item's quality color, or the
 -- accent on a reward still to be picked.
 After(_G.DUIDialogItemButtonMixin, "UpdateNameColor", function(self, quality)
 	local name = self.Name
@@ -288,7 +288,7 @@ local focus = talk.GamePadFocusIndicator
 After(focus, "LoadTheme", Tree)
 After(focus, "SetTheme", Tree)
 
--- Its Brown theme tints the speaker's portrait sepia: kept in its own colours.
+-- Its Brown theme tints the speaker's portrait sepia: kept in its own colors.
 do
 	local header = type(talk.FrontFrame) == "table" and talk.FrontFrame.Header
 	local portrait = type(header) == "table" and header.Portrait

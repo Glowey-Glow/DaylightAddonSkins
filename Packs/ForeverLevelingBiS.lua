@@ -5,7 +5,7 @@
 -- five font objects of its own (ForeverLevelingBiSFont*), which get the player's font here each
 -- time it sets them; and its windows are found by the flat backdrop its W.Window gives them.
 -- Only its Modern theme is dressed: pick Classic or a skin in its own settings and it is left as
--- it draws it. Left alone: its buttons, tabs, rows and selectors (it recolours them on every
+-- it draws it. Left alone: its buttons, tabs, rows and selectors (it recolors them on every
 -- hover and pick), its scroll bars, bubbles, question boxes and tooltip lines, and its accent.
 -- Nothing is written to its saved settings.
 local _, ns = ...
@@ -70,7 +70,7 @@ end
 
 -- ---------------------------------------------------------------------------------------------
 -- Windows: a Frame with W.Window's flat backdrop (a one-pixel WHITE8X8 border round its window
--- colour, 0.06 / 0.06 / 0.08), or the selectors' lists' (0.05 grey).
+-- color, 0.06 / 0.06 / 0.08), or the selectors' lists' (0.05 gray).
 -- ---------------------------------------------------------------------------------------------
 
 local WHITE = "interface\\buttons\\white8x8"

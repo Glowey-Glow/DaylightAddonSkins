@@ -1,6 +1,6 @@
 # DaylightUI Addon Skins
 
-A plugin for DaylightUI on WoW: Forever. It gives your other addons' windows the DaylightUI look: the window shell, your font, text colours and accent, and DaylightUI's buttons, boxes and scroll bars.
+A plugin for DaylightUI on WoW: Forever. It gives your other addons' windows the DaylightUI look: the window shell, your font, text colors and accent, and DaylightUI's buttons, boxes and scroll bars.
 
 **Addons it skins:** Camping Kit, Dialogue UI, DoesItDie, Dungeon Journal, Forever Fishing, Forever Leveling BiS, Journey Guides, Keep or Toss, LayerSwap, LootTriage, OneForAll, OpenMap, Polestar, Questie, RareScanner, Shortest Path Forever, Spoken, Total RP 3.
 
@@ -26,7 +26,7 @@ There's nothing to set up: once it's installed, every supported addon you have t
 Open the DaylightUI options and go to **Plugins → Addons**. There you can:
 
 - switch the skin off for any one addon;
-- give an addon a look of its own (font, outline, shadow, size, window opacity, border, bevel, and for some its text colours and accent) with **Use my own settings** on its page;
+- give an addon a look of its own (font, outline, shadow, size, window opacity, border, bevel, and for some its text colors and accent) with **Use my own settings** on its page;
 - change the Override choices on the addon's **DaylightUI** tab, or use **Give everything back** there;
 - open the Override window again with **Show the choices again** on the All windows page.
 

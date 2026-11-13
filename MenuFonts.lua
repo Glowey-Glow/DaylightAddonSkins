@@ -28,7 +28,7 @@ local function MenuFont(size)
 	return _G["DaylightUIMenuFont" .. math.floor((size or 12) + 0.5)]
 end
 
--- Setting a font object resets the colour: the game's (a class colour, a grey disabled entry)
+-- Setting a font object resets the color: the game's (a class color, a gray disabled entry)
 -- goes back on.
 local function FixText(fs, object)
 	local r, g, b, a = fs:GetTextColor()

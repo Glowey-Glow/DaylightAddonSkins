@@ -7,7 +7,7 @@
 -- controls on each tab), its right-click menus (LibUIDropDownMenu's lists: the tracker menu,
 -- Townsfolk), its own popups (QuestiePopup, not the game's StaticPopup), the objective type
 -- tutorial, and its own tracker while the player has picked Questie's over DaylightUI's (the shell
--- in place of its backdrop, following Questie's own backdrop switch, colour opacity and fader).
+-- in place of its backdrop, following Questie's own backdrop switch, color opacity and fader).
 -- Left alone: its map and minimap icons, the tracker's lines and buttons (secure item buttons),
 -- the world map button.
 --
@@ -125,7 +125,7 @@ if Controls and type(Controls.Create) == "function" then
 		end
 		return control
 	end
-	-- Its colours: gold names, white descriptions, set again on every refresh. DaylightUI's:
+	-- Its colors: gold names, white descriptions, set again on every refresh. DaylightUI's:
 	-- names white, sentences soft white, headings tan, off dimmed.
 	if type(Controls.Refresh) == "function" then
 		hooksecurefunc(Controls, "Refresh", function(control)
@@ -258,8 +258,8 @@ ns.Watch(KEY, "QuestieTutorialChooseObjectiveType", function(frame)
 end)
 
 -- ---------------------------------------------------------------------------------------------
--- Its tracker (made at login, only while Questie's tracker is the one in use). Its backdrop colour
--- is set again on every update and by its fader; each colour asked for is turned into the opacity
+-- Its tracker (made at login, only while Questie's tracker is the one in use). Its backdrop color
+-- is set again on every update and by its fader; each color asked for is turned into the opacity
 -- of a holder carrying the shell, and the backdrop itself kept clear.
 -- ---------------------------------------------------------------------------------------------
 

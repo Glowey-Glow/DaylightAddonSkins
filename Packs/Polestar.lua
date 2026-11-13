@@ -1,6 +1,6 @@
 -- Polestar: it paints everything from one theme (Polestar.Theme) and repaints on Theme.Refresh(),
 -- so the theme is fed rather than its frames touched: DaylightUI's shell as its window paint, the
--- player's font, accent and text colours in its palette. Only its house look ("polestar") is
+-- player's font, accent and text colors in its palette. Only its house look ("polestar") is
 -- changed; pick another look in Polestar's own options and it is left as Polestar draws it.
 -- Nothing is written to Polestar's saved settings.
 local _, ns = ...
@@ -47,7 +47,7 @@ local function Overlay(p)
 		end
 	end
 
-	-- Text ladder and what follows it (Polestar's own text colours when the player said so).
+	-- Text ladder and what follows it (Polestar's own text colors when the player said so).
 	if ns.Look(KEY, "daylightColors") ~= false then
 		for _, name in ipairs({ "text", "title", "buttonText", "rowLabel", "iconHover" }) do
 			Set(p, name, value[1], value[2], value[3], 1)
@@ -70,7 +70,7 @@ local function Overlay(p)
 		local light = 0.2126 * ar + 0.7152 * ag + 0.0722 * ab
 		if light > 0.55 then Set(p, "onAccent", 0.05, 0.05, 0.06, 1) else Set(p, "onAccent", 1, 1, 1, 1) end
 		-- The waypoint arrow follows the accent (and "good" up close), unless the player picked
-		-- their own arrow colours in Polestar.
+		-- their own arrow colors in Polestar.
 		local get = type(P.Get) == "function" and P.Get or nil
 		local okFar, far = pcall(function() return get and get("nav.arrowColor") end)
 		if not (okFar and type(far) == "table") then

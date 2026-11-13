@@ -32,7 +32,7 @@ ns.Guard = Guard
 
 -- An addon this plugin dresses, for the options list. caps = what of its look can be set on its
 -- own page: window (shell), controls (buttons, boxes, scroll bars), text (font, size, outline),
--- shadow (text shadow), colors (text colours and accent), font = the font it starts on
+-- shadow (text shadow), colors (text colors and accent), font = the font it starts on
 -- ("daylight" where the pack already puts the player's font on its text, else "addon").
 -- A pack with settings of its own adds defaults = { name = value } (kept under look.<addon>.<name>
 -- like the rest) and extra = function(at, following, hint) returning option groups, shown on its
@@ -85,7 +85,7 @@ end
 ns.Setting = Setting
 
 -- DaylightUI's inks ({ VALUE = { r, g, b }, ... }, as API.Colors gives them). API.Colors makes a
--- fresh copy of every ink on each call, and the packs ask for one on every colour they set: the
+-- fresh copy of every ink on each call, and the packs ask for one on every color they set: the
 -- copy is kept until DaylightUI's style changes. Read it only; it is shared.
 function ns.Colors()
 	local c = colors
@@ -597,7 +597,7 @@ end
 
 -- The dark round ground behind such a button's icon is placed for the ring (a fixed spot from the
 -- button's corner, each button's a little different), so with the ring gone it sits off to one
--- side of the icon. It's centred on the icon instead (and moves with it as it's pressed).
+-- side of the icon. It's centered on the icon instead (and moves with it as it's pressed).
 local GROUND_IDS
 local function IsGround(tex)
 	if not GROUND_IDS then GROUND_IDS = ns.FileIDs({ ["Interface\\Minimap\\UI-Minimap-Background"] = true }) end

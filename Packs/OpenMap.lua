@@ -11,16 +11,16 @@
 --     its rows, buttons, links, the floors' pictures' edges, its scroll bar), the hint: the quest
 --     log's paper, frame, filigree and shade off, bronze rules as hairlines, grounds neutral.
 --   * The tabs at the map's edge (OpenMap's own rail and the dungeon's two): DaylightUI's side tabs,
---     the lit or shown one in the accent; the rail's arrow grey.
+--     the lit or shown one in the accent; the rail's arrow gray.
 --   * The coordinate labels (Azeroth / Player at the map's foot): a thin neutral edge, label ink.
 --   * Its tiles and buttons framed as action buttons: the action-bar frame off, a thin edge on;
 --     the checked glow in the accent.
 -- How the pieces are found: by what they are (template parts, keys, art by file and atlas), so a
--- frame from any of its files is dressed the same way. Colours it sets again on every refresh
+-- frame from any of its files is dressed the same way. Colors it sets again on every refresh
 -- (gold text, bronze edges, the picked floor in gold) are followed: the frame's own setter is
--- hooked and the colour turned into DaylightUI's as it's set.
+-- hooked and the color turned into DaylightUI's as it's set.
 -- Its content stays: the map, the dungeon's picture, its pins, POIs and icons on the map, the
--- floors' pictures (their edge is dressed), the action and favourite icons, the favourite star.
+-- floors' pictures (their edge is dressed), the action and favorite icons, the favorite star.
 -- Its minimap button is DaylightUI's button collector's.
 local _, ns = ...
 if not ns.ok then return end
@@ -43,7 +43,7 @@ local function Mod()
 end
 
 -- ---------------------------------------------------------------------------------------------
--- Colours: OpenMap's gold and bronze as DaylightUI's
+-- Colors: OpenMap's gold and bronze as DaylightUI's
 -- ---------------------------------------------------------------------------------------------
 
 local function Ink(name)
@@ -56,7 +56,7 @@ local function Hex(r, g, b)
 	return ("%02x%02x%02x"):format(math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5))
 end
 
--- An ink as a colour code's six digits, worked out once per ink: kept until DaylightUI's inks are
+-- An ink as a color code's six digits, worked out once per ink: kept until DaylightUI's inks are
 -- read again (ns.Colors hands back a new table then).
 local hexes, hexesOf = {}, nil
 local function InkHex(name)
@@ -82,13 +82,13 @@ local function Warm(r, g, b)
 	return r >= g and g >= b and r - b > 0.12
 end
 
--- A text colour of its: bright gold (names, headings) bright, tan small print as labels.
+-- A text color of its: bright gold (names, headings) bright, tan small print as labels.
 local function TextColorFor(r, g, b)
 	if BrightGold(r, g, b) then return Ink("VALUE") end
 	if Warm(r, g, b) and r > 0.6 and r < 0.97 then return Ink("LABEL") end
 end
 
--- Its colour codes inside text: gold bright, its tans as labels, its greys dim.
+-- Its color codes inside text: gold bright, its tans as labels, its grays dim.
 local CODES = {
 	ffd100 = "VALUE", ffd200 = "VALUE", ffcc00 = "VALUE", ffe680 = "VALUE",
 	e6c27a = "LABEL", e6b85c = "LABEL", c8a86a = "LABEL",
@@ -122,7 +122,7 @@ end
 
 local busy = false
 
--- The text colour and text it sets from now on, turned as it's set (and what it has now). The
+-- The text color and text it sets from now on, turned as it's set (and what it has now). The
 -- hooks are shared by every string: they're the same for each.
 local function InkColor(self, r, g, b)
 	if busy or type(r) ~= "number" or ns.Look(KEY, "daylightColors") == false then return end
@@ -135,7 +135,7 @@ local function InkColor(self, r, g, b)
 end
 
 local function InkCodes(self, t)
-	-- (Text with no colour code in it, nearly all of it, is let go before the setting is read.)
+	-- (Text with no color code in it, nearly all of it, is let go before the setting is read.)
 	if busy or type(t) ~= "string" or not string.find(t, "|c", 1, true) then return end
 	if ns.Look(KEY, "daylightColors") == false then return end
 	local new = RecodeText(t)
@@ -146,8 +146,8 @@ local function InkCodes(self, t)
 	end
 end
 
--- Strings set many times a second with text that never holds one of its colour codes (the
--- coordinates): only their colour is followed, so nothing runs as their text is set.
+-- Strings set many times a second with text that never holds one of its color codes (the
+-- coordinates): only their color is followed, so nothing runs as their text is set.
 local colorOnly = setmetatable({}, { __mode = "k" })
 
 local inked = setmetatable({}, { __mode = "k" })
@@ -214,8 +214,8 @@ local FILES = {
 	["Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up"] = "next",
 	["Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up"] = "prev",
 	["Interface\\Buttons\\UI-Panel-MinimizeButton-Up"] = "close",
-	["Interface\\Buttons\\UI-MinusButton-Up"] = "grey",
-	["Interface\\Buttons\\UI-PlusButton-Up"] = "grey",
+	["Interface\\Buttons\\UI-MinusButton-Up"] = "gray",
+	["Interface\\Buttons\\UI-PlusButton-Up"] = "gray",
 	["Interface\\COMMON\\Indicator-Yellow"] = "accent",
 	["Interface\\AddOns\\OpenMap\\Media\\Textures\\MapPaper"] = "paper",
 }
@@ -287,7 +287,7 @@ local function Region(r, view)
 		done[r] = true
 		if r.SetDesaturated then r:SetDesaturated(true) end
 		r:SetVertexColor(ns.AccentOf(KEY))
-	elseif what == "grey" or what == "next" or what == "prev" then
+	elseif what == "gray" or what == "next" or what == "prev" then
 		done[r] = true
 		Grey(r, "TEXT")
 	elseif what == "paper" then
@@ -385,7 +385,7 @@ end
 local edgeTabs = setmetatable({}, { __mode = "k" })
 -- Its tabs on the map's edge (the tool rail, the dungeon's two): just the icon, cropped, no frame.
 -- The lit one (its own `selected` texture shown) gets a thin accent outline, drawn here: the
--- Kit's side tab outlines every tab, and a grey square round each icon on the map looked wrong.
+-- Kit's side tab outlines every tab, and a gray square round each icon on the map looked wrong.
 local function HideArt(icon, ...)
 	for i = 1, select("#", ...) do
 		local r = select(i, ...)
@@ -519,7 +519,7 @@ local function Piece(Kit, f, view)
 		done[f] = true
 		if f:GetOrientation() == "VERTICAL" then ThinBar(f) else SliderLook(f) end
 	elseif ns.Usable(f.Slider) and ns.Usable(f.Back) and ns.Usable(f.Forward) then
-		-- MinimalSliderWithSteppersTemplate: its arrows grey, its slider ours.
+		-- MinimalSliderWithSteppersTemplate: its arrows gray, its slider ours.
 		done[f] = true
 		for _, b in ipairs({ f.Back, f.Forward }) do
 			done[b] = true
@@ -623,7 +623,7 @@ end
 local origWindow, origPanel, origDropdown, origFont = Look.Window, Look.Panel, Look.Dropdown, Look.Font
 
 -- A window OpenMap lays on the map itself (the quill's Draw on the map tray): made as wide as its
--- tools, centred on the map, it ran past both sides of DaylightUI's narrower map. Shrunk to the
+-- tools, centered on the map, it ran past both sides of DaylightUI's narrower map. Shrunk to the
 -- map's width (never grown) each time it shows and whenever the map is resized.
 local function FitOnMap(frame)
 	local map = _G.WorldMapFrame
@@ -755,7 +755,7 @@ end
 -- The dungeon view
 -- ---------------------------------------------------------------------------------------------
 
--- Its grounds (the view, its bar, the side panel, the hint) are colour fills of its own browns,
+-- Its grounds (the view, its bar, the side panel, the hint) are color fills of its own browns,
 -- set once: a neutral dark.
 local function Grounds(view)
 	local bar = ns.Usable(view.back) and view.back:GetParent()
@@ -929,8 +929,8 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 -- Its numbers are set about twenty times a second while the map is open (and the place's name
--- under the mouse with them): plain numbers, a grey "--" and place names, none of them one of its
--- colour codes, so only their colour is followed.
+-- under the mouse with them): plain numbers, a gray "--" and place names, none of them one of its
+-- color codes, so only their color is followed.
 local function CoordsText(fs)
 	if type(fs) == "table" then colorOnly[fs] = true end
 end
@@ -978,7 +978,7 @@ end
 local function Rail()
 	if not ns.Usable(railFrame) then return end
 	RailTabs(railFrame:GetChildren())
-	-- Its arrow: the page arrow, turned; grey.
+	-- Its arrow: the page arrow, turned; gray.
 	if ns.Usable(railFrame.arrow) and ns.Usable(railFrame.arrow.icon) then Grey(railFrame.arrow.icon, "TEXT") end
 	if ns.Usable(railFrame.arrow) then ArrowRegions(railFrame.arrow:GetRegions()) end
 end

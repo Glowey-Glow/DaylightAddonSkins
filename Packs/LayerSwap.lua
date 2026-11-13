@@ -14,9 +14,9 @@
 --     outline, DaylightUI's close button and buttons (Mini bar, Swap layer, Host), its headings in
 --     the label ink, the layer bright, the rest in DaylightUI's text inks and your font. LayerSwap
 --     puts the game's gold font back on its Swap button at every refresh (once a second): your
---     font and DaylightUI's ink go back on after it, the dim ink while it's greyed.
+--     font and DaylightUI's ink go back on after it, the dim ink while it's grayed.
 --   * Its layer menu and settings menu (LayerSwapMenu, LayerSwapSettingsMenu): DaylightUI's menu
---     shell, rows in your font and the text ink, ages in the dim ink. Greyed rows stay greyed.
+--     shell, rows in your font and the text ink, ages in the dim ink. Grayed rows stay grayed.
 --   * Its mini bar (LayerSwapMini): a thin DaylightUI edge round it, your font and the text ink.
 --     Its background keeps LayerSwap's own darkness setting.
 --   * Its options page (Options, AddOns, LayerSwap): DaylightUI's switches, buttons and text inks
@@ -28,7 +28,7 @@
 -- Hooked (post-hooks only): each menu's OnShow and OnHide; the Swap / Host / Mini bar buttons'
 -- SetDisabledFontObject, OnEnable and OnDisable; the clicks of the mini bar, its logo and
 -- LayerSwap's minimap button, and its /ls command (to dress what they open at once).
--- Left as it is: its logo and the logo's light, the green / grey ON and OFF words and the orange
+-- Left as it is: its logo and the logo's light, the green / gray ON and OFF words and the orange
 -- world refresh line (they mean something), its rows' faint hover light (DaylightUI's own
 -- strength), its LibDBIcon minimap button (DaylightUI's drawer has it), and what's the game's or
 -- DaylightUI's: the tooltips over its rows (the game tooltip), its lines in chat and the chat box
@@ -94,7 +94,7 @@ local PANEL_TEXT = {      -- its texts and the ink each takes
 local PANEL_BUTTONS = { "lineButton", "swapButton", "hostButton" }
 
 -- LayerSwap gives its Swap button the game's font objects again at every refresh (the disabled
--- one last), and DaylightUI's button look repaints its text as it's enabled or greyed: your font
+-- one last), and DaylightUI's button look repaints its text as it's enabled or grayed: your font
 -- and the ink for its state go on after either.
 local buttonsDone = setmetatable({}, { __mode = "k" })
 local function ButtonText(b)
@@ -152,7 +152,7 @@ local function MenuRows(menu)
 			Font(b.age)
 			Ink(b.age, "OFF")
 		end
-		-- Its rows are white while they can be clicked and grey while not (set at each opening):
+		-- Its rows are white while they can be clicked and gray while not (set at each opening):
 		-- the clickable ones take the text ink.
 		if b:IsShown() and b:IsMouseEnabled() and ns.Usable(b.label) then
 			local r = b.label:GetTextColor()
@@ -419,7 +419,7 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 -- Its sliders (no game template): a thin track with the accent fill up to the knob and a round
--- knob that grows under the mouse. Its own thumb stays (it moves it), out of sight; its grey
+-- knob that grows under the mouse. Its own thumb stays (it moves it), out of sight; its gray
 -- track gives way to ours.
 local KNOB_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 local sliders = setmetatable({}, { __mode = "k" })
@@ -434,7 +434,7 @@ local function SliderLook(slider)
 	if not ns.Usable(thumb) then return end
 	local s = {}
 	sliders[slider] = s
-	-- Its grey track out of sight; the thumb only see-through (it's what the knob rides on).
+	-- Its gray track out of sight; the thumb only see-through (it's what the knob rides on).
 	for i = 1, slider:GetNumRegions() do
 		local r = select(i, slider:GetRegions())
 		if r ~= thumb and r.GetObjectType and r:GetObjectType() == "Texture" then ns.Kill(r) end
