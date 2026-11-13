@@ -845,6 +845,8 @@ end
 --   ready = function() end, get = function(key) end, set = function(key, value) end })
 -- An entry with `switch` instead is a plain option of the pack's (look.<addon>.<switch>), not a
 -- conflict: not asked about, applied while that switch is on.
+-- An entry marked `gone` is one DaylightUI no longer does: never asked about or listed, only kept so
+-- a setting handed over before is given back (its `ours` says false).
 -- ---------------------------------------------------------------------------------------------
 
 local handovers = {}
@@ -973,7 +975,7 @@ function ns.Conflicts(all)
 		if h and ns.Enabled(addon) and (type(h.ready) ~= "function" or h.ready()) then
 			local asked, rec = Asked(addon), Handed(addon)
 			for _, item in ipairs(h.list) do
-				if not item.switch then
+				if not item.switch and not item.gone then
 					local live = false
 					if Ours(item) then
 						local ok, cur = pcall(h.get, item.key)
@@ -1030,7 +1032,7 @@ function ns.HandoverGroup(addon)
 	local label = ns.targets[addon] or addon
 	local items = {}
 	for _, item in ipairs(h and h.list or {}) do
-		if not item.switch then
+		if not item.switch and not item.gone then
 			items[#items + 1] = { type = "toggle", key = UsePath(addon, item.key),
 				label = item.label or item.key,
 				desc = "On: DaylightUI does this" .. (item.daylight and (" (" .. item.daylight .. ")") or "")

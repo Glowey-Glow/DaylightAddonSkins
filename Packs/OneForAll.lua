@@ -328,8 +328,10 @@ ns.Handover(KEY, {
 			function() return has("QoL", "fastLoot") end),
 		C("questSparkles", "Quest loot sparkles", "loot sparkles (Quality of Life)",
 			function() return has("QoL", "lootSparkles") end, RELOAD),
+		-- DaylightUI 1.7.3 removed its object glow, so nothing does this on its side any more: kept
+		-- only so a sparkle handed over before is given back to OneForAll (never asked, never listed).
 		C("nodeGlow", "Herb and ore sparkle", "object glow (Quality of Life)",
-			function() return has("QoL", "objectGlow") end, RELOAD),
+			function() return false end, { reload = true, gone = true }),
 		C("cameraZoom", "Farther camera zoom", "camera distance (Quality of Life)",
 			function() return has("QoL", "cameraZoom", notOne) end, RELOAD),
 		C("hideErrors", "Hide error messages", "quiet errors and its own error text (Quality of Life)",
