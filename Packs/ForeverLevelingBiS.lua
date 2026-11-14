@@ -5,8 +5,15 @@
 -- five font objects of its own (ForeverLevelingBiSFont*), which get the player's font here each
 -- time it sets them; and its windows are found by the flat backdrop its W.Window gives them.
 -- Only its Modern theme is dressed: pick Classic or a skin in its own settings and it is left as
--- it draws it. Left alone: its buttons, tabs, rows and selectors (it recolors them on every
--- hover and pick), its scroll bars, bubbles, question boxes and tooltip lines, and its accent.
+-- it draws it. It fixes its theme for the session (a change takes a reload), so the theme is read
+-- once, after login, and kept until the reload too.
+-- The selectors' list beside the Character frame is moved there on the first click of a selector
+-- in the gear panel: the panel's buttons' clicks look for it straight after, so it's dressed
+-- before it's drawn.
+-- Left alone: its buttons, tabs, rows and selectors (it recolors them on every hover and pick),
+-- its scroll bars, bubbles, tooltip lines and its accent, and its question boxes (W.Confirm's and
+-- W.Coach's, with a pointer notch and a pulsing halo of their own; their ground is a window's, so
+-- they're told apart by the marks the addon gives them and skipped).
 -- Nothing is written to its saved settings.
 local _, ns = ...
 if not ns.ok then return end
@@ -16,11 +23,17 @@ ns.Target("ForeverLevelingBiS", "Forever Leveling BiS", { window = true, text = 
 local KEY = "ForeverLevelingBiS"
 local abs = math.abs
 
--- Its theme, as the player set it (read only): a skin or Classic is left alone.
+-- Its theme, as the player set it (read only): a skin or Classic is left alone. It keeps the one
+-- set when its first widget is made (its saved settings are in by then) until a reload: kept here
+-- from the first read after login (a change in its settings before the reload isn't drawn yet).
+local sessionModern
 local function Modern()
+	if sessionModern ~= nil then return sessionModern end
 	local db = _G.ForeverLevelingBiSDB
 	local theme = type(db) == "table" and type(db.display) == "table" and db.display.theme
-	return theme == nil or theme == "modern"
+	local modern = theme == nil or theme == "modern"
+	if type(db) == "table" and IsLoggedIn() then sessionModern = modern end
+	return modern
 end
 
 local function On()
@@ -82,6 +95,8 @@ end
 -- "window", "list" or nil.
 local function Kind(f)
 	if not ns.Usable(f) or f:GetObjectType() ~= "Frame" or not f.GetBackdrop then return nil end
+	-- Its question boxes (left alone: see the top).
+	if f.isConfirm or f.isCoach then return nil end
 	local bd = f:GetBackdrop()
 	if type(bd) ~= "table" or bd.edgeSize ~= 1 or type(bd.bgFile) ~= "string" or bd.bgFile:lower() ~= WHITE then
 		return nil
@@ -124,7 +139,7 @@ end
 
 local function Dress(f, kind)
 	if dressed[f] then return end
-	dressed[f] = true
+	dressed[f] = kind
 	ns.NoBackdrop(f)
 	-- It may lay its backdrop on again: taken straight back off.
 	local clearing = false
@@ -148,14 +163,20 @@ end
 
 -- Its windows among root and what is in it, `depth` levels down (parents first, so a dialog knows
 -- its window is dressed).
-local function Scan(root, depth)
+local Scan
+-- (The children as the game hands them back, with no table made: this runs twice a second.)
+local function ScanChildren(depth, ...)
+	for i = 1, select("#", ...) do
+		local child = select(i, ...)
+		if ns.Usable(child) and child:GetObjectType() == "Frame" then Scan(child, depth) end
+	end
+end
+function Scan(root, depth)
 	if not ns.Usable(root) then return end
 	local kind = not dressed[root] and Kind(root)
 	if kind then Dress(root, kind) end
 	if depth <= 0 or not root.GetChildren then return end
-	for _, child in ipairs({ root:GetChildren() }) do
-		if ns.Usable(child) and child:GetObjectType() == "Frame" then Scan(child, depth - 1) end
-	end
+	ScanChildren(depth - 1, root:GetChildren())
 end
 
 local function Guarded(fn)
@@ -182,12 +203,42 @@ local function Main(frame)
 	if frame:IsShown() and not ticker then ticker = C_Timer.NewTicker(0.5, Guarded(Look)) end
 end
 
+-- The gear panel's buttons, `depth` levels down: a click on one (a selector's box among them)
+-- looks again at once, for the list it may just have moved into the Character frame.
+local clicks = setmetatable({}, { __mode = "k" })
+local function HookClicks(f, depth, look)
+	for _, child in ipairs({ f:GetChildren() }) do
+		if ns.Usable(child) then
+			if child:GetObjectType() == "Button" then
+				if not clicks[child] then
+					clicks[child] = true
+					child:HookScript("OnClick", look)
+				end
+			elseif depth > 0 then
+				HookClicks(child, depth - 1, look)
+			end
+		end
+	end
+end
+
 -- My gear beside the Character frame: on a holder of its own in the Character frame.
 local function Sheet()
 	local cf = _G.CharacterFrame
 	if not ns.Usable(cf) or not cf.HookScript then return end
+	local function Clicked()
+		if On() then ns.Guard(Scan, cf, 2) end
+	end
 	local function Look()
-		if On() then Scan(cf, 2) end
+		if not On() then return end
+		Scan(cf, 2)
+		-- The panel is the window on its holder (two down).
+		for _, holder in ipairs({ cf:GetChildren() }) do
+			if ns.Usable(holder) and holder:GetObjectType() == "Frame" and not holder:GetName() then
+				for _, panel in ipairs({ holder:GetChildren() }) do
+					if dressed[panel] == "window" then HookClicks(panel, 4, Clicked) end
+				end
+			end
+		end
 	end
 	cf:HookScript("OnShow", function()
 		C_Timer.After(0, Guarded(Look))

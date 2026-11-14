@@ -3,6 +3,16 @@
 -- player's font, accent and text colors in its palette. Only its house look ("polestar") is
 -- changed; pick another look in Polestar's own options and it is left as Polestar draws it.
 -- Nothing is written to Polestar's saved settings.
+-- Through the palette: DaylightUI's window ground for Polestar's navy (bg, scrim, shade: the
+-- header fades of its nav alerts, rare toasts, Guide End, Route Choice, Welcome and What's New,
+-- the zone-art fades, the world map's info bar), picked rows in the accent (selected).
+-- Through its paint: windows and the popups that stand alone (PolestarMenu, which holds every
+-- dropdown's list and the minimap button's menu; PolestarLootNeeds; the gamepad hint bar) wear
+-- DaylightUI's shell; panels inside a window keep Polestar's raised ground.
+-- Hooked: the level-gain panel (LevelTip.Show) gets the shell; the "Polestar" game menu button
+-- (after each GameMenu.Mirror) gets DaylightUI's button look; the minimap button's round back is
+-- hidden while DaylightUI's drawer holds it. Left alone on purpose: where the world map's info
+-- bar (PolestarMapInfo) sits and whether it shows, and Polestar's optional minimap coordinates.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -67,6 +77,8 @@ local function Overlay(p)
 		Set(p, "accentLine", ar, ag, ab, 0.35)
 		Set(p, "padSelect", ar, ag, ab, 0.12)
 		Set(p, "chipAccent", ar, ag, ab, 0.16)
+		-- A picked row (the rail, Lookup, the guide menu, the lists) in the accent, not white.
+		Set(p, "selected", ar, ag, ab, 0.14)
 		local light = 0.2126 * ar + 0.7152 * ag + 0.0722 * ab
 		if light > 0.55 then Set(p, "onAccent", 0.05, 0.05, 0.06, 1) else Set(p, "onAccent", 1, 1, 1, 1) end
 		-- The waypoint arrow follows the accent (and "good" up close), unless the player picked
@@ -91,6 +103,12 @@ local function Overlay(p)
 		local c = p[name]
 		if type(c) == "table" then p[name] = { c[1], c[2], c[3], 0 } end
 	end
+	-- The window ground (DaylightUI's own, #141417) and the darker one under text on zone art,
+	-- in place of Polestar's navy: the header fades of its alerts, toasts, Guide End, Route
+	-- Choice, Welcome and What's New, the zone-art fades and the world map's info bar.
+	Set(p, "bg", 0.078, 0.078, 0.090)
+	Set(p, "scrim", 0.035, 0.035, 0.04)
+	Set(p, "shade", 0, 0, 0)
 	-- Raised panels, menus and controls: neutral darks that sit on any dark ground.
 	Set(p, "panel", 0.075, 0.075, 0.085, 0.98)
 	Set(p, "menuBg", 0.075, 0.075, 0.085, 0.98)
@@ -172,6 +190,72 @@ T.SKIN_PAINT.polestar.window = function(f)
 	end
 end
 
+-- Panel paint: the popups that stand on their own (every dropdown's list and the minimap
+-- button's menu in PolestarMenu, the party loot list, the gamepad hint bar) wear DaylightUI's
+-- shell; the panels inside a window keep Polestar's raised ground.
+local housePanel = T.Paint.house.panel
+local POPUPS = { PolestarMenu = true, PolestarLootNeeds = true }
+
+local function Popup(f)
+	local name = f.GetName and f:GetName()
+	if name and POPUPS[name] then return true end
+	local parent = f.GetParent and f:GetParent()
+	return parent ~= nil and (parent == UIParent or parent == P.UIParent)
+end
+
+local POPUP_SHELL = { window = true, bgAlpha = 0.98 }
+
+local function Panel(f)
+	if not ns.Enabled(KEY) or not Popup(f) then return housePanel(f) end
+	if f.psBare then
+		housePanel(f)
+		if shelled[f] == "on" then
+			shelled[f] = "bare"
+			ns.Shell(f, BARE, KEY)
+		end
+		return
+	end
+	HideHouse(f)
+	if shelled[f] ~= "on" then
+		shelled[f] = "on"
+		ns.Shell(f, POPUP_SHELL, KEY)
+	end
+end
+
+if type(housePanel) == "function" then
+	T.SKIN_PAINT.polestar.panel = function(f)
+		local ok, err = pcall(Panel, f)
+		if not ok then
+			geterrorhandler()(err)
+			housePanel(f)
+		end
+	end
+end
+
+-- The level-gain panel (a route's "+1.3 levels" chip, hovered): Polestar's square edge and
+-- ground off, DaylightUI's shell on. Made on the first hover.
+local tip
+local function TipLook(on)
+	if not tip then return end
+	if tip.Edge then tip.Edge:SetShown(not on) end
+	if tip.Ground then tip.Ground:SetShown(not on) end
+end
+
+local LevelTip = type(P.UI) == "table" and P.UI.LevelTip
+if type(LevelTip) == "table" and type(LevelTip.Show) == "function" and type(LevelTip.Frame) == "function" then
+	hooksecurefunc(LevelTip, "Show", function()
+		if not On() then return end
+		local f = LevelTip.Frame()
+		if not ns.Usable(f) then return end
+		tip = f
+		if shelled[f] ~= "on" then
+			shelled[f] = "on"
+			TipLook(true)
+			ns.Shell(f, POPUP_SHELL, KEY)
+		end
+	end)
+end
+
 -- Another Polestar look picked: take the shell back off the windows it was on.
 if type(T.OnChanged) == "function" then
 	T.OnChanged(function()
@@ -181,10 +265,126 @@ if type(T.OnChanged) == "function" then
 			if state == "on" and ns.Usable(f) then
 				shelled[f] = "bare"
 				ns.Shell(f, BARE, KEY)
+				if f == tip then TipLook(false) end
 			end
 		end
 	end)
 end
+
+-- ---------------------------------------------------------------------------------------------
+-- The "Polestar" button in the game menu (Esc)
+-- ---------------------------------------------------------------------------------------------
+
+-- Polestar's button copies the look of the menu button above it each time the menu opens
+-- (GameMenu.Mirror): with DaylightUI's menu that means a grey box of its own, white edge lines
+-- and a white hover over it, and the alphas of its neighbour's pieces put on its own. It wears
+-- DaylightUI's button look instead, like the menu's other buttons, put right after every copy.
+local GameMenu = type(P.UI) == "table" and P.UI.GameMenu or nil
+local MENU_ART = { "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture" }
+local MENU_PARTS = { "Left", "Middle", "Right", "Center" }
+local menuKit = setmetatable({}, { __mode = "k" })   -- button -> { texture = true } of Kit's look
+local menuLit = setmetatable({}, { __mode = "k" })   -- button -> its lit line's color as Kit made it
+
+local function KitPieces(s)
+	local mine = {}
+	for _, k in ipairs({ "outline", "band", "fill", "lit" }) do
+		if type(s[k]) == "table" then mine[s[k]] = true end
+	end
+	local tr = s.trace
+	if type(tr) == "table" then
+		for _, k in ipairs({ "top", "right", "left", "bottom" }) do
+			if type(tr[k]) == "table" then mine[tr[k]] = true end
+		end
+		if type(tr.gleams) == "table" then
+			for i = 1, #tr.gleams do mine[tr.gleams[i]] = true end
+		end
+	end
+	return mine
+end
+
+local function MenuRegions(mine, ...)
+	for i = 1, select("#", ...) do
+		local r = select(i, ...)
+		if r and r.GetObjectType and r:GetObjectType() == "Texture" then
+			if mine[r] then
+				r:SetAlpha(1)
+			elseif r:GetDrawLayer() == "HIGHLIGHT" then
+				ns.Kill(r)   -- Polestar's white hover (and the template's)
+			end
+		end
+	end
+end
+
+local function MenuChildren(...)
+	for i = 1, select("#", ...) do
+		local c = select(i, ...)
+		-- Polestar's own box behind the label: an unnamed frame of its own.
+		if ns.Usable(c) and c:GetObjectType() == "Frame" and not c:GetName() then ns.Kill(c) end
+	end
+end
+
+local function MenuButton()
+	if not ns.Enabled(KEY) then return end
+	local Kit = ns.Kit
+	local b = GameMenu.Button()
+	if not Kit or not ns.Usable(b) then return end
+	if ns.Controls(KEY) and ns.Once(b) then ns.Guard(Kit.Button, b) end
+	local s = type(Kit.ButtonOf) == "function" and Kit.ButtonOf(b) or nil
+	if type(s) ~= "table" then return end
+	local mine = menuKit[b]
+	if not mine then
+		mine = KitPieces(s)
+		menuKit[b] = mine
+		if s.lit and s.lit.GetVertexColor then menuLit[b] = { s.lit:GetVertexColor() } end
+	end
+	-- The template's art, as Kit.Button hides it (the copy may have put it back).
+	for _, get in ipairs(MENU_ART) do
+		if b[get] then Kit.Hide(b[get](b)) end
+	end
+	local name = b:GetName()
+	for _, k in ipairs(MENU_PARTS) do
+		Kit.Hide(b[k])
+		if name then Kit.Hide(_G[name .. k]) end
+	end
+	MenuRegions(mine, b:GetRegions())
+	MenuChildren(b:GetChildren())
+	local lit = menuLit[b]
+	if lit and s.lit then s.lit:SetVertexColor(lit[1], lit[2], lit[3], lit[4]) end
+	if type(s.Paint) == "function" then s.Paint() end
+end
+
+if type(GameMenu) == "table" and type(GameMenu.Mirror) == "function" and type(GameMenu.Button) == "function" then
+	hooksecurefunc(GameMenu, "Mirror", function()
+		local ok, err = pcall(MenuButton)
+		if not ok then geterrorhandler()(err) end
+	end)
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- The minimap button: its round dark back off while DaylightUI's drawer (or another collector)
+-- holds it in a square cell of its own; back on when it is on the minimap's edge again.
+-- ---------------------------------------------------------------------------------------------
+
+local function BackOf(btn, ...)
+	for i = 1, select("#", ...) do
+		local r = select(i, ...)
+		if r and r.GetObjectType and r:GetObjectType() == "Texture" and r ~= btn.Icon and r:GetDrawLayer() == "BACKGROUND" then
+			return r
+		end
+	end
+end
+
+ns.Watch(KEY, "PolestarMinimapButton", function(btn)
+	if not ns.Usable(btn) or not ns.Once(btn) then return end
+	local back = BackOf(btn, btn:GetRegions())
+	if not back then return end
+	local function Fit()
+		if not ns.Enabled(KEY) then return end
+		back:SetShown(btn:GetParent() == _G.Minimap)
+	end
+	hooksecurefunc(btn, "SetParent", Fit)
+	Fit()
+end)
 
 -- Windows made before this file ran (the guide window) are repainted at login, and everything
 -- follows when the DaylightUI look changes. One repaint a frame at most, however many asked.

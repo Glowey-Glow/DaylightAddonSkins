@@ -1,4 +1,9 @@
 -- LootTriage: its one window is the unnamed "What's New" dialog, opened from its settings page.
+-- DaylightUI's window shell, its Okay button, and its two page arrows at the top right (unnamed
+-- buttons with the spellbook's page art: the right one turns to older notes, the one left of it to
+-- newer) as DaylightUI's page buttons, grayed by the addon at either end as before.
+-- Left as it is: the gold version and section headings and item names in the notes (color codes
+-- in the text, readable on the dark shell, which DaylightUI's text lighting keeps as they are).
 -- Bag marks, loot marks and tooltip lines are its display and are left alone.
 local _, ns = ...
 if not ns.ok then return end
@@ -37,10 +42,19 @@ ns.Pack("LootTriage", "LootTriage", function()
 			if region:GetObjectType() == "Texture" and region:GetDrawLayer() == "BACKGROUND" then ns.Kill(region) end
 		end
 		ns.Shell(dialog, { window = true })
+		if not ns.Controls("LootTriage") then return end
 		for _, child in ipairs({ dialog:GetChildren() }) do
 			if ns.Usable(child) and child:GetObjectType() == "Button" then
 				local text = child:GetText()
-				if text and text ~= "" and ns.Controls("LootTriage") and ns.Once(child) then ns.Guard(Kit.Button, child) end
+				if text and text ~= "" then
+					if ns.Once(child) then ns.Guard(Kit.Button, child) end
+				elseif ns.Once(child) then
+					-- A page arrow: the one pinned to the dialog's top right shows older notes (a right
+					-- arrow); the other sits left of it and shows newer ones.
+					local point, rel = child:GetPoint(1)
+					local older = point == "TOPRIGHT" and rel == dialog
+					ns.Guard(Kit.PageButton, child, older and "right" or "left")
+				end
 			end
 		end
 	end)

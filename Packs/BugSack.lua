@@ -4,7 +4,8 @@
 -- the four tabs under the window (All bugs, Current session, Previous session, Options), and the
 -- Options page (its checkboxes, the font size and sound dropdowns, and Wipe saved bugs).
 -- Left to DaylightUI: the minimap button (LibDBIcon, gathered by DaylightUI's drawer), the "Send
--- bugs" popup (the game's StaticPopup), tooltips and the dropdowns' menus.
+-- bugs" popup (the game's StaticPopup), tooltips and the dropdowns' menus. Left as it is: the
+-- speaker icon beside the sound dropdown that plays the picked sound (an icon, not chrome).
 local _, ns = ...
 if not ns.ok then return end
 
@@ -32,28 +33,50 @@ end
 
 -- The session line is a button whose words come from its font objects (plain, and brighter under
 -- the mouse), so the look goes on its own copies of them. Its colored parts (who sent it, the
--- session number) are color codes in the text and stay.
+-- session number) are color codes in the text and stay. Made once and filled again when
+-- DaylightUI's style or this window's look changes (the button keeps the same objects).
 local titleFont, titleHover
-local function TitleFonts()
-	if titleFont then return titleFont, titleHover end
+local function FillTitleFonts()
+	if not titleFont then return end
 	local base = _G.GameFontNormalLeft
-	local _, size, flags = base:GetFont()
+	local path, size, flags = base:GetFont()
 	local face
 	local ok, f = pcall(API.Font)
 	if ok and type(f) == "string" then face = f end
-	face, size, flags = ns.FontFor(KEY, face or (base:GetFont()), size, flags)
+	face, size, flags = ns.FontFor(KEY, face or path, size, flags)
 	local c = ns.Colors()
-	titleFont = CreateFont("DaylightAddonSkinsBugSackTitle")
 	titleFont:CopyFontObject(base)
-	titleFont:SetFont(face, size, flags or "")
+	if face and size then titleFont:SetFont(face, size, flags or "") end
 	local v = c.VALUE or { 1, 1, 1 }
 	titleFont:SetTextColor(v[1], v[2], v[3])
-	titleHover = CreateFont("DaylightAddonSkinsBugSackTitleHover")
 	titleHover:CopyFontObject(titleFont)
 	local t = c.TEXT or { 1, 1, 1 }
 	titleHover:SetTextColor(t[1], t[2], t[3])
+end
+
+local function TitleFonts()
+	if titleFont then return titleFont, titleHover end
+	titleFont = CreateFont("DaylightAddonSkinsBugSackTitle")
+	titleHover = CreateFont("DaylightAddonSkinsBugSackTitleHover")
+	FillTitleFonts()
 	return titleFont, titleHover
 end
+
+local refillQueued = false
+local function Refill()
+	refillQueued = false
+	if titleFont then ns.Guard(FillTitleFonts) end
+end
+local function QueueRefill()
+	if not titleFont or refillQueued then return end
+	refillQueued = true
+	C_Timer.After(0, Refill)
+end
+ns.me.On("StyleChanged", QueueRefill)
+ns.me.On("SettingChanged", function(scope, path)
+	if scope ~= "DaylightAddonSkins" or type(path) ~= "string" then return end
+	if path == "followDaylight" or string.sub(path, 1, 13) == "look.BugSack." then QueueRefill() end
+end)
 
 local function Ink(Kit, fs, role)
 	if not ns.Usable(fs) then return end
@@ -177,16 +200,21 @@ local function Now()
 end
 
 ns.Pack("BugSack", "BugSack", function()
-	-- The window is made on its first opening. Dressed straight after the minimap button's click
-	-- or /bugsack opened it; when it pops up by itself on an error, as soon as it's found.
-	local ldb = type(LibStub) == "table" and LibStub("LibDataBroker-1.1", true)
-	local obj = ldb and ldb:GetDataObjectByName("BugSack")
-	if type(obj) == "table" and type(obj.OnClick) == "function" then
-		hooksecurefunc(obj, "OnClick", function() ns.Guard(Now) end)
-	end
-	local slash = _G.SlashCmdList
-	if type(slash) == "table" and type(slash.BugSack) == "function" then
-		hooksecurefunc(slash, "BugSack", function() ns.Guard(Now) end)
-	end
+	-- The window is made on its first opening. Watched for first (so a failing hook below can't
+	-- keep it undressed); dressed straight after the minimap button's click or /bugsack opened it,
+	-- and when it pops up by itself on an error, as soon as it's found.
 	ns.Watch(KEY, "BugSackFrame", function(frame, Kit) Dress(frame, Kit) end)
+	pcall(function()
+		local ldb = type(LibStub) == "table" and LibStub("LibDataBroker-1.1", true)
+		local obj = ldb and ldb:GetDataObjectByName("BugSack")
+		if type(obj) == "table" and type(obj.OnClick) == "function" then
+			hooksecurefunc(obj, "OnClick", function() ns.Guard(Now) end)
+		end
+	end)
+	pcall(function()
+		local slash = _G.SlashCmdList
+		if type(slash) == "table" and type(slash.BugSack) == "function" then
+			hooksecurefunc(slash, "BugSack", function() ns.Guard(Now) end)
+		end
+	end)
 end, { window = true, controls = true, text = true })

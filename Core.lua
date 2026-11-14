@@ -830,6 +830,114 @@ function ns.PlainWindow(frame, opts, key)
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- Icon tabs as clean tiles (the game's "side tab" look other addons borrow: TrueshotLodge's tabs,
+-- Questie's settings tabs, OpenMap's tabs on the map's edge). Each becomes a square of DaylightUI's
+-- tab look with the icon cropped and centered in an even margin; the picked one's edge is the
+-- accent (flat), the others neutral with their icon a little dimmed until the mouse is on them.
+-- ns.SideTile(tab, opts): opts.picked(tab) says whether it's picked (required); opts.icon = its
+-- icon texture (default tab.Icon or tab.icon); opts.mouse = the frame that takes the mouse
+-- (default tab); opts.key = the addon whose accent it follows. Two ways of placing it:
+--   opts.copy: the icon is drawn again on a tile of ours (size opts.size, at opts.point of the tab,
+--     default its LEFT; a small symbol keeps its size with opts.iconSize) and the original hidden,
+--     for a template that moves, mirrors or masks its icon;
+--   otherwise the tile sits round the icon where it is (opts.pad, default 4), the icon kept.
+-- Call ns.SideTilePaint(tab) whenever the addon may have changed which one is picked.
+-- ---------------------------------------------------------------------------------------------
+
+local tiles = setmetatable({}, { __mode = "k" })   -- tab -> its tile
+local TILE_PAD, TILE_DIM = 4, 0.72
+
+function ns.SideTilePaint(tab)
+	local t = tiles[tab]
+	local Kit = ns.Kit
+	if not t or not Kit or not ns.Enabled(t.key) then return end
+	local on = t.picked(tab) == true
+	local hover = Usable(t.mouse) and t.mouse:IsMouseOver() == true
+	local border
+	if on then
+		border = t.accent
+		border[1], border[2], border[3] = ns.AccentOf(t.key)
+	elseif hover then
+		border = Kit.ROW_HOVER or Kit.TAB_BORDER
+	else
+		border = Kit.TAB_BORDER
+	end
+	if t.shell then Kit.Paint(t.shell, border) end
+	t.icon:SetAlpha((on or hover) and 1 or TILE_DIM)
+end
+
+local function PaintAllTiles()
+	for tab in pairs(tiles) do Guard(ns.SideTilePaint, tab) end
+end
+local tilesQueued = false
+local function PaintTilesSoon()
+	if tilesQueued then return end
+	tilesQueued = true
+	C_Timer.After(0, function() tilesQueued = false PaintAllTiles() end)
+end
+ns.SideTilesPaintSoon = PaintTilesSoon
+
+function ns.SideTile(tab, opts)
+	local Kit = ns.Kit
+	if not Kit or not Usable(tab) or tiles[tab] or type(opts) ~= "table" or type(opts.picked) ~= "function" then return end
+	local source = opts.icon or tab.Icon or tab.icon
+	if not (Usable(source) and source.GetObjectType and source:GetObjectType() == "Texture") then return end
+	local key = opts.key or current
+	local mouse = Usable(opts.mouse) and opts.mouse or tab
+	local tile = CreateFrame("Frame", nil, tab)
+	tile:EnableMouse(false)
+	local icon
+	if opts.copy then
+		local size = opts.size or math.floor((tab:GetHeight() or 40) - 4 + 0.5)
+		tile:SetSize(size, size)
+		local point = opts.point or "LEFT"
+		tile:SetPoint(point, tab, point, 0, 0)
+		icon = tile:CreateTexture(nil, "ARTWORK")
+		-- A picture fills the tile's inside (cropped of its own frame); a small symbol (opts.iconSize)
+		-- keeps its size, centered.
+		local small = opts.iconSize
+		if small then
+			icon:SetSize(small, small)
+			icon:SetPoint("CENTER", tile, "CENTER", 0, 0)
+		else
+			icon:SetPoint("TOPLEFT", tile, "TOPLEFT", TILE_PAD, -TILE_PAD)
+			icon:SetPoint("BOTTOMRIGHT", tile, "BOTTOMRIGHT", -TILE_PAD, TILE_PAD)
+		end
+		local function crop() if not small then icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end end
+		local ok, atlas = pcall(source.GetAtlas, source)
+		if ok and type(atlas) == "string" and atlas ~= "" then icon:SetAtlas(atlas) else icon:SetTexture(source:GetTexture()) crop() end
+		hooksecurefunc(source, "SetTexture", function(_, file) icon:SetTexture(file) crop() end)
+		hooksecurefunc(source, "SetAtlas", function(_, atlas) icon:SetAtlas(atlas) end)
+		Kit.Erase(source)
+	else
+		-- Behind the tab's own parts, round the icon.
+		local pad = opts.pad or TILE_PAD
+		tile:SetFrameLevel(math.max(0, tab:GetFrameLevel() - 1))
+		tile:SetPoint("TOPLEFT", source, "TOPLEFT", -pad, pad)
+		tile:SetPoint("BOTTOMRIGHT", source, "BOTTOMRIGHT", pad, -pad)
+		if source.GetNumMaskTextures and source.RemoveMaskTexture then
+			for i = source:GetNumMaskTextures(), 1, -1 do pcall(source.RemoveMaskTexture, source, source:GetMaskTexture(i)) end
+		end
+		source:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		icon = source
+	end
+	local t = { key = key, picked = opts.picked, mouse = mouse, icon = icon, accent = { 1, 1, 1 }, tile = tile }
+	t.shell = Kit.Shell(tile, "tab")
+	tiles[tab] = t
+	local function paint() ns.SideTilePaint(tab) end
+	mouse:HookScript("OnEnter", paint)
+	mouse:HookScript("OnLeave", paint)
+	-- A click anywhere may pick another tab: all of them, next frame.
+	mouse:HookScript("OnMouseUp", PaintTilesSoon)
+	tab:HookScript("OnShow", PaintTilesSoon)
+	ns.SideTilePaint(tab)
+	return t
+end
+
+me.On("StyleChanged", PaintTilesSoon)
+me.On("SettingChanged", function(scope) if scope == ADDON then PaintTilesSoon() end end)
+
+-- ---------------------------------------------------------------------------------------------
 -- Conflicts: what an addon does that DaylightUI already does (or that fights a frame DaylightUI
 -- owns). The rule for every pack: DaylightUI's copy wins by default. Each pack lists its
 -- conflicts (ns.Handover); on first load the player is asked about each one that is live (both

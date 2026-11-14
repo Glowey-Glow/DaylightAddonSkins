@@ -1,12 +1,12 @@
 ## Interface: 16001
 ## Title: Addon Skins for |cffa335eeDaylightUI|r
-## Notes: A DaylightUI plugin: dresses the windows of your other addons (Keep or Toss, DoesItDie, Camping Kit, LootTriage, OpenMap, Spoken, Forever Fishing, Polestar, Forever Leveling BiS, Journey Guides, OneForAll, Questie, Dialogue UI, Shortest Path Forever, Dungeon Journal, Total RP 3, RareScanner, LayerSwap, BugSack) in the DaylightUI look. Needs DaylightUI and its Window Skins module.
+## Notes: A DaylightUI plugin: dresses the windows of your other addons (Keep or Toss, DoesItDie, Camping Kit, LootTriage, OpenMap, Spoken, Forever Fishing, Polestar, Forever Leveling BiS, Journey Guides, OneForAll, Questie, Dialogue UI, Shortest Path Forever, Dungeon Journal, Total RP 3, RareScanner, LayerSwap, BugSack, TrueshotLodge), and the game windows DaylightUI leaves bare, in the DaylightUI look. Needs DaylightUI and its Window Skins module.
 ## Author: Glowey
 ## X-License: All Rights Reserved
 ## X-Curse-Project-ID: 1799579
 ## Version: @project-version@
 ## Dependencies: DaylightUI
-## OptionalDeps: DaylightUI_Skins, CampingKit, DoesItDie, KeepOrToss, LootTriage, OpenMap, Spoken, ForeverFishing, Polestar, ForeverLevelingBiS, Journey, OneForAll, Questie, DialogueUI, ShortestPathForever, ForeverCore, ForeverDungeonJournal, totalRP3, RareScanner, LayerSwap, BugSack
+## OptionalDeps: DaylightUI_Skins, CampingKit, DoesItDie, KeepOrToss, LootTriage, OpenMap, Spoken, ForeverFishing, Polestar, ForeverLevelingBiS, Journey, OneForAll, Questie, DialogueUI, ShortestPathForever, ForeverCore, ForeverDungeonJournal, totalRP3, RareScanner, LayerSwap, BugSack, TrueshotLodge
 ## SavedVariables: DaylightAddonSkinsDB
 
 Core.lua
@@ -30,5 +30,9 @@ Packs\TotalRP3.lua
 Packs\RareScanner.lua
 Packs\LayerSwap.lua
 Packs\BugSack.lua
+Packs\TrueshotLodge.lua
+Packs\Blizzard.lua
+Packs\BlizzardSettings.lua
+Packs\Ace3.lua
 Options.lua
 Choices.lua

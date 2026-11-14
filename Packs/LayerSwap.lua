@@ -14,7 +14,10 @@
 --     outline, DaylightUI's close button and buttons (Mini bar, Swap layer, Host), its headings in
 --     the label ink, the layer bright, the rest in DaylightUI's text inks and your font. LayerSwap
 --     puts the game's gold font back on its Swap button at every refresh (once a second): your
---     font and DaylightUI's ink go back on after it, the dim ink while it's grayed.
+--     font and DaylightUI's ink go back on after it, the dim ink while it's grayed. Its "Ask your
+--     guild" entry (LayerSwapPanelGuildButton, shown only in a guild): its title on font objects of
+--     ours (the label ink, the accent under the mouse; LayerSwap sets them once, as it builds the
+--     entry), its "Guild chat reaches every layer" line in your font and the text ink.
 --   * Its layer menu and settings menu (LayerSwapMenu, LayerSwapSettingsMenu): DaylightUI's menu
 --     shell, rows in your font and the text ink, ages in the dim ink. Grayed rows stay grayed.
 --   * Its mini bar (LayerSwapMini): a thin DaylightUI edge round it, your font and the text ink.
@@ -28,7 +31,8 @@
 -- Hooked (post-hooks only): each menu's OnShow and OnHide; the Swap / Host / Mini bar buttons'
 -- SetDisabledFontObject, OnEnable and OnDisable; the clicks of the mini bar, its logo and
 -- LayerSwap's minimap button, and its /ls command (to dress what they open at once).
--- Left as it is: its logo and the logo's light, the green / gray ON and OFF words and the orange
+-- Left as it is: its logo and the logo's light, the guild entry's emblem (the guild's own tabard)
+-- and its faint 0.08 hover light, the green / gray ON and OFF words and the orange
 -- world refresh line (they mean something), its rows' faint hover light (DaylightUI's own
 -- strength), its LibDBIcon minimap button (DaylightUI's drawer has it), and what's the game's or
 -- DaylightUI's: the tooltips over its rows (the game tooltip), its lines in chat and the chat box
@@ -113,6 +117,42 @@ local function PanelButton(b)
 	ButtonText(b)
 end
 
+-- The guild entry's title takes its words' look from the button's font objects (gold, white under
+-- the mouse): its own copies of them, made once and filled again when the style or look changes.
+local guildFont, guildHover
+local function FillGuildFonts()
+	if not guildFont then return end
+	local base = _G.GameFontNormal
+	local path, size, flags = base:GetFont()
+	local face
+	face, size, flags = ns.FontFor(KEY, path, size, flags)
+	guildFont:CopyFontObject(base)
+	if face and size then guildFont:SetFont(face, size, flags or "") end
+	guildHover:CopyFontObject(guildFont)
+	if ns.Look(KEY, "daylightColors") == false then
+		-- The addon's own colors: gold, white under the mouse.
+		local h = _G.GameFontHighlight
+		if h then guildHover:SetTextColor(h:GetTextColor()) end
+		return
+	end
+	local c = ns.Colors().LABEL or { 1, 1, 1 }
+	guildFont:SetTextColor(c[1], c[2], c[3])
+	guildHover:SetTextColor(ns.AccentOf(KEY))
+end
+
+local function GuildEntry(ge)
+	if not ns.Usable(ge) or not ge.SetNormalFontObject or not ns.Once(ge) then return end
+	if not guildFont then
+		guildFont = CreateFont("DaylightAddonSkinsLayerSwapGuild")
+		guildHover = CreateFont("DaylightAddonSkinsLayerSwapGuildHover")
+		FillGuildFonts()
+	end
+	ge:SetNormalFontObject(guildFont)
+	ge:SetHighlightFontObject(guildHover)
+	Font(ge.line)
+	Ink(ge.line, "TEXT")
+end
+
 local function Panel(p, Kit)
 	if not ns.Once(p) then return end
 	KillFlat(p:GetRegions())
@@ -135,6 +175,7 @@ local function Panel(p, Kit)
 		end
 	end
 	for _, key in ipairs(PANEL_BUTTONS) do PanelButton(p[key]) end
+	GuildEntry(p.guildButton)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -534,6 +575,10 @@ ns.Pack(KEY, nil, function(Kit)
 		if scope == "DaylightAddonSkins" and type(path) == "string"
 			and (path == "look." .. KEY .. ".dock" or path == KEY) then
 			ns.Guard(ApplyDock)
+		elseif scope == "DaylightAddonSkins" and type(path) == "string"
+			and (path == "followDaylight" or string.sub(path, 1, #KEY + 6) == "look." .. KEY .. ".") then
+			-- Its font, colors or accent picked on its page: the guild entry's title follows.
+			C_Timer.After(0, function() ns.Guard(FillGuildFonts) end)
 		elseif scope == "InfoPanel" then
 			ns.Guard(ApplyDock)
 		end
@@ -545,6 +590,7 @@ ns.Pack(KEY, nil, function(Kit)
 			DockPaint()
 		end
 		for _, s in pairs(sliders) do SliderPaint(s) end
+		ns.Guard(FillGuildFonts)
 	end)
 	-- DaylightUI places its map (and may raise it) as the world loads: the button's level and
 	-- place follow it.

@@ -50,7 +50,11 @@
 --     its title and field names in DaylightUI's inks and its copy box DaylightUI's; the custom
 --     NPC import / export dialog DaylightUI's shell, button, scroll bar and a quiet well round the
 --     text. The rest of its settings are AceConfig's, which DaylightUI's Ace3 skin dresses
---     (SharedMedia sound pickers included).
+--     (SharedMedia sound pickers included). What that skin leaves gold is inked here, for every
+--     addon's AceConfig pages, not only RareScanner's (Packs/Ace3.lua): a settings tree's
+--     lines (Map options' Icons, Timers...) in DaylightUI's label ink at rest and its value ink
+--     hovered or picked, and text in GameFontNormal's gold code (Profiles' "Current Profile:"
+--     value) in the value ink. Lines and text an addon colored on purpose keep their colors.
 --   * The telemetry export window (/rs telemetry export): the shell, title, close button, inset,
 --     link box, text area and scroll bar.
 -- How the pieces are found: the alert, explorer, import dialog and About page by name; the
@@ -62,7 +66,8 @@
 -- RefreshOverlayFrames and the map button's OnMenuResponse; the explorer's OnShow, its two lists'
 -- selection changes (made before the explorer first opens, so the lists' own callbacks run
 -- through them) and its loot button's refresh; each list's rows as they're filled; AceGUI's
--- RegisterAsWidget and the marker picker's SetDisabled (which paints its label gold again); the
+-- RegisterAsWidget, RegisterAsContainer and Release, the marker picker's SetDisabled (which paints
+-- its label gold again), each AceGUI tree's RefreshTree and each AceGUI label's SetText; the
 -- addon compartment's hover; DaylightUI's SettingChanged (tooltip opacity).
 -- Left as it is: the 3D model over the alert, every item and loot icon's own picture and the loot
 -- names' quality colors, the rare list's name colors (a level's difficulty color, gold for a
@@ -1018,6 +1023,8 @@ local function Explorer(Kit, f)
 		Well(info)
 		Font(info.Name)
 		Ink(info.Name, "VALUE")
+		-- ("Decor": a card of older RareScanner versions, gone from the current info panel; kept so
+		-- those still get it, and passed over where it's missing.)
 		for _, key in ipairs({ "Mounts", "Pets", "Toys", "Custom", "Appearances", "Decor" }) do
 			local card = info[key]
 			if ns.Usable(card) then
@@ -1288,6 +1295,7 @@ local function HookAce()
 	aceHooked = AG.RegisterAsWidget
 end
 
+
 -- The About page (LibAboutPanel's): its title bright, the field names as labels, its copy box.
 local function About(panel, Kit)
 	for _, r in ipairs({ panel:GetRegions() }) do
@@ -1503,7 +1511,7 @@ ns.Pack(KEY, nil, function(Kit)
 		registry:RegisterCallback("MenuProxy.OnShow", MenuShown, menuOwner)
 	end
 
-	-- Its settings.
+	-- Its settings (every AceGUI tree's lines are Packs/Ace3.lua's).
 	HookAce()
 	local loads = CreateFrame("Frame")
 	loads:RegisterEvent("ADDON_LOADED")

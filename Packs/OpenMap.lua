@@ -10,11 +10,30 @@
 --     the floor list, the side panel (title and levels, the Floors / Bosses / Quests / Loot tabs,
 --     its rows, buttons, links, the floors' pictures' edges, its scroll bar), the hint: the quest
 --     log's paper, frame, filigree and shade off, bronze rules as hairlines, grounds neutral.
---   * The tabs at the map's edge (OpenMap's own rail and the dungeon's two): DaylightUI's side tabs,
---     the lit or shown one in the accent; the rail's arrow gray.
+--   * The tabs at the map's edge (OpenMap's own rail and the dungeon's two): clean tiles like
+--     TrueshotLodge's and Questie's tabs, the lit or shown one edged in the accent; the rail's arrow gray.
 --   * The coordinate labels (Azeroth / Player at the map's foot): a thin neutral edge, label ink.
 --   * Its tiles and buttons framed as action buttons: the action-bar frame off, a thin edge on;
 --     the checked glow in the accent.
+--   * The corner row while "Buttons as edge tabs" is off (the OpenMap button, the favorites, the
+--     arrow that folds them away): the map's own children, found by shape on each refresh of the
+--     corner (so switching the setting with the map open is followed) and dressed as above, the
+--     arrow gray.
+--   * Its copy of the quest log toggle on the full-screen map: page buttons, as DaylightUI dresses
+--     the game's own.
+--   * The draw tray's tools: the picked one's gold wash and gold glyph in the accent, the others'
+--     cream glyphs in DaylightUI's text ink.
+--   * Its dropdown lists that grow while open (the search results): what they add is dressed on
+--     the next frame.
+--   * Its windows (Look:Window: What's new, Pins, the pin editor and code window, Report, Friends,
+--     Welcome, the draw tray, notes export, Bench) on a solid ground (they sit over the map), and
+--     dressed again on the next frame, once what they hold is made; a window that sets its own
+--     OnShow afterwards (What's new) has the show hook put back. What's new: its count box and
+--     version list as quiet wells, the picked version in the accent wash, its buttons and link box
+--     DaylightUI's, its tan and gold text in DaylightUI's inks; its parchment page and the notes on
+--     it stay (the page's scroll bar is DaylightUI's, refilled pages dressed as they're shown).
+--     A scroll frame's content refilled while shown is dressed on the next frame; the draw
+--     tray's Done glow is in the accent.
 -- How the pieces are found: by what they are (template parts, keys, art by file and atlas), so a
 -- frame from any of its files is dressed the same way. Colors it sets again on every refresh
 -- (gold text, bronze edges, the picked floor in gold) are followed: the frame's own setter is
@@ -85,7 +104,7 @@ end
 -- A text color of its: bright gold (names, headings) bright, tan small print as labels.
 local function TextColorFor(r, g, b)
 	if BrightGold(r, g, b) then return Ink("VALUE") end
-	if Warm(r, g, b) and r > 0.6 and r < 0.97 then return Ink("LABEL") end
+	if Warm(r, g, b) and r > 0.55 and r < 0.97 then return Ink("LABEL") end
 end
 
 -- Its color codes inside text: gold bright, its tans as labels, its grays dim.
@@ -380,12 +399,10 @@ local function TextTab(Kit, b, initial)
 	end
 end
 
--- A tab on the map's edge (OpenMap's rail, the dungeon's two): DaylightUI's side tab, the lit or
--- shown one picked. Its face's mask comes off the icon (the side tab is square).
 local edgeTabs = setmetatable({}, { __mode = "k" })
--- Its tabs on the map's edge (the tool rail, the dungeon's two): just the icon, cropped, no frame.
--- The lit one (its own `selected` texture shown) gets a thin accent outline, drawn here: the
--- Kit's side tab outlines every tab, and a gray square round each icon on the map looked wrong.
+-- Its tabs on the map's edge (the tool rail, the dungeon's two): clean tiles (ns.SideTile, as
+-- TrueshotLodge's and Questie's tabs), the icon cropped in an even margin, the lit one (its own
+-- `selected` texture shown) edged in the accent, the others neutral and a little dimmed.
 local function HideArt(icon, ...)
 	for i = 1, select("#", ...) do
 		local r = select(i, ...)
@@ -393,7 +410,11 @@ local function HideArt(icon, ...)
 	end
 end
 
--- Its frame off and our outline made, once; nil = not a tab that can be dressed.
+local function Lit(b)
+	return ns.Usable(b.selected) and b.selected:IsShown() == true
+end
+
+-- Its frame off and our tile made, once; nil = not a tab that can be dressed.
 local function EdgeTabSetup(b)
 	if not ns.Usable(b) or not ns.Usable(b.icon) then return nil end
 	local e = edgeTabs[b]
@@ -406,25 +427,13 @@ local function EdgeTabSetup(b)
 			local t = b[get] and b[get](b)
 			if ns.Usable(t) and t ~= b.icon then t:SetAlpha(0) end
 		end
-		b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-		-- The lit one's outline: four edges, on a frame of ours over the icon.
-		local o = CreateFrame("Frame", nil, b)
-		o:SetAllPoints(b.icon)
-		o:SetFrameLevel(b:GetFrameLevel() + 2)
-		o:EnableMouse(false)
-		local function edge(a1, a2, w, h)
-			local t = o:CreateTexture(nil, "OVERLAY")
-			t:SetPoint(a1, o, a1)
-			t:SetPoint(a2, o, a2)
-			if w then t:SetWidth(w) else t:SetHeight(h) end
-			return t
-		end
-		e.lines = { edge("TOPLEFT", "TOPRIGHT", nil, 2), edge("BOTTOMLEFT", "BOTTOMRIGHT", nil, 2),
-			edge("TOPLEFT", "BOTTOMLEFT", 2), edge("TOPRIGHT", "BOTTOMRIGHT", 2) }
-		e.frame = o
-		-- Under the mouse: the icon a touch brighter.
-		b:HookScript("OnEnter", function() b.icon:SetVertexColor(1, 1, 1) b.icon:SetAlpha(1) end)
-		b:HookScript("OnLeave", function() b.icon:SetAlpha(e.lit and 1 or 0.85) end)
+		-- (Drawn again on a tile centered on the button: OpenMap places its icon off-center, toward
+		-- the map's edge, and sizes it on every refresh. A tool's symbol keeps its own size.)
+		local w, h = b:GetSize()
+		local side = math.floor(math.min(w or 44, h or 44) - 4 + 0.5)
+		local picture = b.fill and b.icon.square ~= false
+		ns.Guard(ns.SideTile, b, { icon = b.icon, picked = Lit, key = KEY, copy = true, point = "CENTER",
+			size = side, iconSize = not picture and (b.iconSize or 24) or nil })
 	end
 	return e
 end
@@ -433,12 +442,8 @@ end
 local function EdgeTab(b)
 	local e = EdgeTabSetup(b)
 	if not e then return end
-	e.lit = ns.Usable(b.selected) and b.selected:IsShown() or false
 	if b.selected then b.selected:SetAlpha(0) end
-	local r, g, bl = ns.AccentOf(KEY)
-	for _, t in ipairs(e.lines) do t:SetColorTexture(r, g, bl, 1) end
-	e.frame:SetShown(e.lit)
-	b.icon:SetAlpha(e.lit and 1 or 0.85)
+	ns.SideTilePaint(b)
 end
 
 -- A tile or button framed as an action button: a thin edge where the frame was (a boxed tile
@@ -474,6 +479,69 @@ end
 local SKIP = { GameTooltip = true, Model = true, PlayerModel = true, ModelScene = true, Cooldown = true,
 	SimpleHTML = true, MessageFrame = true, ColorSelect = true, Minimap = true }
 
+-- The draw tray's tool buttons: the picked one's gold wash in the accent, and its glyph (lines
+-- the tray colors again on every refresh: gold for the picked tool, cream for the rest) in the
+-- accent and DaylightUI's text ink as the color is set.
+local GLOW_ALPHA = 0.18
+local toolButtons = setmetatable({}, { __mode = "k" })
+local lineBusy = false
+
+local function Near(a, b) return type(a) == "number" and math.abs(a - b) < 0.01 end
+
+local function ToolLine(line, r, g, b)
+	if lineBusy or not ns.Enabled(KEY) or ns.Look(KEY, "daylightColors") == false then return end
+	local nr, ng, nb
+	if Near(r, 1) and Near(g, 0.82) and Near(b, 0.3) then
+		nr, ng, nb = ns.AccentOf(KEY)
+	elseif Near(r, 0.93) and Near(g, 0.86) and Near(b, 0.7) then
+		nr, ng, nb = Ink("TEXT")
+	end
+	if nr then
+		lineBusy = true
+		line:SetVertexColor(nr, ng, nb)
+		lineBusy = false
+	end
+end
+
+-- A fill of its own gold (a picked row's bar, a glow) in the accent instead, at the given alpha;
+-- painted again when the accent changes.
+local PICKED_ALPHA = 0.22
+local accentFills = setmetatable({}, { __mode = "k" })   -- texture -> its alpha
+local function PaintFill(tex, a)
+	local r, g, b = ns.AccentOf(KEY)
+	tex:SetColorTexture(r, g, b, a)
+end
+local function AccentFill(tex, a)
+	accentFills[tex] = a
+	PaintFill(tex, a)
+end
+
+local function ToolGlow(b)
+	AccentFill(b.glow, GLOW_ALPHA)
+end
+
+local function ToolButton(b)
+	if toolButtons[b] then return end
+	toolButtons[b] = true
+	ToolGlow(b)
+	for _, line in ipairs(b.lines) do
+		if ns.Usable(line) and line.SetVertexColor then
+			hooksecurefunc(line, "SetVertexColor", ToolLine)
+			local ok, r, g, bl = pcall(line.GetVertexColor, line)
+			if ok then ToolLine(line, r, g, bl) end
+		end
+	end
+end
+
+ns.me.On("StyleChanged", function()
+	if not ns.Enabled(KEY) then return end
+	for tex, a in pairs(accentFills) do
+		if ns.Usable(tex) then PaintFill(tex, a) end
+	end
+end)
+
+local DressSoon   -- (below: dressed on the next frame)
+
 local function Piece(Kit, f, view)
 	if done[f] then return end
 	-- (a tab on the map's edge is the rail's or the dungeon's: EdgeTab, from their hooks)
@@ -485,6 +553,11 @@ local function Piece(Kit, f, view)
 	end
 	local kind = f:GetObjectType()
 	local controls = ns.Controls(KEY)
+	if kind == "Button" and f.key and ns.Usable(f.glow) and type(f.lines) == "table" then
+		done[f] = true
+		ns.Guard(ToolButton, f)
+		return
+	end
 	if kind == "Button" then
 		if f.Text and type(f.SetSelected) == "function" and f.key then
 			-- MinimalTabTemplate
@@ -495,6 +568,12 @@ local function Piece(Kit, f, view)
 		elseif f.Left and f.Middle and f.Right then
 			done[f] = true
 			if controls then ns.Guard(Kit.Button, f) end
+			-- Its gold glow round a button that leads on (the draw tray's Done): the accent.
+			if ns.Usable(f.glow) and f.glow:GetObjectType() == "Texture" then AccentFill(f.glow, 0.55) end
+		elseif ns.Usable(f.lit) and f.lit:GetObjectType() == "Texture" and ns.Usable(f.label) then
+			-- A list row whose picked state is a gold bar (What's new's versions): the accent wash.
+			done[f] = true
+			AccentFill(f.lit, PICKED_ALPHA)
 		elseif IsClose(f) then
 			done[f] = true
 			if controls then ns.Guard(Kit.Close, f) end
@@ -515,6 +594,10 @@ local function Piece(Kit, f, view)
 	elseif kind == "ScrollFrame" then
 		done[f] = true
 		if controls and ns.Usable(f.ScrollBar) then ns.Guard(Kit.ScrollBar, f.ScrollBar) end
+		-- What it scrolls is often filled again while shown (What's new's notes, page by page):
+		-- what's added is dressed on the next frame.
+		local child = f.GetScrollChild and f:GetScrollChild()
+		if ns.Usable(child) and child.HookScript then child:HookScript("OnSizeChanged", DressSoon) end
 	elseif kind == "Slider" then
 		done[f] = true
 		if f:GetOrientation() == "VERTICAL" then ThinBar(f) else SliderLook(f) end
@@ -575,15 +658,49 @@ local function Dress(f)
 end
 ns.OpenMapDress = Dress
 
+-- Dressed on the next frame, once however many times it's asked for in this one; not if it's
+-- hidden by then (its next show dresses it).
+local soon = {}
+local soonQueued = false
+local function DressQueued()
+	soonQueued = false
+	for f in pairs(soon) do
+		soon[f] = nil
+		if ns.Usable(f) and f:IsShown() then Dress(f) end
+	end
+end
+DressSoon = function(f)
+	if not ns.Enabled(KEY) or soon[f] then return end
+	soon[f] = true
+	if not soonQueued then
+		soonQueued = true
+		C_Timer.After(0, DressQueued)
+	end
+end
+
 -- Dressed now and on every show (in the same frame: OnShow runs before it's drawn).
 local hooked = setmetatable({}, { __mode = "k" })
+local showScript = setmetatable({}, { __mode = "k" })   -- frame -> its OnShow as it was once hooked
 local function Follow(f)
 	if not ns.Usable(f) then return end
 	if not hooked[f] then
 		hooked[f] = true
 		f:HookScript("OnShow", Dress)
+		showScript[f] = f:GetScript("OnShow") or false
 	end
 	Dress(f)
+end
+
+-- A window that sets its own OnShow after it's made (What's new does, at the end of its build)
+-- drops the hook above: hooked again when its script is no longer the one it was.
+local function Rehook(f)
+	local was = showScript[f]
+	if was == nil or not ns.Usable(f) then return end
+	local now = f:GetScript("OnShow") or false
+	if now ~= was then
+		f:HookScript("OnShow", Dress)
+		showScript[f] = f:GetScript("OnShow") or false
+	end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -621,6 +738,7 @@ local function Call(fn, ...)
 end
 
 local origWindow, origPanel, origDropdown, origFont = Look.Window, Look.Panel, Look.Dropdown, Look.Font
+local WINDOW_ALPHA = 0.97
 
 -- A window OpenMap lays on the map itself (the quill's Draw on the map tray): made as wide as its
 -- tools, centered on the map, it ran past both sides of DaylightUI's narrower map. Shrunk to the
@@ -668,13 +786,22 @@ Look.Window = function(self, frame, title, onClose)
 		if not ns.Enabled(KEY) or not ns.Once(frame) then return end
 		for i = 1, #children do ns.Kill(children[i]) end
 		for i = 1, #regions do ns.Kill(regions[i]) end
-		ns.Shell(frame, { window = true }, KEY)
+		-- A solid ground: these windows sit over the map, which showed through the window's
+		-- usual see-through ground (the player's own opacity, when set on its page, still wins).
+		ns.Shell(frame, { window = true, bgAlpha = WINDOW_ALPHA }, KEY)
 		if close and ns.Controls(KEY) and ns.Once(close) then
 			done[close] = true
 			ns.Guard(Kit.Close, close)
 		end
 		if text then InkText(text) end
 		Follow(frame)
+		-- What the window holds is made after this call: dressed on the next frame, and its show
+		-- hook put back if it set its own OnShow meanwhile.
+		C_Timer.After(0, function()
+			if not ns.Enabled(KEY) or not ns.Usable(frame) then return end
+			Rehook(frame)
+			if frame:IsShown() then Dress(frame) end
+		end)
 	end)
 	return top, text, close
 end
@@ -705,6 +832,9 @@ Look.Dropdown = function(self, frame)
 		for i = 1, #regions do ns.Kill(regions[i]) end
 		ns.Shell(frame, nil, KEY)
 		Follow(frame)
+		-- A list that grows while it's open (the search's results, made as they're typed for):
+		-- what it added is dressed on the next frame.
+		frame:HookScript("OnSizeChanged", DressSoon)
 	end)
 	return l, r, t, b
 end
@@ -983,6 +1113,63 @@ local function Rail()
 	if ns.Usable(railFrame.arrow) then ArrowRegions(railFrame.arrow:GetRegions()) end
 end
 
+-- The row in the map's bottom-left corner, while "Buttons as edge tabs" is off: the OpenMap button
+-- and the favorites (action buttons in the action bar's frame, the checked glow while on), the
+-- arrow that folds them away (the spellbook's page arrow), and the favorites' row. They're the
+-- map's own children, so no walk of OpenMap's windows reaches them: found by what they are.
+local function IsTray(b)
+	local icon = b.icon
+	if not (ns.Usable(icon) and icon.GetObjectType and icon:GetObjectType() == "Texture") then return false end
+	local kind = FileKind(icon)
+	return kind == "next" or kind == "prev"
+end
+
+local function CornerAmong(...)
+	for i = 1, select("#", ...) do
+		local c = select(i, ...)
+		if ns.Usable(c) and not (c.IsProtected and c:IsProtected()) then
+			local kind = c:GetObjectType()
+			if kind == "Button" then
+				if not done[c] and (ns.Usable(c.icon) and c.icon.slot or IsTray(c)) then Dress(c) end
+			elseif kind == "Frame" and type(c.buttons) == "table" then
+				local first = c.buttons[1]
+				if type(first) == "table" and ns.Usable(first.icon) and first.icon.slot then Dress(c) end
+			end
+		end
+	end
+end
+
+local function Corner()
+	local m = Mod()
+	local db = m and m.db
+	if type(db) ~= "table" or db.tabRail or db.mapButtons == false then return end
+	local map = _G.WorldMapFrame
+	if ns.Usable(map) and map:IsShown() then CornerAmong(map:GetChildren()) end
+end
+
+-- Asked for by every refresh of the corner (each map show, zoom and size change, a setting
+-- changed while the map is open): looked over once, on the next frame, when it's been laid out.
+local cornerQueued = false
+local function CornerNow()
+	cornerQueued = false
+	if ns.Enabled(KEY) then ns.Guard(Corner) end
+end
+local function QueueCorner()
+	if cornerQueued or not ns.Enabled(KEY) then return end
+	cornerQueued = true
+	C_Timer.After(0, CornerNow)
+end
+
+-- Its copy of the quest log toggle, in the corner of the full-screen map: dressed as DaylightUI
+-- dresses the game's own (SidePanelToggle), its two arrows as page buttons.
+local function LogToggle(Kit)
+	local m = Mod()
+	local t = m and m.maxLogToggle
+	if not ns.Usable(t) or not ns.Controls(KEY) then return end
+	if ns.Usable(t.CloseButton) then ns.Guard(Kit.PageButton, t.CloseButton, "left") end
+	if ns.Usable(t.OpenButton) then ns.Guard(Kit.PageButton, t.OpenButton, "right") end
+end
+
 ns.Pack(KEY, nil, function(Kit)
 	ns.Watch(KEY, "OpenMapMenu", Menu)
 	local m = Mod()
@@ -1034,15 +1221,24 @@ ns.Pack(KEY, nil, function(Kit)
 			if not ns.Enabled(KEY) then return end
 			Coords()
 			Rail()
+			LogToggle(Kit)
+			QueueCorner()
 			if openView and openView:IsShown() then MapCorner(true) end
 		end)
 		ns.FollowMapRings(KEY)
 		if type(map.RefreshOverlayFrames) == "function" then
 			hooksecurefunc(map, "RefreshOverlayFrames", function()
 				if not ns.Enabled(KEY) then return end
+				QueueCorner()
 				if openView and openView:IsShown() then MapCorner(true) end
 			end)
 		end
+	end
+	-- Every refresh of its corner buttons ends in PlaceDungeonTabs (with the corner row as with the
+	-- rail; the row's buttons are made just after it): the corner row looked over next frame. This
+	-- is what follows "Buttons as edge tabs" being switched off while the map is open.
+	if type(m.PlaceDungeonTabs) == "function" then
+		hooksecurefunc(m, "PlaceDungeonTabs", QueueCorner)
 	end
 	-- The dungeon view is made the first time a dungeon's map opens.
 	ns.Watch(KEY, "OpenMapDungeonView", function(view) View(view) end)
