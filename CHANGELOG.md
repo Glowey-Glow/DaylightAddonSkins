@@ -2,6 +2,7 @@
 
 ## 1.7.0
 - New: LayerSwap. A "Layer: B" button in the bottom-left corner of DaylightUI's minimap, made like DaylightUI's own corner buttons: left-click opens LayerSwap's panel, right-click its layer menu, shift + right-click its settings. Shown all the time, only with the mouse over the map, or off (its page, Minimap tab); it sits above the queue eye when that shows. Its panel, layer menu and settings menu on the DaylightUI shell with DaylightUI's close button and buttons, your font and DaylightUI's text inks (its Swap button keeps them through every refresh), its mini bar with a thin DaylightUI edge, and its options page with DaylightUI's switches, buttons and sliders. Its logo and its green, gray and orange status words stay its own.
+- Lighter: the LayerSwap minimap button no longer runs every frame (it checks the mouse as it moves onto or off the map, and its layer once a second only while shown), and its width is only set when it changes. Its dropdown's choices are short enough to show in full (Always, On hover, Off).
 - OneForAll: DaylightUI 1.7.3 removed its object glow, so "Herb and ore sparkle" is no longer offered to DaylightUI. If you gave it to DaylightUI before, OneForAll's own sparkle is switched back on for you.
 
 ## 1.6.2

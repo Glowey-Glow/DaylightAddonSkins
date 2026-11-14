@@ -44,8 +44,8 @@ ns.Target(KEY, "LayerSwap", { window = true, controls = true, text = true, shado
 		return {
 			{ label = "Minimap button", items = {
 				{ type = "dropdown", key = at .. "dock", label = "Layer button on the minimap",
-				  values = { always = "Shown all the time", hover = "Shown with the mouse over the map", off = "Off" },
-				  desc = "A \"Layer: B\" button in the bottom-left corner of DaylightUI's minimap. Left-click opens LayerSwap's panel, right-click its layer menu, shift + right-click its settings. LayerSwap's own mini bar can be turned off in its options (Mini bar)." },
+				  values = { always = "Always", hover = "On hover", off = "Off" },
+				  desc = "A \"Layer: B\" button in the bottom-left corner of DaylightUI's minimap: always shown, only with the mouse over the map (On hover), or off. Left-click opens LayerSwap's panel, right-click its layer menu, shift + right-click its settings. LayerSwap's own mini bar can be turned off in its options (Mini bar)." },
 			} },
 		}
 	end })
@@ -218,7 +218,7 @@ end
 -- while lit, at their level over the map, fading in and out over the map in their time.
 local DOCK_H, DOCK_INSET, DOCK_PAD, DOCK_LEVEL = 24, 4, 8, 5
 local DOCK_BG = 0.6
-local DOCK_WATCH, DOCK_READ = 0.1, 1
+local DOCK_READ = 1
 local function DockBorder(px) return math.max(3, math.floor(px * 0.5 + 0.5)) end
 
 local dock, dockText
@@ -284,8 +284,13 @@ local function DockRead()
 	if not dock then return end
 	local word = LayerWord()
 	if dockText:GetText() ~= word then dockText:SetText(word) end
-	-- Measured every time: a font or size change resizes the text without changing it.
-	dock:SetWidth(math.ceil(dockText:GetStringWidth() or 0) + DOCK_PAD * 2)
+	-- Measured every time (a font or size change resizes the text without changing it), set only
+	-- when it changed.
+	local w = math.ceil(dockText:GetStringWidth() or 0) + DOCK_PAD * 2
+	if w ~= dock.width then
+		dock.width = w
+		dock:SetWidth(w)
+	end
 end
 
 -- The game's queue eye, which DaylightUI pins in the same corner: the button sits above it while
@@ -311,21 +316,32 @@ local function DockGoal()
 	return ((mm and mm:IsMouseOver() == true) or dock:IsMouseOver() == true) and 1 or 0
 end
 
-local sinceWatch, sinceRead = 0, DOCK_READ
-local function DockUpdate(self, elapsed)
-	sinceWatch = sinceWatch + elapsed
-	sinceRead = sinceRead + elapsed
-	if sinceRead >= DOCK_READ then
-		sinceRead = 0
-		DockRead()
-		if EyeLift() ~= dockLift then DockPlace() end
-	end
-	if sinceWatch < DOCK_WATCH then return end
-	sinceWatch = 0
+-- Nothing runs every frame. The goal (shown, or faded in hover mode) is looked at when the mouse
+-- goes onto or off the map or this button; the layer's name, the queue eye and the goal once a
+-- second while the button shows (a ticker, stopped while it's hidden).
+local function DockCheck()
+	if not (dock and dock:IsShown()) then return end
 	local goal = DockGoal()
 	if goal ~= dockGoal then
 		dockGoal = goal
-		API.Fade(self, goal, "FAST")
+		API.Fade(dock, goal, "FAST")
+	end
+end
+-- (A moment later: the mouse has landed on whatever is next.)
+local function DockCheckSoon() C_Timer.After(0, DockCheck) end
+
+local dockTicker
+local function DockTick()
+	DockRead()
+	if EyeLift() ~= dockLift then DockPlace() end
+	DockCheck()
+end
+local function DockTicking(on)
+	if on and not dockTicker then
+		dockTicker = C_Timer.NewTicker(DOCK_READ, DockTick)
+	elseif not on and dockTicker then
+		dockTicker:Cancel()
+		dockTicker = nil
 	end
 end
 
@@ -367,6 +383,7 @@ end
 
 local function DockEnter(self)
 	DockPaint()
+	DockCheckSoon()
 	GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
 	local lines = LayerLines()
 	GameTooltip:AddLine("LayerSwap")
@@ -377,6 +394,7 @@ end
 
 local function DockLeave()
 	DockPaint()
+	DockCheckSoon()
 	GameTooltip:Hide()
 end
 
@@ -395,7 +413,10 @@ local function BuildDock()
 	dock:SetScript("OnClick", DockClick)
 	dock:SetScript("OnEnter", DockEnter)
 	dock:SetScript("OnLeave", DockLeave)
-	dock:SetScript("OnUpdate", DockUpdate)
+	dock:SetScript("OnShow", function() DockTicking(true) DockTick() end)
+	dock:SetScript("OnHide", function() DockTicking(false) end)
+	mm:HookScript("OnEnter", DockCheckSoon)
+	mm:HookScript("OnLeave", DockCheckSoon)
 	DockPlace()
 	DockRead()
 	DockPaint()
@@ -412,6 +433,7 @@ local function ApplyDock()
 	dockGoal = DockGoal()
 	dock:SetAlpha(dockGoal)
 	dock:Show()
+	DockTicking(true)   -- (Show on a shown frame doesn't run its OnShow)
 end
 
 -- ---------------------------------------------------------------------------------------------
