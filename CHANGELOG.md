@@ -1,5 +1,8 @@
 # DaylightUI Addon Skins
 
+## 1.12.1
+- Its own icon: in the game's AddOns list and other menus (instead of the blank "?"), and on its page in DaylightUI's options.
+
 ## 1.12.0
 - New: Mastercraft. Its style is kept on Classic (the flat one) while the skin is on, so it takes the DaylightUI look from the moment it loads; the style you had comes back when the skin is off (a style you pick in Mastercraft meanwhile is the one that comes back, and the chat says so). Each character keeps its own choice, following its DaylightUI profile. Its main window, compact view, item tracker, farming HUD, fishing bar and catch card, mini guide, alt view, recipe details, Trade board, Map icons, What's New, setup guide, question box, toasts, request pop-up, mailbox helper and bank pop-up get the DaylightUI window shell and close button, with the accent line along the top. The fishing bar's secure buttons are never touched; its shell goes on outside combat.
 - Mastercraft's colors become DaylightUI's as it paints them, through every hover, pick, scroll and refresh: its blue-gray panels and edges as DaylightUI's neutral darks, its words in DaylightUI's inks, its faction red or blue as your accent (gradients included: primary buttons, lighter under the mouse; picked tabs, rows and chips; switches, sliders, bars and marks), its gold highlights in your accent. Quality, class, good, warning and bad colors stay, and every word is in DaylightUI's font, its sub-tabs laid out again for it and labels shrunk to fit their buttons.

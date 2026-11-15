@@ -1574,6 +1574,7 @@ function ns.RegisterSettings(pages)
 	end
 	Guard(function()
 		DUI:RegisterPlugin(ADDON, {
+			icon = "Interface\\AddOns\\" .. ADDON .. "\\Media\\icon-glyph.png",
 			needs = { 1, 1 },
 			short = ns.L["Addons"],
 			blurb = ns.L["Your other addons' windows in the DaylightUI look."],
