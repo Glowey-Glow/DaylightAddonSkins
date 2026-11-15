@@ -4,6 +4,7 @@ package-as: DaylightAddonSkins
 ignore:
   - README.md
   - CHANGELOG.md
+  - CURSEFORGE.md
   - .github
   - .gitignore
   - .gitattributes
