@@ -46,6 +46,9 @@ local WASH                          -- DaylightUI's wash texture, as a texture r
 local function FillOne(font, base, probe, ink)
 	if type(base) == "table" then font:CopyFontObject(base) end
 	local face, size, flags = probe:GetFont()
+	-- (Read off a string DaylightUI dresses through a font family: a plain SetFont has none, so
+	-- where this client's letters aren't in that face the game's copied font stays, ns.SafeFace.)
+	face = ns.SafeFace(face)
 	if face and type(size) == "number" and size > 0 then font:SetFont(face, size, flags or "") end
 	font:SetShadowOffset(probe:GetShadowOffset())
 	font:SetShadowColor(probe:GetShadowColor())

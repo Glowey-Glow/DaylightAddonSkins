@@ -66,9 +66,9 @@
 --     checkbox's checked art, the hover layer) or are read by the timer.
 local _, ns = ...
 if not ns.ok then return end
+local L = ns.L
 
 local SETTINGS, READY = "BlizzardSettings", "BlizzardDungeonReady"
-local API = ns.API
 
 local Kit
 local select, type, pairs, ipairs, pcall = select, type, pairs, ipairs, pcall
@@ -81,10 +81,10 @@ local CANVAS_DEPTH = 40    -- how far into an addon's page (scroll frames nest t
                            -- guard: a frame's children never lead back up to it
 local HEADING_SIZE = 15    -- words this big or bigger, on a row or a page of its own, are headings
 
-ns.Target(SETTINGS, "Game settings window", { controls = true })
+ns.Target(SETTINGS, L["Game settings window"], { controls = true })
 -- (The game's dungeon finder is built in with the game's own windows: there at load or not at all.)
 local hasReady = _G.LFGDungeonReadyPopup ~= nil or _G.LFGDungeonReadyDialog ~= nil
-if hasReady then ns.Target(READY, "Dungeon ready dialog", { controls = true }) end
+if hasReady then ns.Target(READY, L["Dungeon ready dialog"], { controls = true }) end
 
 local function weak() return setmetatable({}, { __mode = "k" }) end
 
@@ -238,8 +238,8 @@ local leftText = weak()    -- string -> the words it was fitted for
 local playerFont
 local function PlayerFont()
 	if playerFont == nil then
-		local ok, face = pcall(API.Font)
-		playerFont = ok and type(face) == "string" and face or false
+		-- (nil where this client's letters aren't in it: the game's font stays, ns.SafeFace.)
+		playerFont = ns.PlayerFace() or false
 	end
 	return playerFont or nil
 end

@@ -32,6 +32,7 @@
 -- RP card shows beside it) and its own name colors in chat (DaylightUI's class colors).
 local _, ns = ...
 if not ns.ok then return end
+local L = ns.L
 
 local KEY = "totalRP3"
 
@@ -928,11 +929,11 @@ ns.Handover(KEY, {
 		if c then pcall(c.setValue, key, value) end
 	end,
 	list = {
-		{ key = "tooltip_char_HideOriginal", label = "Unit tooltip (its RP card replacing the game's)",
-		  daylight = "its unit tooltip; Total RP 3's RP card then shows beside it",
+		{ key = "tooltip_char_HideOriginal", label = L["Unit tooltip (its RP card replacing the game's)"],
+		  daylight = L["its unit tooltip; Total RP 3's RP card then shows beside it"],
 		  ours = function() return ns.DaylightHas("Tooltip", "anchor", function() return true end) end },
-		{ key = "chat_color", label = "Name colors in chat",
-		  daylight = "class-colored names in chat",
+		{ key = "chat_color", label = L["Name colors in chat"],
+		  daylight = L["class-colored names in chat"],
 		  ours = function() return ns.DaylightHas("Chat", "classColors") end },
 	},
 })

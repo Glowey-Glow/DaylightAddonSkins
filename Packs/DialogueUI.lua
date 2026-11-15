@@ -17,6 +17,7 @@
 -- NPC window can open them (DaylightUI's vendor and trainer windows are unaffected).
 local _, ns = ...
 if not ns.ok then return end
+local L = ns.L
 
 local KEY = "DialogueUI"
 
@@ -387,17 +388,17 @@ ns.Handover(KEY, {
 		_G.DialogueUI_DB[key] = value
 	end,
 	list = {
-		{ key = "AutoSelectGossip", label = "Pick an NPC's only gossip option",
-		  daylight = "skip gossip (Quality of Life)",
+		{ key = "AutoSelectGossip", label = L["Pick an NPC's only gossip option"],
+		  daylight = ns.In(L["skip gossip"], "Quality of Life"),
 		  ours = function() return ns.DaylightHas("QoL", "skipGossip") end },
-		{ key = "AutoCompleteQuest", label = "Turn in quests automatically",
-		  daylight = "auto turn in (Quality of Life)",
+		{ key = "AutoCompleteQuest", label = L["Turn in quests automatically"],
+		  daylight = ns.In(L["auto turn in"], "Quality of Life"),
 		  ours = function() return ns.DaylightHas("QoL", "questTurnIn") end },
-		{ key = "BookUIEnabled", label = "Its own window for books and letters",
-		  daylight = "the game's book window in the DaylightUI look (Window Skins)", reload = true,
+		{ key = "BookUIEnabled", label = L["Its own window for books and letters"],
+		  daylight = ns.In(L["the game's book window in the DaylightUI look"], "Window Skins"), reload = true,
 		  ours = function() return ns.Enabled() end },
-		{ key = "UseBlizzardTooltip", label = "Its own tooltip for rewards",
-		  daylight = "its tooltip, with item level and quality (Tooltip)", reload = true,
+		{ key = "UseBlizzardTooltip", label = L["Its own tooltip for rewards"],
+		  daylight = ns.In(L["its tooltip, with item level and quality"], "Tooltip"), reload = true,
 		  ours = function() return ns.ModuleOn("Tooltip") end },
 	},
 })

@@ -220,6 +220,49 @@ ns.LSM = LSM
 
 local OUTLINES = { none = "", thin = "OUTLINE", thick = "THICKOUTLINE" }
 
+-- Other alphabets. A font file draws only the letters it has: DaylightUI's fonts have no Korean or
+-- Chinese ones, and only some have Russian. DaylightUI's own text goes through font families that
+-- take those letters from the game's fonts; a plain SetFont here has no family, so on a Korean or
+-- Chinese client (unless DaylightUI's "Use my language's font" is on, which makes its font the
+-- game's) and on a Russian one with a font lacking Russian, the player's font isn't put on: the
+-- string keeps the game's or the addon's face, its size, outline and colors still change. Every
+-- other client keeps every face. Shared fonts picked for one addon are left as LibSharedMedia
+-- lists them (it lists only the fonts with the client's letters).
+local LOCALE = type(GetLocale) == "function" and GetLocale() or ""
+local CJK = { koKR = true, zhCN = true, zhTW = true }
+-- DaylightUI's default (Expressway) has Russian; used when DaylightUI's own list can't be read.
+local CYRILLIC = { ["expresswayfree.ttf"] = true, ["frizqt___cyr.ttf"] = true }
+local cyrillicOf = {}    -- face -> whether it has Russian, worked out once
+local function HasCyrillic(face)
+	local known = cyrillicOf[face]
+	if known ~= nil then return known end
+	local name = string.lower(string.match(face, "([^\\/]+)$") or face)
+	local Style = type(_G.DaylightUI) == "table" and _G.DaylightUI.Style
+	local list = type(Style) == "table" and type(Style.CYRILLIC) == "table" and Style.CYRILLIC or CYRILLIC
+	known = list[name] == true
+	cyrillicOf[face] = known
+	return known
+end
+
+-- face, when this client can draw its words in it; nil when the string should keep its own.
+function ns.SafeFace(face)
+	if type(face) ~= "string" then return nil end
+	if CJK[LOCALE] then
+		local db = type(_G.DaylightUI) == "table" and _G.DaylightUI.DB
+		local ok, own = false, false
+		if type(db) == "table" and type(db.UseLocalFont) == "function" then ok, own = pcall(db.UseLocalFont) end
+		return ok and own == true and face or nil
+	end
+	if LOCALE == "ruRU" and not HasCyrillic(face) then return nil end
+	return face
+end
+
+-- The player's font (DaylightUI's), when this client can draw in it.
+function ns.PlayerFace()
+	local ok, face = pcall(API.Font)
+	return ok and ns.SafeFace(face) or nil
+end
+
 -- The text look of `key`, worked out once: face (nil = the addon's own), scale (nil = as it is),
 -- flags (nil = the addon's own outline), shadow, and plain = nothing of the text is changed.
 local function Text(key)
@@ -228,8 +271,8 @@ local function Text(key)
 	t = {}
 	local font = Look(key, "font")
 	if font == "daylight" then
-		local ok, face = pcall(API.Font)
-		if ok and type(face) == "string" then t.face = face end
+		t.face = ns.PlayerFace()
+		t.dropped = t.face == nil
 	elseif font ~= "addon" then
 		local face = LSM and LSM:Fetch("font", font, true)
 		if type(face) == "string" then t.face = face end
@@ -246,6 +289,11 @@ end
 -- Whether `key`'s text is left exactly as the addon set it (a font hook can stop there).
 function ns.PlainText(key)
 	return Text(key).plain
+end
+
+-- Whether `key`'s look asks for DaylightUI's font and this client can't draw in it (ns.SafeFace).
+function ns.FaceDropped(key)
+	return Text(key).dropped == true
 end
 
 -- The face, size and flags a string of `key`'s gets, from what the addon gave it.
@@ -558,7 +606,8 @@ function ns.Refont(fs, key)
 	if key then
 		ns.SetFont(key, fs, path, size, flags)
 	else
-		fs:SetFont(API.Font(), size, flags or "")
+		local face = ns.PlayerFace()
+		if face then fs:SetFont(face, size, flags or "") end
 	end
 end
 
@@ -1202,21 +1251,23 @@ end)
 -- The group on an addon's page: one switch per conflict, and the way back.
 function ns.HandoverGroup(addon)
 	local h = handovers[addon]
+	local L = ns.L
 	local label = ns.targets[addon] or addon
 	local items = {}
 	for _, item in ipairs(h and h.list or {}) do
 		if not item.switch and not item.gone then
 			items[#items + 1] = { type = "toggle", key = UsePath(addon, item.key),
 				label = item.label or item.key,
-				desc = "On: DaylightUI does this" .. (item.daylight and (" (" .. item.daylight .. ")") or "")
-					.. " and " .. label .. "'s own is switched off. Off: " .. label .. "'s own, as it was.",
+				desc = item.daylight
+					and string.format(L["On: DaylightUI does this (%s) and %s's own is switched off. Off: %s's own, as it was."], item.daylight, label, label)
+					or string.format(L["On: DaylightUI does this and %s's own is switched off. Off: %s's own, as it was."], label, label),
 				reload = item.reload or nil }
 		end
 	end
-	items[#items + 1] = { type = "button", label = "Give everything back to " .. label,
-		desc = "Puts back every one of " .. label .. "'s settings this plugin switched off, as they were.",
+	items[#items + 1] = { type = "button", label = string.format(L["Give everything back to %s"], label),
+		desc = string.format(L["Puts back every one of %s's settings this plugin switched off, as they were."], label),
 		func = function() ns.GiveBack(addon) end }
-	return { label = "DaylightUI or " .. label, items = items }
+	return { label = string.format(L["DaylightUI or %s"], label), items = items }
 end
 
 -- Got the Kit as early as DaylightUI will give it.
@@ -1259,10 +1310,10 @@ function ns.RegisterSettings(pages)
 	Guard(function()
 		DUI:RegisterPlugin(ADDON, {
 			needs = { 1, 1 },
-			short = "Addons",
-			blurb = "Your other addons' windows in the DaylightUI look.",
+			short = ns.L["Addons"],
+			blurb = ns.L["Your other addons' windows in the DaylightUI look."],
 		})
-		DUI:RegisterModule(ADDON, { plugin = ADDON, label = "Addon skins", defaults = defaults,
+		DUI:RegisterModule(ADDON, { plugin = ADDON, label = ns.L["Addon skins"], defaults = defaults,
 			options = pages and { pages = pages } or nil })
 	end)
 end

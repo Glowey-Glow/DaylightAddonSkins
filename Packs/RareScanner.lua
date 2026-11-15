@@ -82,6 +82,7 @@
 -- text).
 local _, ns = ...
 if not ns.ok then return end
+local L = ns.L
 
 local KEY = "RareScanner"
 
@@ -455,7 +456,7 @@ local function SearchHint(eb)
 		hint:SetPoint("LEFT", eb, "LEFT", 8, 0)
 		hint:SetPoint("RIGHT", eb, "RIGHT", -22, 0)
 		hint:SetWordWrap(false)
-		hint:SetText("Search rares")
+		hint:SetText(L["Search rares"])
 		eb.daylightHint = hint
 		local function update()
 			local text = eb:GetText()

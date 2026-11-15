@@ -1,5 +1,11 @@
 # DaylightUI Addon Skins
 
+## 1.10.1
+- Addon Skins' own text (its options, the Override window) in German, French, Spanish, Russian, Korean and Simplified Chinese (machine drafts, corrections welcome).
+- Fixes for non-English game clients: on Korean and Chinese clients, and on Russian ones with a font that has no Russian letters, words in skinned windows no longer turn into boxes or go blank. Text there keeps the game's font (its size, outline and colors still follow the look) unless DaylightUI's "Use my language's font" is on. Russian clients now get DaylightUI's font in Kerzo Classic Quest Log and Dungeon Journal when it has Russian letters (Expressway does).
+- The game's language menus (Settings > Languages, Text and Audio; the Communities finder's language) show the language names again instead of blank bars (DaylightUI's menu skin painted their pictures over as hover bars).
+- Shortest Path Forever: headings with letters outside A to Z (such as "über") are no longer half in capitals.
+
 ## 1.10.0
 - New: skins for Kerzo Classic Quest Log (its theme kept on Dark while skinned, given back when the skin is off), Kerzo Quest Expansion and LFG Forever (1.5.0's Player ratings tab included).
 - Every text in a skinned window is in DaylightUI's font from the first open, and stays in it: a refresh, a reused list row or a hover that puts the addon's own font back is followed. Kerzo (its "Default" font; one you pick in its settings stays), Questie's settings, Dungeon Journal, OpenMap's panels, LFG Forever, OneForAll and Shortest Path Forever now use it; tabs and buttons sized for the game's narrower font are measured again, so nothing is cut short. Game windows' labels, the combat log's tabs, tutorials and the Settings window's addon pages too; a label too long for the space shrinks a pixel or two instead of going back to the game's font. Item counts keep the game's number font.

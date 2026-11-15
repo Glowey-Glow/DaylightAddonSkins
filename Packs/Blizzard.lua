@@ -46,9 +46,10 @@
 -- combat. Nothing here loads a Blizzard addon.
 local _, ns = ...
 if not ns.ok then return end
+local L = ns.L
 
 local KEY = "Blizzard"
-ns.Target(KEY, "Game windows", { controls = true })
+ns.Target(KEY, L["Game windows"], { controls = true })
 
 local Usable, Guard = ns.Usable, ns.Guard
 local ipairs, pairs, type, select = ipairs, pairs, type, select

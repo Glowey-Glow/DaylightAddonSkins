@@ -8,6 +8,7 @@ local _, ns = ...
 if not ns.ok then return end
 
 local API = ns.API
+local L = ns.L
 local W, PAD, ROW, HEAD = 560, 18, 42, 30
 local MAX_H = 520
 
@@ -45,9 +46,8 @@ local function Build()
 	local sub = API.Text(frame, "body", "LEFT")
 	sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
 	sub:SetWidth(W - PAD * 2)
-	sub:SetText("Some of your addons do things DaylightUI already does. Pick who handles each one: "
-		.. "on = DaylightUI (the addon's own is switched off), off = the addon keeps it. "
-		.. "You can change any of these later: DaylightUI options, Plugins, Addons, each addon's DaylightUI tab.")
+	sub:SetText(string.format(L["Some of your addons do things DaylightUI already does. Pick who handles each one: on = DaylightUI (the addon's own is switched off), off = the addon keeps it. You can change any of these later: DaylightUI options, %s, %s, each addon's DaylightUI tab."],
+		ns.Module("Plugins"), L["Addons"]))
 	Ink(sub, "TEXT")
 	frame.sub = sub
 
@@ -67,7 +67,7 @@ local function Build()
 	content:SetSize(W - PAD * 2, 10)
 	scroll:SetScrollChild(content)
 
-	local apply = API.Button(frame, "Apply", 26)
+	local apply = API.Button(frame, L["Apply"], 26)
 	apply:SetSize(150, 26)
 	apply:SetPoint("BOTTOMRIGHT", -PAD, PAD)
 	apply:SetScript("OnClick", function()
@@ -79,11 +79,11 @@ local function Build()
 		end
 		frame:Hide()
 		if reload then
-			print("|cffa335eeAddon Skins|r: some of these take a /reload to finish (the ones marked so). Type /reload when it suits you.")
+			print("|cffa335eeAddon Skins|r: " .. L["some of these take a /reload to finish (the ones marked so). Type /reload when it suits you."])
 		end
 	end)
 
-	local later = API.Button(frame, "Ask me later", 26)
+	local later = API.Button(frame, L["Ask me later"], 26)
 	later:SetSize(150, 26)
 	later:SetPoint("RIGHT", apply, "LEFT", -10, 0)
 	later:SetScript("OnClick", function() frame:Hide() end)
@@ -129,7 +129,7 @@ function ns.ShowChoices(all)
 	if InCombatLockdown() then return end
 	local list = ns.Conflicts(all)
 	if #list == 0 then
-		if all then print("|cffa335eeAddon Skins|r: none of your addons does anything DaylightUI is doing now.") end
+		if all then print("|cffa335eeAddon Skins|r: " .. L["none of your addons does anything DaylightUI is doing now."]) end
 		return
 	end
 	if not frame then Build() end
@@ -159,8 +159,15 @@ function ns.ShowChoices(all)
 		row:SetPoint("RIGHT", content, "RIGHT", 0, 0)
 		row.name:SetText(c.item.label or c.item.key)
 		Ink(row.name, "VALUE")
-		row.what:SetText((c.item.daylight and ("DaylightUI: " .. c.item.daylight) or "")
-			.. (c.item.reload and "  (takes a /reload)" or ""))
+		local what = ""
+		if c.item.daylight and c.item.reload then
+			what = string.format(L["DaylightUI: %s  (takes a /reload)"], c.item.daylight)
+		elseif c.item.daylight then
+			what = string.format(L["DaylightUI: %s"], c.item.daylight)
+		elseif c.item.reload then
+			what = "  " .. L["(takes a /reload)"]
+		end
+		row.what:SetText(what)
 		Ink(row.what, "TEXT")
 		row.switch.SetOn(c.daylight)
 		row:Show()

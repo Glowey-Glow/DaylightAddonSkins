@@ -23,6 +23,7 @@
 -- step aside while DaylightUI's nameplates mark quest targets.
 local _, ns = ...
 if not ns.ok then return end
+local L = ns.L
 
 local KEY = "Questie"
 
@@ -821,23 +822,23 @@ ns.Handover(KEY, {
 		end
 	end,
 	list = {
-		{ key = "nameplateEnabled", label = "Quest icons over nameplates",
-		  daylight = "quest marks on its nameplates",
+		{ key = "nameplateEnabled", label = L["Quest icons over nameplates"],
+		  daylight = L["quest marks on its nameplates"],
 		  ours = function() return ns.DaylightHas("Nameplates", "quest") end },
-		{ key = "enableTooltips", label = "Quest lines in unit and item tooltips",
-		  daylight = "the quest lines its Quests module paints in tooltips",
+		{ key = "enableTooltips", label = L["Quest lines in unit and item tooltips"],
+		  daylight = L["the quest lines its Quests module paints in tooltips"],
 		  ours = QuestsOn },
-		{ key = "soundOnQuestComplete", label = "Sound when a quest is ready",
-		  daylight = "the tracker's chime (Quests)",
+		{ key = "soundOnQuestComplete", label = L["Sound when a quest is ready"],
+		  daylight = ns.In(L["the tracker's chime"], "Quests"),
 		  ours = function() return ns.DaylightHas("Quests", "sound") end },
-		{ key = "autoAccept.enabled", label = "Accept quests automatically",
-		  daylight = "auto accept (Quality of Life)",
+		{ key = "autoAccept.enabled", label = L["Accept quests automatically"],
+		  daylight = ns.In(L["auto accept"], "Quality of Life"),
 		  ours = function() return ns.DaylightHas("QoL", "questAccept") end },
-		{ key = "autocomplete", label = "Turn in quests automatically",
-		  daylight = "auto turn in (Quality of Life)",
+		{ key = "autocomplete", label = L["Turn in quests automatically"],
+		  daylight = ns.In(L["auto turn in"], "Quality of Life"),
 		  ours = function() return ns.DaylightHas("QoL", "questTurnIn") end },
-		{ key = "minimapCoordinatesEnabled", label = "Coordinates on the minimap",
-		  daylight = "the info panel's coordinates",
+		{ key = "minimapCoordinatesEnabled", label = L["Coordinates on the minimap"],
+		  daylight = L["the info panel's coordinates"],
 		  ours = function() return ns.DaylightHas("InfoPanel", "map.coords.enabled") end },
 	},
 })

@@ -96,6 +96,80 @@ local function InkText(fs)
 	end
 end
 
+-- Language names drawn as pictures. The game shows the choices of its language menus (Settings >
+-- Languages, Text and Audio; the Communities finder's language) as pictures, one "Lang-Regions-..."
+-- atlas per language (each name in its own alphabet), with the row's text hidden. DaylightUI's
+-- menu skin takes any wide picture on a menu row for the row's hover, and paints it over with its
+-- hover bar: the menu showed blank bars instead of the languages. Here each such picture is
+-- noted while it still shows its atlas; once it has been painted over (its blend turned to ADD)
+-- it is made clear, and a picture of ours (on a small frame over the row, where DaylightUI's skin
+-- doesn't look) shows the same atlas in the same place. DaylightUI's own picture stays painted,
+-- so its skin finds nothing to dress again.
+local langOf = setmetatable({}, { __mode = "k" })  -- the game's texture -> its language atlas
+local cover = setmetatable({}, { __mode = "k" })   -- the game's texture -> our texture over it
+local rowOf = setmetatable({}, { __mode = "k" })   -- the game's texture -> the row it was on
+local mine = setmetatable({}, { __mode = "k" })    -- our textures (left alone)
+local langOn = true                                -- false once the game refused this once
+
+local function Lang(t, row)
+	if mine[t] then return end
+	local atlas = t:GetAtlas()
+	if type(atlas) == "string" and atlas:lower():find("^lang%-regions%-") then
+		langOf[t], rowOf[t] = atlas, row
+		local c = cover[t]
+		if c then c:Hide() end
+		return
+	end
+	local want = langOf[t]
+	if not want or rowOf[t] ~= row or t:GetBlendMode() ~= "ADD" then return end
+	local c = cover[t]
+	if c and c:IsShown() and c.daylightAtlas == want and t:GetAlpha() == 0 then return end
+	if not c then
+		local holder = CreateFrame("Frame", nil, row)
+		c = holder:CreateTexture(nil, "ARTWORK")
+		mine[c] = true
+		cover[t] = c
+	end
+	local holder = c:GetParent()
+	if holder:GetParent() ~= row then holder:SetParent(row) end
+	holder:SetAllPoints(row)
+	holder:SetFrameLevel(row:GetFrameLevel() + 1)
+	holder:Show()
+	t:SetAlpha(0)
+	c:ClearAllPoints()
+	for i = 1, t:GetNumPoints() do c:SetPoint(t:GetPoint(i)) end
+	c:SetAtlas(want, true)
+	c.daylightAtlas = want
+	c:Show()
+end
+
+-- Ours shows only while the game's picture it stands for does, on the same row.
+local function SweepCovers()
+	for t, c in pairs(cover) do
+		if c:IsShown() and (not t:IsShown() or t:GetParent() ~= rowOf[t] or t:GetBlendMode() ~= "ADD") then
+			c:Hide()
+		end
+	end
+end
+
+-- The pictures noted the moment a menu shows (its rows are filled by then), before DaylightUI's
+-- skin, which dresses a menu a frame later, paints them over.
+local function NoteLangs(menu)
+	for _, row in ipairs({ menu:GetChildren() }) do
+		if row.GetRegions and not (row.IsForbidden and row:IsForbidden()) then
+			for _, r in ipairs({ row:GetRegions() }) do
+				if r.GetObjectType and r:GetObjectType() == "Texture" then Lang(r, row) end
+			end
+		end
+	end
+end
+
+local function DropCovers()
+	for _, c in pairs(cover) do c:Hide() end
+	wipe(langOf)
+	wipe(rowOf)
+end
+
 -- One text: its font read, put back if it lost DaylightUI's, then inked. (One protected call for
 -- all three: any of them the game refuses stops the fix for good.)
 local function FixString(fs, font)
@@ -112,7 +186,7 @@ end
 -- under one protected call; the font and inks are read when a menu opens, not on every frame.)
 local FixFrame
 
-local function FixRegions(font, ...)
+local function FixRegions(font, frame, ...)
 	for i = 1, select("#", ...) do
 		local r = select(i, ...)
 		local kind = r.GetObjectType and r:GetObjectType()
@@ -123,11 +197,14 @@ local function FixRegions(font, ...)
 				blocked = true
 				return
 			end
-		elseif inks and kind == "Texture" and r:IsShown() then
-			local part = KindOf(r)
-			if part and not pcall(Tint, r, part == "mark" and inks.accent or inks.text) then
-				blocked = true
-				return
+		elseif kind == "Texture" then
+			if langOn and not pcall(Lang, r, frame) then langOn = false end
+			if inks and r:IsShown() then
+				local part = KindOf(r)
+				if part and not pcall(Tint, r, part == "mark" and inks.accent or inks.text) then
+					blocked = true
+					return
+				end
 			end
 		end
 	end
@@ -143,7 +220,7 @@ end
 FixFrame = function(frame, font, depth)
 	if blocked or type(frame) ~= "table" or not frame.GetRegions then return end
 	if frame.IsForbidden and frame:IsForbidden() then return end
-	FixRegions(font, frame:GetRegions())
+	FixRegions(font, frame, frame:GetRegions())
 	if not blocked and depth > 0 and frame.GetChildren then
 		FixChildren(font, depth - 1, frame:GetChildren())
 	end
@@ -177,7 +254,11 @@ watcher:SetScript("OnUpdate", function(self)
 			open[menu] = nil
 		end
 	end
-	if not any or blocked then self:Hide() end
+	if langOn and next(cover) and not pcall(SweepCovers) then langOn = false end
+	if not any or blocked then
+		pcall(DropCovers)
+		self:Hide()
+	end
 end)
 
 local owner = {}
@@ -185,9 +266,11 @@ registry:RegisterCallback("MenuProxy.OnShow", function(_, menu)
 	if blocked or type(menu) ~= "table" or not ns.ModuleOn("Skins") then return end
 	open[menu] = true
 	stale = true
+	if langOn and menu.GetChildren and not pcall(NoteLangs, menu) then langOn = false end
 	watcher:Show()
 end, owner)
 registry:RegisterCallback("MenuProxy.OnClose", function(_, menu)
 	if type(menu) == "table" then open[menu] = nil end
+	if not next(open) then pcall(DropCovers) end
 end, owner)
 if ns.me and ns.me.On then ns.me.On("StyleChanged", function() stale = true wipe(menuFonts) end) end

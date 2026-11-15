@@ -10,7 +10,6 @@ local _, ns = ...
 if not ns.ok then return end
 
 local KEY = "BugSack"
-local API = ns.API
 
 -- The title row's left edge. BugSack places its words past the portrait, which the window look
 -- takes away; they start where DaylightUI's titles do instead.
@@ -40,9 +39,7 @@ local function FillTitleFonts()
 	if not titleFont then return end
 	local base = _G.GameFontNormalLeft
 	local path, size, flags = base:GetFont()
-	local face
-	local ok, f = pcall(API.Font)
-	if ok and type(f) == "string" then face = f end
+	local face = ns.PlayerFace()
 	face, size, flags = ns.FontFor(KEY, face or path, size, flags)
 	local c = ns.Colors()
 	titleFont:CopyFontObject(base)

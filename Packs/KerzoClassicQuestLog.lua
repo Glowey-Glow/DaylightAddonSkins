@@ -721,15 +721,11 @@ local function Settings(kql, Kit)
 	end
 end
 
--- Locales whose letters only the game's fonts have: Kerzo's own font choice there stays.
-local LOCAL_FONTS = { koKR = true, zhCN = true, zhTW = true, ruRU = true }
-
 -- Whether its words get the player's font now: the skin on, a text look, its own pick "Default"
--- and a locale DaylightUI's fonts have the letters of.
+-- and a font with this client's letters (ns.SafeFace: where DaylightUI's has none of them,
+-- Kerzo's own font choice stays).
 local function Ours(kql)
-	if not On() or ns.PlainText(KEY) then return false end
-	local locale = _G.GetLocale and _G.GetLocale() or ""
-	if LOCAL_FONTS[locale] then return false end
+	if not On() or ns.PlainText(KEY) or ns.FaceDropped(KEY) then return false end
 	local ok, pick = pcall(kql.ObtenerFuenteSeleccionada, kql)
 	return ok and (pick == nil or pick == "default")
 end

@@ -20,6 +20,11 @@ All pop-up menus (right-click menus and dropdowns, any addon's) and every addon'
 
 ---
 
+## New in 1.10.1
+- **In your language:** Addon Skins' options and Override window in German, French, Spanish, Russian, Korean and Simplified Chinese (machine drafts, corrections welcome).
+- **Korean, Chinese and Russian clients:** words in skinned windows no longer turn into boxes or go blank.
+- The game's **language menus** (Settings > Languages) show the language names again instead of blank bars.
+
 ## New in 1.10.0
 
 ### Three more addons

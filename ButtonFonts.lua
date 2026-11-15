@@ -31,6 +31,9 @@ end
 local function FontLike(fs)
 	local ok, path, size, flags = pcall(fs.GetFont, fs)
 	if not ok or type(path) ~= "string" or type(size) ~= "number" or size <= 0 then return nil end
+	-- A plain font object has no other alphabets' fonts (ns.SafeFace): where this client's
+	-- letters aren't in it, the button keeps the font objects it has.
+	if not ns.SafeFace(path) then return nil end
 	flags = flags or ""
 	local key = path .. ":" .. size .. ":" .. flags
 	local f = made[key]
@@ -76,7 +79,7 @@ end)
 -- button using one shows it at once.
 me.On("StyleChanged", function()
 	if count == 0 then return end
-	local face = API.Font()
+	local face = ns.PlayerFace()
 	local ink = API.Colors().TEXT
 	for _, f in pairs(made) do
 		if type(face) == "string" then f:SetFont(face, f.daylightSize, f.daylightFlags) end

@@ -452,13 +452,12 @@ local MENU_NAMES = { "ForeverDungeonJournalRunLogMenu", "ForeverDungeonJournalTr
 -- Its own fonts: since 2.0.8 the journal draws its words with copies of the game's font objects
 -- (ForeverDJ_<name>, Core/Fonts.lua) carrying the game's Friz Quadrata and Morpheus files by
 -- name, so neither DaylightUI's font nor its journal skin reaches them. Those copies take the
--- player's font (their size and outline kept), in the client's languages DaylightUI's fonts have
--- the letters of; each one's own Korean / Chinese / Russian member is never touched. The ones
+-- player's font (their size and outline kept), where it has this client's letters (ns.SafeFace);
+-- each one's own Korean / Chinese / Russian member is never touched. The ones
 -- changed are remembered (with the size and outline they had), so a new DaylightUI font follows.
 -- They stay changed until the next login if the skin is turned off.
 -- ---------------------------------------------------------------------------------------------
 
-local LOCAL_FONTS = { koKR = true, zhCN = true, zhTW = true, ruRU = true }
 local ownChanged = {}   -- font object -> { size, flags } it had before
 
 local function GameSerif(path)
@@ -469,13 +468,11 @@ end
 
 local function OwnFontsInDaylight()
 	if not ns.Enabled(KEY) then return end
-	local locale = _G.GetLocale and _G.GetLocale() or ""
-	if LOCAL_FONTS[locale] then return end
+	local face = ns.PlayerFace()
+	if not face then return end
 	local FDJ = _G.ForeverDungeonJournal_NS
 	local own = type(FDJ) == "table" and FDJ.OwnFontObjects
 	if type(own) ~= "table" then return end
-	local okFace, face = pcall(ns.API.Font)
-	if not okFace or type(face) ~= "string" then return end
 	local prefix = type(FDJ.OWN_FONT_PREFIX) == "string" and FDJ.OWN_FONT_PREFIX or "ForeverDJ_"
 	for name in pairs(own) do
 		local font = _G[prefix .. name]

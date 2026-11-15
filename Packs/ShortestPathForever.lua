@@ -15,6 +15,7 @@
 -- zeppelin pins on the world map step aside while DaylightUI's map pins show the same.
 local _, ns = ...
 if not ns.ok then return end
+local L = ns.L
 
 local KEY = "ShortestPathForever"
 
@@ -26,9 +27,9 @@ ns.Target(KEY, "Shortest Path Forever", { window = true, controls = true, text =
 	defaults = { dock = true }, extraTab = "DaylightUI",
 	extra = function(at)
 		return {
-			{ label = "Quest tracker", items = {
-				{ type = "toggle", key = at .. "dock", label = "Put the Forever sections under DaylightUI's quest tracker",
-				  desc = "Shortest Path's lifts, boats and journey steps (and any other Forever addon's tracker sections) sit right under your quest list and look like it. Off: ForeverCore places them as it does without DaylightUI." },
+			{ label = L["Quest tracker"], items = {
+				{ type = "toggle", key = at .. "dock", label = L["Put the Forever sections under DaylightUI's quest tracker"],
+				  desc = L["Shortest Path's lifts, boats and journey steps (and any other Forever addon's tracker sections) sit right under your quest list and look like it. Off: ForeverCore places them as it does without DaylightUI."] },
 			} },
 			ns.HandoverGroup(KEY),
 		}
@@ -225,8 +226,9 @@ end
 local function Ink(fs, size, r, g, b)
 	if not ns.Usable(fs) or not fs.SetFont then return end
 	if size then
-		local face = API.Font()
 		local cur, curSize, flags = fs:GetFont()
+		-- (Its own face kept where this client's letters aren't in the player's: ns.SafeFace.)
+		local face = ns.PlayerFace() or cur
 		if cur ~= face or not curSize or math.abs(curSize - size) > 0.05 then
 			pcall(fs.SetFont, fs, face, size, flags or "")
 		end
@@ -250,7 +252,7 @@ local function PaintFont(obj)
 	if not f then return end
 	if Dressed() and _G.DaylightUIQuestTracker then
 		local size = f.role == "title" and QSize("title", 12) or QSize("objective", 11)
-		pcall(obj.SetFont, obj, API.Font(), math.floor(size * zoom + 0.5), f.flags or "")
+		pcall(obj.SetFont, obj, ns.PlayerFace() or f.path, math.floor(size * zoom + 0.5), f.flags or "")
 	else
 		pcall(obj.SetFont, obj, f.path, f.size, f.flags or "")
 	end
@@ -297,7 +299,11 @@ local function StyleSection(module, Kit)
 		local text = head.Text
 		if ns.Usable(text) then
 			local words = text:GetText()
-			if type(words) == "string" and words ~= upper(words) then text:SetText(upper(words)) end
+			-- (string.upper changes only a-z: words with other letters, "über", stay as they are
+			-- rather than come out half in capitals.)
+			if type(words) == "string" and not string.find(words, "[\128-\255]") and words ~= upper(words) then
+				text:SetText(upper(words))
+			end
 			Ink(text, math.floor(QSize("header", 12) * zoom + 0.5), HeaderColor())
 		end
 		local line = lines[module]
@@ -629,17 +635,18 @@ ns.Handover(KEY, {
 		_G.ShortestPathForeverDB[key] = value
 	end,
 	list = {
-		{ key = "mapFlightMasters", label = "Flight master pins on the world map",
-		  daylight = "map pins (Window Skins)",
+		{ key = "mapFlightMasters", label = L["Flight master pins on the world map"],
+		  daylight = ns.In(L["map pins"], "Window Skins"),
 		  ours = function() return ns.DaylightHas("Skins", "mapFlights") end },
-		{ key = "pins", label = "Boat and zeppelin pins on the world map",
-		  daylight = "map pins (Window Skins)",
+		{ key = "pins", label = L["Boat and zeppelin pins on the world map"],
+		  daylight = ns.In(L["map pins"], "Window Skins"),
 		  ours = function() return ns.DaylightHas("Skins", "mapTravel") end },
-		{ key = "destinationPin", label = "Pin over the destination",
-		  daylight = "the in-world quest marker (Quests, Navigation)",
+		{ key = "destinationPin", label = L["Pin over the destination"],
+		  daylight = ns.In(L["the in-world quest marker"], "Quests", "Navigation"),
 		  ours = function() return ns.DaylightHas("Quests", "nav.marker") end },
-		{ key = "arrow", label = "Direction arrow (and the route marker it sets)",
-		  daylight = "the quest arrow (Quests, Navigation); with Shortest Path's off, routes no longer steer the marker",
+		{ key = "arrow", label = L["Direction arrow (and the route marker it sets)"],
+		  daylight = string.format(L["the quest arrow (%s); with Shortest Path's off, routes no longer steer the marker"],
+			string.format(L["%s, %s"], ns.Module("Quests"), ns.Module("Navigation"))),
 		  ours = function() return ns.DaylightHas("Quests", "nav.arrow") end },
 	},
 })

@@ -39,17 +39,18 @@
 -- it fills in for a request, the party invite popup, the Who list it reads quietly.
 local _, ns = ...
 if not ns.ok then return end
+local L = ns.L
 
 local KEY = "LayerSwap"
 
 ns.Target(KEY, "LayerSwap", { window = true, controls = true, text = true, shadow = true, colors = true,
-	font = "daylight", defaults = { dock = "always" }, extraTab = "Minimap",
+	font = "daylight", defaults = { dock = "always" }, extraTab = L["Minimap"],
 	extra = function(at)
 		return {
-			{ label = "Minimap button", items = {
-				{ type = "dropdown", key = at .. "dock", label = "Layer button on the minimap",
-				  values = { always = "Always", hover = "On hover", off = "Off" },
-				  desc = "A \"Layer: B\" button in the bottom-left corner of DaylightUI's minimap: always shown, only with the mouse over the map (On hover), or off. Left-click opens LayerSwap's panel, right-click its layer menu, shift + right-click its settings. LayerSwap's own mini bar can be turned off in its options (Mini bar)." },
+			{ label = L["Minimap button"], items = {
+				{ type = "dropdown", key = at .. "dock", label = L["Layer button on the minimap"],
+				  values = { always = L["Always"], hover = L["On hover"], off = L["Off"] },
+				  desc = L["A \"Layer: B\" button in the bottom-left corner of DaylightUI's minimap: always shown, only with the mouse over the map (On hover), or off. Left-click opens LayerSwap's panel, right-click its layer menu, shift + right-click its settings. LayerSwap's own mini bar can be turned off in its options (Mini bar)."] },
 			} },
 		}
 	end })
@@ -287,16 +288,18 @@ local function LayerLines()
 end
 
 local function LayerWord()
+	-- (Read off its launcher's tooltip, in its words: LayerSwap keeps the layer it's on to itself,
+	-- and is in English only. Should it ever be translated, the lines below read "Layer: ?".)
 	-- Dungeons and raids have no layers (LayerSwap's own bar says so there too).
-	if IsInInstance and IsInInstance() then return "Layer: -" end
+	if IsInInstance and IsInInstance() then return string.format(L["Layer: %s"], "-") end
 	local lines = LayerLines()
 	local line = lines and lines[2]
-	if type(line) ~= "string" then return "Layer: ?" end
+	if type(line) ~= "string" then return string.format(L["Layer: %s"], "?") end
 	line = string.gsub(line, "%s%s%s.*$", "")          -- " Host on" after three spaces
 	local rest = string.match(line, "^Layer%s+(.+)$")
-	if rest then return "Layer: " .. rest end
-	if line == "Detecting..." then return "Layer: ..." end
-	return "Layer: ?"
+	if rest then return string.format(L["Layer: %s"], rest) end
+	if line == "Detecting..." then return string.format(L["Layer: %s"], "...") end
+	return string.format(L["Layer: %s"], "?")
 end
 
 -- DaylightUI's square map, on which its corner buttons sit.
@@ -429,7 +432,7 @@ local function DockEnter(self)
 	local lines = LayerLines()
 	GameTooltip:AddLine("LayerSwap")
 	if lines and type(lines[2]) == "string" then GameTooltip:AddLine(lines[2], 1, 1, 1) end
-	GameTooltip:AddLine("Left-click: the panel. Right-click: ask for a layer. Shift + right-click: settings.", 0.7, 0.7, 0.7, true)
+	GameTooltip:AddLine(L["Left-click: the panel. Right-click: ask for a layer. Shift + right-click: settings."], 0.7, 0.7, 0.7, true)
 	GameTooltip:Show()
 end
 

@@ -24,6 +24,7 @@ read_globals = {
 	"GameFontNormal",
 	"GameFontNormalLarge",
 	"GameTooltip",
+	"GetLocale",
 	"GetTime",
 	"InCombatLockdown",
 	"IsInInstance",

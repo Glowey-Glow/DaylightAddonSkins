@@ -9,6 +9,13 @@
 ## OptionalDeps: DaylightUI_Skins, CampingKit, DoesItDie, KeepOrToss, LootTriage, OpenMap, Spoken, ForeverFishing, Polestar, ForeverLevelingBiS, Journey, OneForAll, Questie, DialogueUI, ShortestPathForever, ForeverCore, ForeverDungeonJournal, totalRP3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFGForever
 ## SavedVariables: DaylightAddonSkinsDB
 
+Locales\Locales.lua
+Locales\deDE.lua
+Locales\frFR.lua
+Locales\esES.lua
+Locales\ruRU.lua
+Locales\koKR.lua
+Locales\zhCN.lua
 Core.lua
 MenuFonts.lua
 ButtonFonts.lua

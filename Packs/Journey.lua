@@ -18,6 +18,7 @@
 -- Nothing is written to Journey's saved settings, and none of its files are touched.
 local _, ns = ...
 if not ns.ok then return end
+local L = ns.L
 
 local KEY = "Journey"
 
@@ -32,17 +33,17 @@ end
 
 -- setting = { label, Journey's color names it stands for, its default }
 local LINKS = {
-	{ "linkQuest", "Quests to do", { "QUEST", "QUEST_DO" }, Hex("0084EB") },
-	{ "linkAccept", "Quests to accept", { "QUEST_ACCEPT" }, Hex("FFFF00") },
-	{ "linkTurnin", "Quests to turn in", { "QUEST_TURNIN" }, Hex("FFA500") },
-	{ "linkFriendly", "Friendly NPCs", { "NPC_FRIENDLY" }, Hex("9DFF9D") },
-	{ "linkHostile", "Hostile NPCs", { "NPC_HOSTILE" }, Hex("FF6363") },
-	{ "linkNeutral", "Neutral NPCs", { "NPC_NEUTRAL" }, Hex("FFD100") },
-	{ "linkObject", "Items, objects, spells and other NPCs", { "ITEM", "GAME_OBJECT", "SPELL", "SKILL", "NPC", "SEARCH_TERM" }, Hex("E36EE4") },
-	{ "linkPlace", "Places and zones", { "AREA", "ZONE", "WMOAREA" }, Hex("FFD100") },
-	{ "linkTravel", "Flights and inns", { "TAXI", "INN" }, Hex("FFA500") },
-	{ "linkLevel", "Levels and experience", { "LEVEL", "XP" }, Hex("FFFF00") },
-	{ "linkWarn", "Warnings and tips", { "TIP", "RED_TEXT", "GET_OUT", "QUEST_SKIPPED", "SKIPPED_HEADING" }, Hex("FF0000") },
+	{ "linkQuest", L["Quests to do"], { "QUEST", "QUEST_DO" }, Hex("0084EB") },
+	{ "linkAccept", L["Quests to accept"], { "QUEST_ACCEPT" }, Hex("FFFF00") },
+	{ "linkTurnin", L["Quests to turn in"], { "QUEST_TURNIN" }, Hex("FFA500") },
+	{ "linkFriendly", L["Friendly NPCs"], { "NPC_FRIENDLY" }, Hex("9DFF9D") },
+	{ "linkHostile", L["Hostile NPCs"], { "NPC_HOSTILE" }, Hex("FF6363") },
+	{ "linkNeutral", L["Neutral NPCs"], { "NPC_NEUTRAL" }, Hex("FFD100") },
+	{ "linkObject", L["Items, objects, spells and other NPCs"], { "ITEM", "GAME_OBJECT", "SPELL", "SKILL", "NPC", "SEARCH_TERM" }, Hex("E36EE4") },
+	{ "linkPlace", L["Places and zones"], { "AREA", "ZONE", "WMOAREA" }, Hex("FFD100") },
+	{ "linkTravel", L["Flights and inns"], { "TAXI", "INN" }, Hex("FFA500") },
+	{ "linkLevel", L["Levels and experience"], { "LEVEL", "XP" }, Hex("FFFF00") },
+	{ "linkWarn", L["Warnings and tips"], { "TIP", "RED_TEXT", "GET_OUT", "QUEST_SKIPPED", "SKIPPED_HEADING" }, Hex("FF0000") },
 }
 
 local DEFAULTS = {
@@ -64,56 +65,56 @@ for _, l in ipairs(LINKS) do DEFAULTS[l[1]] = l[4] end
 local function Extra(at, following, hint)
 	local function off(get) return following(get) end
 	local linkItems = {
-		{ type = "toggle", key = at .. "ownLinks", label = "Use my own link colors",
-		  desc = "Off: the quests, NPCs, items and places in the steps keep Journey's colors.", disabled = off },
+		{ type = "toggle", key = at .. "ownLinks", label = L["Use my own link colors"],
+		  desc = L["Off: the quests, NPCs, items and places in the steps keep Journey's colors."], disabled = off },
 	}
 	for _, l in ipairs(LINKS) do
 		linkItems[#linkItems + 1] = { type = "color", key = at .. l[1], label = l[2],
-			desc = "Their color in the step text.",
+			desc = L["Their color in the step text."],
 			disabled = function(get) return following(get) or get(at .. "ownLinks") ~= true end }
 	end
 	return {
-		{ label = "Guide window", items = {
+		{ label = L["Guide window"], items = {
 			hint(),
-			{ type = "toggle", key = at .. "showLogo", label = "Journey logo",
-			  desc = "The logo at the left of the guide's header.", disabled = off },
-			{ type = "toggle", key = at .. "groupMarks", label = "Marked steps",
-			  desc = "A colored bar in the step boxes the guide marks with a color (it drew their border in it).", disabled = off },
-			{ type = "dropdown", key = at .. "progress", label = "Progress bar",
-			  values = { accent = "The accent", own = "My own color", journey = "Journey's blue" },
-			  desc = "The color of the guide's progress bar under the title.", disabled = off },
-			{ type = "color", key = at .. "progressColor", label = "Progress bar color",
-			  desc = "Its color when \"My own color\" is picked.",
+			{ type = "toggle", key = at .. "showLogo", label = L["Journey logo"],
+			  desc = L["The logo at the left of the guide's header."], disabled = off },
+			{ type = "toggle", key = at .. "groupMarks", label = L["Marked steps"],
+			  desc = L["A colored bar in the step boxes the guide marks with a color (it drew their border in it)."], disabled = off },
+			{ type = "dropdown", key = at .. "progress", label = L["Progress bar"],
+			  values = { accent = L["The accent"], own = L["My own color"], journey = L["Journey's blue"] },
+			  desc = L["The color of the guide's progress bar under the title."], disabled = off },
+			{ type = "color", key = at .. "progressColor", label = L["Progress bar color"],
+			  desc = L["Its color when \"My own color\" is picked."],
 			  disabled = function(get) return following(get) or get(at .. "progress") ~= "own" end },
 		} },
-		{ label = "Step buttons", items = {
-			{ type = "dropdown", key = at .. "stepButtons", label = "Style",
-			  values = { flat = "Flat, in the step's color", daylight = "DaylightUI buttons", journey = "As Journey draws them" },
-			  desc = "The buttons in the steps (Go to, Skip and the guide's own). Takes hold after a reload.", disabled = off },
-			{ type = "slider", key = at .. "buttonTint", label = "Color strength", min = 0.1, max = 0.8, step = 0.05, unit = "%",
-			  desc = "How strongly a flat button shows its step's color.",
+		{ label = L["Step buttons"], items = {
+			{ type = "dropdown", key = at .. "stepButtons", label = L["Style"],
+			  values = { flat = L["Flat, in the step's color"], daylight = L["DaylightUI buttons"], journey = L["As Journey draws them"] },
+			  desc = L["The buttons in the steps (Go to, Skip and the guide's own). Takes hold after a reload."], disabled = off },
+			{ type = "slider", key = at .. "buttonTint", label = L["Color strength"], min = 0.1, max = 0.8, step = 0.05, unit = "%",
+			  desc = L["How strongly a flat button shows its step's color."],
 			  disabled = function(get) return following(get) or get(at .. "stepButtons") ~= "flat" end },
-			{ type = "toggle", key = at .. "accentHighlight", label = "Highlighted buttons in the accent",
-			  desc = "Off: the button the guide highlights keeps Journey's blue.", disabled = off },
-			{ type = "toggle", key = at .. "squareItems", label = "Square item buttons",
-			  desc = "The item and target buttons beside the guide: square icons with a thin border. Takes hold after a reload.",
+			{ type = "toggle", key = at .. "accentHighlight", label = L["Highlighted buttons in the accent"],
+			  desc = L["Off: the button the guide highlights keeps Journey's blue."], disabled = off },
+			{ type = "toggle", key = at .. "squareItems", label = L["Square item buttons"],
+			  desc = L["The item and target buttons beside the guide: square icons with a thin border. Takes hold after a reload."],
 			  disabled = off },
-			{ type = "button", label = "Reload interface", func = function() ReloadUI() end },
+			{ type = "button", label = L["Reload interface"], func = function() ReloadUI() end },
 		} },
-		{ label = "Menus, tooltip and arrow", items = {
-			{ type = "toggle", key = at .. "menuAccent", label = "Menus in the accent",
-			  desc = "The guide menu's rows light up, and its check marks show, in the accent.", disabled = off },
-			{ type = "toggle", key = at .. "tooltip", label = "Dress the guide tooltip",
-			  desc = "The tooltip of the guide's links in DaylightUI's shell. Takes hold after a reload.", disabled = off },
-			{ type = "toggle", key = at .. "arrowAccent", label = "Arrow distance in the accent",
-			  desc = "Off: the HUD arrow's distance stays gold.", disabled = off },
+		{ label = L["Menus, tooltip and arrow"], items = {
+			{ type = "toggle", key = at .. "menuAccent", label = L["Menus in the accent"],
+			  desc = L["The guide menu's rows light up, and its check marks show, in the accent."], disabled = off },
+			{ type = "toggle", key = at .. "tooltip", label = L["Dress the guide tooltip"],
+			  desc = L["The tooltip of the guide's links in DaylightUI's shell. Takes hold after a reload."], disabled = off },
+			{ type = "toggle", key = at .. "arrowAccent", label = L["Arrow distance in the accent"],
+			  desc = L["Off: the HUD arrow's distance stays gold."], disabled = off },
 		} },
-		{ label = "Link colors", items = linkItems },
+		{ label = L["Link colors"], items = linkItems },
 	}
 end
 
 ns.Target(KEY, "Journey Guides", { window = true, controls = true, text = true, shadow = true, colors = true,
-	font = "daylight", defaults = DEFAULTS, extra = Extra, extraTab = "Guide" })
+	font = "daylight", defaults = DEFAULTS, extra = Extra, extraTab = L["Guide"] })
 
 -- ---------------------------------------------------------------------------------------------
 -- Journey's environment

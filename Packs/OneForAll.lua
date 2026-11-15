@@ -13,6 +13,7 @@
 -- already does are switched off through OneForAll.QoL.Set, while DaylightUI's copy is on.
 local _, ns = ...
 if not ns.ok then return end
+local L = ns.L
 
 local KEY = "OneForAll"
 
@@ -24,9 +25,9 @@ ns.Target(KEY, "OneForAll", { window = true, controls = true, text = true, shado
 	extra = function(at)
 		return {
 			ns.HandoverGroup(KEY),
-			{ label = "World map", items = {
-				{ type = "toggle", key = at .. "hideMapButton", label = "Hide OneForAll's world map button",
-				  desc = "The \"1\" logo at the top left of the world map (its quick list of map switches). Switched off in OneForAll's own settings; turn this off again and it comes back. The same switches stay in OneForAll's Quality of Life tab, under World Map." },
+			{ label = L["World map"], items = {
+				{ type = "toggle", key = at .. "hideMapButton", label = L["Hide OneForAll's world map button"],
+				  desc = L["The \"1\" logo at the top left of the world map (its quick list of map switches). Switched off in OneForAll's own settings; turn this off again and it comes back. The same switches stay in OneForAll's Quality of Life tab, under World Map."] },
 			} },
 		}
 	end })
@@ -298,71 +299,71 @@ ns.Handover(KEY, {
 	set = function(key, value) QoL.Set(key, value) end,
 	list = {
 		-- Chat: DaylightUI_Chat draws its own panel over the game's chat windows.
-		C("chatHide", "Chat hide button (the speech bubble on the chat)",
-			"its chat panel; OneForAll's button hides the chat windows DaylightUI's chat is built on", moduleOn("Chat")),
-		C("chatAutoHide", "Hide the chat after a while", "the chat's own fading (Chat)", moduleOn("Chat"), { off = 0 }),
-		C("copyChat", "Copy buttons on the chat", "the chat's Copy button (Chat)",
+		C("chatHide", L["Chat hide button (the speech bubble on the chat)"],
+			L["its chat panel; OneForAll's button hides the chat windows DaylightUI's chat is built on"], moduleOn("Chat")),
+		C("chatAutoHide", L["Hide the chat after a while"], ns.In(L["the chat's own fading"], "Chat"), moduleOn("Chat"), { off = 0 }),
+		C("copyChat", L["Copy buttons on the chat"], ns.In(L["the chat's Copy button"], "Chat"),
 			function() return has("Chat", "copyButton") end),
-		C("chatHistory", "Up and Down bring back sent messages", "the same in its chat box (Chat)",
+		C("chatHistory", L["Up and Down bring back sent messages"], ns.In(L["the same in its chat box"], "Chat"),
 			function() return has("Chat", "arrowHistory") end, RELOAD),
 		-- Minimap
-		C("mmCollect", "Minimap button collector", "the addon drawer under the minimap (Info Panel)",
+		C("mmCollect", L["Minimap button collector"], ns.In(L["the addon drawer under the minimap"], "Info Panel"),
 			function() return has("InfoPanel", "map.enabled") and has("InfoPanel", "map.drawer") end),
-		C("mmSquare", "Square minimap", "its own square minimap (Info Panel)",
+		C("mmSquare", L["Square minimap"], ns.In(L["its own square minimap"], "Info Panel"),
 			function() return has("InfoPanel", "map.enabled") end),
 		-- World map
-		C("lmDungeons", "Dungeon entrances on the world map", "map pins (Window Skins)",
+		C("lmDungeons", L["Dungeon entrances on the world map"], ns.In(L["map pins"], "Window Skins"),
 			function() return has("Skins", "mapDungeons") end),
-		C("lmFlight", "Flight masters on the world map", "map pins (Window Skins)",
+		C("lmFlight", L["Flight masters on the world map"], ns.In(L["map pins"], "Window Skins"),
 			function() return has("Skins", "mapFlights") end),
-		C("lmTransport", "Boats, zeppelins and the tram on the world map", "map pins (Window Skins)",
+		C("lmTransport", L["Boats, zeppelins and the tram on the world map"], ns.In(L["map pins"], "Window Skins"),
 			function() return has("Skins", "mapTravel") end),
-		C("mapFog", "Remove the map's fog", "map reveal (Window Skins)",
+		C("mapFog", L["Remove the map's fog"], ns.In(L["map reveal"], "Window Skins"),
 			function() return has("Skins", "mapReveal") end),
-		C("flightMapNow", "Open the flight map at once", "its NPC window and skip-gossip (Quality of Life)",
+		C("flightMapNow", L["Open the flight map at once"], ns.In(L["its NPC window and skip-gossip"], "Quality of Life"),
 			function() return has("NPC", "enabled") or has("QoL", "skipGossip") end),
 		-- Quality of life
-		C("flightTimes", "Flight timer", "the flight timer (Quality of Life)",
+		C("flightTimes", L["Flight timer"], ns.In(L["the flight timer"], "Quality of Life"),
 			function() return has("QoL", "flightTimer") end),
-		C("lootFeed", "Loot feed", "the loot feed (Quality of Life)",
+		C("lootFeed", L["Loot feed"], ns.In(L["the loot feed"], "Quality of Life"),
 			function() return has("QoL", "lootFeed") end),
-		C("quickLoot", "Faster looting", "fast loot (Quality of Life)",
+		C("quickLoot", L["Faster looting"], ns.In(L["fast loot"], "Quality of Life"),
 			function() return has("QoL", "fastLoot") end),
-		C("questSparkles", "Quest loot sparkles", "loot sparkles (Quality of Life)",
+		C("questSparkles", L["Quest loot sparkles"], ns.In(L["loot sparkles"], "Quality of Life"),
 			function() return has("QoL", "lootSparkles") end, RELOAD),
 		-- DaylightUI 1.7.3 removed its object glow, so nothing does this on its side any more: kept
 		-- only so a sparkle handed over before is given back to OneForAll (never asked, never listed).
-		C("nodeGlow", "Herb and ore sparkle", "object glow (Quality of Life)",
+		C("nodeGlow", L["Herb and ore sparkle"], ns.In(L["object glow"], "Quality of Life"),
 			function() return false end, { reload = true, gone = true }),
-		C("cameraZoom", "Farther camera zoom", "camera distance (Quality of Life)",
+		C("cameraZoom", L["Farther camera zoom"], ns.In(L["camera distance"], "Quality of Life"),
 			function() return has("QoL", "cameraZoom", notOne) end, RELOAD),
-		C("hideErrors", "Hide error messages", "quiet errors and its own error text (Quality of Life)",
+		C("hideErrors", L["Hide error messages"], ns.In(L["quiet errors and its own error text"], "Quality of Life"),
 			function() return has("QoL", "quietErrors") or has("QoL", "errorText") end),
-		C("autoAccept", "Accept quests automatically", "auto accept (Quality of Life)",
+		C("autoAccept", L["Accept quests automatically"], ns.In(L["auto accept"], "Quality of Life"),
 			function() return has("QoL", "questAccept") end),
-		C("autoTurnIn", "Turn in quests automatically", "auto turn in (Quality of Life)",
+		C("autoTurnIn", L["Turn in quests automatically"], ns.In(L["auto turn in"], "Quality of Life"),
 			function() return has("QoL", "questTurnIn") end),
 		-- Windows
-		C("moveWindows", "Move the game's windows", "moving windows and its own windows (Window Skins)",
+		C("moveWindows", L["Move the game's windows"], ns.In(L["moving windows and its own windows"], "Window Skins"),
 			function() return ns.Enabled() end, RELOAD),
-		C("resizeWindows", "Resize the game's windows", "Ctrl + wheel sizing (Window Skins)",
+		C("resizeWindows", L["Resize the game's windows"], ns.In(L["Ctrl + wheel sizing"], "Window Skins"),
 			function() return ns.Enabled() end),
 		-- Vendors
-		C("autoRepair", "Repair at vendors", "auto repair (Bags)", function() return has("Bags", "autoRepair") end),
-		C("sellJunk", "Sell junk at vendors", "sell junk (Bags)", function() return has("Bags", "sellJunk") end),
+		C("autoRepair", L["Repair at vendors"], ns.In(L["auto repair"], "Bags"), function() return has("Bags", "autoRepair") end),
+		C("sellJunk", L["Sell junk at vendors"], ns.In(L["sell junk"], "Bags"), function() return has("Bags", "sellJunk") end),
 		-- Tooltip, nameplates, info
-		C("unitTarget", "\"Target:\" line in unit tooltips", "the target line (Tooltip)",
+		C("unitTarget", L["\"Target:\" line in unit tooltips"], ns.In(L["the target line"], "Tooltip"),
 			function() return has("Tooltip", "showTarget") end),
-		C("questMarks", "Quest marks on nameplates", "quest marks on its nameplates (Nameplates)",
+		C("questMarks", L["Quest marks on nameplates"], ns.In(L["quest marks on its nameplates"], "Nameplates"),
 			function() return has("Nameplates", "quest") end),
-		C("infoBar", "OneForAll's info bar", "the data texts (Info Panel)",
+		C("infoBar", L["OneForAll's info bar"], ns.In(L["the data texts"], "Info Panel"),
 			function() return has("InfoPanel", "data.enabled") end),
 		-- The game's frames DaylightUI hides: work done on bars no one sees.
-		C("classColors", "Class colors on the game's unit frames", "its own unit frames (Unit Frames)",
+		C("classColors", L["Class colors on the game's unit frames"], ns.In(L["its own unit frames"], "Unit Frames"),
 			moduleOn("UnitFrames")),
-		C("bagSlots", "Free slots on the game's backpack button", "the bags data text and its bags (Bags)",
+		C("bagSlots", L["Free slots on the game's backpack button"], ns.In(L["the bags data text and its bags"], "Bags"),
 			moduleOn("Bags")),
-		C("questXP", "Quest XP on the game's experience bar", "its experience bar with banked quest XP (Info Panel)",
+		C("questXP", L["Quest XP on the game's experience bar"], ns.In(L["its experience bar with banked quest XP"], "Info Panel"),
 			function() return has("InfoPanel", "xp.enabled") end),
 		-- A plain option of this pack's, not a conflict.
 		{ key = "mapButton", switch = "hideMapButton", ours = function() return true end },
