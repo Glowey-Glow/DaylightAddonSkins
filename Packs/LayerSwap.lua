@@ -14,7 +14,11 @@
 --     outline, DaylightUI's close button and buttons (Mini bar, Swap layer, Host), its headings in
 --     the label ink, the layer bright, the rest in DaylightUI's text inks and your font. LayerSwap
 --     puts the game's gold font back on its Swap button at every refresh (once a second): your
---     font and DaylightUI's ink go back on after it, the dim ink while it's grayed. Its "Ask your
+--     font and DaylightUI's ink go back on after it, the dim ink while it's grayed. A button's
+--     words that outgrow it step down a size or three. While hosting is paused LayerSwap grays its
+--     Host button ("Host: PAUSED", still clickable): it takes DaylightUI's grayed look then. Its own
+--     ground and edges are DaylightUI's shell's, so its Panel background slider and Panel edges
+--     box (LayerSwap's options) don't change it. Its "Ask your
 --     guild" entry (LayerSwapPanelGuildButton, shown only in a guild): its title on font objects of
 --     ours (the label ink, the accent under the mouse; LayerSwap sets them once, as it builds the
 --     entry), its "Guild chat reaches every layer" line in your font and the text ink.
@@ -23,14 +27,17 @@
 --   * Its mini bar (LayerSwapMini): a thin DaylightUI edge round it, your font and the text ink.
 --     Its background keeps LayerSwap's own darkness setting.
 --   * Its options page (Options, AddOns, LayerSwap): DaylightUI's switches, buttons and text inks
---     (through Kit.Auto), its sliders as a thin track with the accent fill and a round knob.
+--     (through Kit.Auto, its Open the panel and Reset to defaults buttons too), its sliders (two
+--     share a row) as a thin track with the accent fill and a round knob. Its switches' names and
+--     notes are one line each: one too long for your font steps down a size or three as it shows.
 -- How the pieces are found: by name. The panel and the menus are made the first time they open, so
 -- they're dressed the moment one of LayerSwap's own buttons, its slash command or this button
 -- opens them (and watched for, for the panel it opens by itself after a swap); their rows are made
 -- as they're first needed and dressed each time the menu shows.
 -- Hooked (post-hooks only): each menu's OnShow and OnHide; the Swap / Host / Mini bar buttons'
--- SetDisabledFontObject, OnEnable and OnDisable; the clicks of the mini bar, its logo and
--- LayerSwap's minimap button, and its /ls command (to dress what they open at once).
+-- SetDisabledFontObject, SetText, OnEnable and OnDisable; the options page's OnShow; the clicks
+-- of the mini bar, its logo and LayerSwap's minimap button, and its /ls command (to dress what
+-- they open at once).
 -- Left as it is: its logo and the logo's light, the guild entry's emblem (the guild's own tabard)
 -- and its faint 0.08 hover light, the green / gray ON and OFF words and the orange
 -- world refresh line (they mean something), its rows' faint hover light (DaylightUI's own
@@ -102,20 +109,68 @@ local PANEL_BUTTONS = { "lineButton", "swapButton", "hostButton" }
 -- one last), and DaylightUI's button look repaints its text as it's enabled or grayed: your font
 -- and the ink for its state go on after either.
 local buttonsDone = setmetatable({}, { __mode = "k" })
+local labelSize = setmetatable({}, { __mode = "k" })   -- each label's size before it's fitted
+local LABEL_ROOM, LABEL_STEPS = 14, 3                  -- (LayerSwap's own room round a label)
+
+-- A label wider than its button steps down a size or three (LayerSwap only measures its own
+-- font, and the Host button's words grow a lock clock, "Host: ON  4:59").
+local function FitLabel(b, fs)
+	local base = labelSize[fs]
+	local path, size, flags = fs:GetFont()
+	if not (base and path and type(size) == "number") then return end
+	local room = (b:GetWidth() or 0) - LABEL_ROOM
+	if room <= 0 then return end
+	local s = base
+	if size ~= s then fs:SetFont(path, s, flags or "") end
+	while (fs:GetStringWidth() or 0) > room and s > base - LABEL_STEPS do
+		s = s - 1
+		fs:SetFont(path, s, flags or "")
+	end
+end
+
 local function ButtonText(b)
 	if not ns.Enabled(KEY) then return end
 	local fs = b:GetFontString()
+	if not ns.Usable(fs) then return end
 	Font(fs)
 	Ink(fs, b:IsEnabled() and "TEXT" or "OFF")
+	labelSize[fs] = select(2, fs:GetFont())
+	FitLabel(b, fs)
+end
+
+-- LayerSwap grays its Host button while hosting is paused (in a group, in combat, a break), and
+-- it stays clickable: it reads "Host: PAUSED" then. DaylightUI's button takes its grayed look for
+-- that time, put on as the words change.
+local function HostPaused(b, text)
+	local Kit = ns.Kit
+	local s = Kit and type(Kit.ButtonOf) == "function" and Kit.ButtonOf(b) or nil
+	if type(s) ~= "table" or type(s.Paint) ~= "function" then return end
+	local paused = type(text) == "string" and string.find(text, "PAUSED", 1, true) ~= nil
+	local off = (paused or not b:IsEnabled()) or nil
+	if s.off == off then return end
+	s.off = off
+	s.Paint()
+	if type(s.Light) == "function" then s.Light(not off and b:IsMouseOver() == true) end
+end
+
+-- New words on a button (its state words, the Swap button's next step): fitted again; the Host
+-- button's grayed look follows them.
+local function LabelSet(b, text)
+	if not ns.Enabled(KEY) then return end
+	local fs = b:GetFontString()
+	if ns.Usable(fs) then FitLabel(b, fs) end
+	if b:GetName() == "LayerSwapPanelHostButton" then HostPaused(b, text) end
 end
 
 local function PanelButton(b)
 	if not ns.Usable(b) or buttonsDone[b] then return end
 	buttonsDone[b] = true
 	hooksecurefunc(b, "SetDisabledFontObject", ButtonText)
+	hooksecurefunc(b, "SetText", LabelSet)
 	b:HookScript("OnEnable", ButtonText)
 	b:HookScript("OnDisable", ButtonText)
 	ButtonText(b)
+	LabelSet(b, b:GetText())
 end
 
 -- The guild entry's title takes its words' look from the button's font objects (gold, white under
@@ -491,7 +546,7 @@ local KNOB_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 local sliders = setmetatable({}, { __mode = "k" })
 
 local function SliderPaint(s)
-	s.fill:SetColorTexture(ns.AccentOf(KEY))
+	ns.FillAccent(s.fill, 1, nil, KEY)
 end
 
 local function SliderLook(slider)
@@ -548,9 +603,42 @@ local function OptionTexts(...)
 	end
 end
 
+-- Its switches' names and notes are one line each, cut short with "..." when too long (LayerSwap
+-- sized them for its own font): one that runs over steps down a size or three. Done as the page
+-- shows, when it has its width.
+local lineSize = setmetatable({}, { __mode = "k" })
+local function FitLines(...)
+	for i = 1, select("#", ...) do
+		local r = select(i, ...)
+		if r.GetObjectType and r:GetObjectType() == "FontString" and r.IsTruncated
+			and r.CanWordWrap and not r:CanWordWrap() then
+			local path, size, flags = r:GetFont()
+			if path and type(size) == "number" then
+				local base = lineSize[r] or size
+				lineSize[r] = base
+				local s = base
+				if size ~= s then r:SetFont(path, s, flags or "") end
+				while r:IsTruncated() and s > base - LABEL_STEPS do
+					s = s - 1
+					r:SetFont(path, s, flags or "")
+				end
+			end
+		end
+	end
+end
+
+local function FitOptions(o)
+	if not ns.Enabled(KEY) then return end
+	FitLines(o:GetRegions())
+	-- (Once more a moment later: the game's options window sizes the page as it shows it.)
+	C_Timer.After(0, function() if o:IsVisible() then FitLines(o:GetRegions()) end end)
+end
+
 local function Options(o, Kit)
 	if not ns.Once(o) then return end
 	OptionTexts(o:GetRegions())
+	o:HookScript("OnShow", FitOptions)
+	if o:IsVisible() then FitOptions(o) end
 	for _, s in ipairs(type(o.sliders) == "table" and o.sliders or {}) do SliderLook(s) end
 	if ns.Controls(KEY) then
 		ns.Guard(Kit.Auto, o, { rows = false })

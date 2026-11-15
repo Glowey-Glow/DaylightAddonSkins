@@ -67,9 +67,12 @@ local function Build()
 	content:SetSize(W - PAD * 2, 10)
 	scroll:SetScrollChild(content)
 
+	-- Apply is the window's main action, as DaylightUI lays out its own (Accept, Send...): in the
+	-- left corner with its main-button look (DaylightUI 1.8), Ask me later in the right corner.
 	local apply = API.Button(frame, L["Apply"], 26)
 	apply:SetSize(150, 26)
-	apply:SetPoint("BOTTOMRIGHT", -PAD, PAD)
+	apply:SetPoint("BOTTOMLEFT", PAD, PAD)
+	if type(API.MainButton) == "function" then pcall(API.MainButton, apply, true) end
 	apply:SetScript("OnClick", function()
 		local reload = false
 		for _, r in ipairs(rows) do
@@ -85,7 +88,7 @@ local function Build()
 
 	local later = API.Button(frame, L["Ask me later"], 26)
 	later:SetSize(150, 26)
-	later:SetPoint("RIGHT", apply, "LEFT", -10, 0)
+	later:SetPoint("BOTTOMRIGHT", -PAD, PAD)
 	later:SetScript("OnClick", function() frame:Hide() end)
 end
 

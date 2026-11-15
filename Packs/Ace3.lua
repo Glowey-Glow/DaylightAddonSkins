@@ -28,7 +28,7 @@ if not ns.ok then return end
 -- Self-contained and started once (AceInks.Start), whichever pack starts it.
 local AceInks = {
 	started = false,
-	hooked = {},                                       -- library method -> what was hooked
+	minor = nil,                                       -- the AceGUI version hooked (LibStub's minor)
 	trees = setmetatable({}, { __mode = "k" }),        -- TreeGroup widget -> true
 	labels = setmetatable({}, { __mode = "k" }),       -- Label widget -> true
 	washed = setmetatable({}, { __mode = "k" }),       -- tree line DaylightUI dressed -> true
@@ -178,21 +178,23 @@ local function AceSeen(_, w)
 	end
 end
 
--- AceGUI is shared and a newer copy may replace it when another addon loads: hooked again then.
+-- AceGUI is shared and a newer copy may replace it when another addon loads (its functions made
+-- again in the same table, under a higher minor version): hooked again then, and only then. Told
+-- by the version, not by the function: DaylightUI's Ace3 look post-hooks the same functions, so a
+-- function that isn't the one hooked here is most often its wrapper round ours, and hooking that
+-- again on every addon load piled the wrappers up.
 function AceInks.Hook()
-	local AG = LibStub("AceGUI-3.0", true)
-	if type(AG) ~= "table" then return end
+	local AG, minor = LibStub("AceGUI-3.0", true)
+	if type(AG) ~= "table" or minor == AceInks.minor then return end
+	AceInks.minor = minor
 	for _, m in ipairs(ACE_METHODS) do
-		if type(AG[m]) == "function" and AG[m] ~= AceInks.hooked[m] then
-			hooksecurefunc(AG, m, AceSeen)
-			AceInks.hooked[m] = AG[m]
-		end
+		if type(AG[m]) == "function" then hooksecurefunc(AG, m, AceSeen) end
 	end
 	-- A tree made before this started (and not shown yet, so no lines to find it by) is found when
 	-- it makes its first line: AceGUI numbers each new line (AceGUI30TreeButton<n>) as it makes it,
 	-- inside the tree's refresh; the line's tree is hooked once that refresh is over.
 	local m = "GetNextWidgetNum"
-	if type(AG[m]) == "function" and AG[m] ~= AceInks.hooked[m] then
+	if type(AG[m]) == "function" then
 		hooksecurefunc(AG, m, function(_, kind)
 			if kind ~= "TreeGroupButton" then return end
 			local n = type(AG.counts) == "table" and AG.counts.TreeGroupButton
@@ -204,7 +206,6 @@ function AceInks.Hook()
 				end
 			end)
 		end)
-		AceInks.hooked[m] = AG[m]
 	end
 end
 

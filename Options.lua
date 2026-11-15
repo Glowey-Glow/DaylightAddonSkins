@@ -36,6 +36,11 @@ local late = CreateFrame("Frame")
 late:RegisterEvent("PLAYER_LOGIN")
 late:SetScript("OnEvent", gatherFonts)
 
+-- The accents an addon's page can pick: DaylightUI's own Accent choices, its gradients included.
+local ACCENTS = { daylight = L["DaylightUI's accent"], gradient = L["Daylight gradient"], class = L["Class color"],
+	classGradient = L["Class gradient"], custom = L["Custom color"] }
+local ACCENT_ORDER = { "daylight", "gradient", "class", "classGradient", "custom" }
+
 local OUTLINES = { keep = L["As the addon has it"], none = L["None"], thin = L["Thin"], thick = L["Thick"] }
 
 -- The switch at the top of each tab of an addon's page: the addon's own settings, or DaylightUI's.
@@ -70,11 +75,12 @@ local function textGroups(addon, caps, tab)
 			  desc = L["Off: the addon keeps its own text colors."], disabled = following },
 		} }
 		groups[#groups + 1] = { label = L["Accent"], tab = tab, items = {
-			{ type = "toggle", key = at .. "daylightAccent", label = L["Use DaylightUI's accent"],
-			  desc = L["Off: pick an accent for this addon alone."], disabled = following },
+			{ type = "dropdown", key = at .. "accentMode", label = L["Accent"], values = ACCENTS, order = ACCENT_ORDER,
+			  desc = L["This addon's accent: DaylightUI's own (a gradient one included), or one for this addon alone."],
+			  disabled = following },
 			{ type = "color", key = at .. "accent", label = L["Accent color"],
 			  desc = L["This addon's accent: its highlights, marks and arrow."],
-			  disabled = function(get) return following(get) or get(at .. "daylightAccent") ~= false end },
+			  disabled = function(get) return following(get) or get(at .. "accentMode") ~= "custom" end },
 		} }
 	end
 	return groups
@@ -103,6 +109,9 @@ local function lookGroups(addon, caps, tab, lead)
 			{ type = "slider", key = at .. "borderPx", label = L["Border size"], min = 1, max = 16, step = 1, unit = "px",
 			  desc = L["How thick the border is."],
 			  disabled = function(get) return following(get) or get(at .. "border") == false or get(at .. "ownBorder") ~= true end },
+			{ type = "toggle", key = at .. "gradientBorder", label = L["Gradient window borders"],
+			  desc = L["When this addon's accent is a gradient (Daylight's or your class's), its window borders run along it."],
+			  disabled = function(get) return following(get) or get(at .. "border") == false end },
 			{ type = "toggle", key = at .. "bevel", label = L["Bevel"],
 			  desc = L["The soft light along the top of this addon's windows."], disabled = following },
 		} }

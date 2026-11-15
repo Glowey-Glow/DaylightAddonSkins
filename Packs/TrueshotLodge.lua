@@ -59,13 +59,11 @@ local accentLines = setmetatable({}, { __mode = "k" }) -- the filter buttons' "o
 local headerLabels = setmetatable({}, { __mode = "k" }) -- the list headings' words
 
 local function PaintPick(tex)
-	local r, g, b = ns.AccentOf(KEY)
-	tex:SetColorTexture(r, g, b, Kit and Kit.ROW_PICK or 0.16)
+	ns.FillAccent(tex, Kit and Kit.ROW_PICK or 0.16, nil, KEY)
 end
 
 local function PaintLine(tex)
-	local r, g, b = ns.AccentOf(KEY)
-	tex:SetColorTexture(r, g, b, 1)
+	ns.FillAccent(tex, 1, nil, KEY)
 end
 
 -- A list heading's words: the game's gold becomes the accent, as DaylightUI's own list
@@ -496,8 +494,7 @@ local sliderFills = setmetatable({}, { __mode = "k" })
 local function SliderPaint(slider)
 	local s = sliderFills[slider]
 	if not s then return end
-	local r, g, b = ns.AccentOf(KEY)
-	s.fill:SetColorTexture(r, g, b, 1)
+	ns.FillAccent(s.fill, 1, nil, KEY)
 	s.knob:SetVertexColor(1, 1, 1, (not slider.IsEnabled or slider:IsEnabled()) and 1 or 0.4)
 end
 

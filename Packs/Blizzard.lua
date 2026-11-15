@@ -2,12 +2,14 @@
 -- BlizzardSettings pack) leave as the game draws them, in the same look through the Kit. Built
 -- against the client's own interface code (wow-ui-source, branch "forever"; this client loads the
 -- Mainline files plus its own Camelot overrides), so every name and key below is the game's.
---   Ready check (ReadyCheckListenerFrame), role check (RolePollPopup), the "Return to graveyard"
---     button (GhostFrame), quick keybind (QuickKeybindFrame): shown by the game itself, sometimes
---     in a fight, so dressed ahead of time and quietly (see Taint below).
+--   Ready check (ReadyCheckListenerFrame), the "Return to graveyard" button (GhostFrame), quick
+--     keybind (QuickKeybindFrame): shown by the game itself, sometimes in a fight, so dressed
+--     ahead of time and quietly (see Taint below). The leader's role poll (RolePollPopup) too,
+--     but only while DaylightUI's own System skins, which dress it, are off.
 --   Color picker (ColorPickerFrame; the wheel, value and alpha bars and the two swatches stay) and
 --     the opacity panel (OpacityFrame: the zone map's and the chat windows' "Opacity").
---   Alert toasts other than DaylightUI's loot and money toasts: achievements, criteria, recipes,
+--   Alert toasts other than DaylightUI's loot and money toasts (and, from DaylightUI 1.8.3, its
+--     new recipe toast while its System skins are on): achievements, criteria, recipes,
 --     honor, pets / mounts / toys, dungeon and scenario completion, guild and the rest the game
 --     sends through AlertFrame_ShowNewAlert. Icons, an item's quality ring, the achievement
 --     shield and points, a guild's tabard and a dig site's race stay.
@@ -27,11 +29,16 @@
 --     the plain error dialog, the model preview, the quest details popup, party sync dialogs,
 --     the abandon-instance popup, the bank's clean-up question, the quick-join role picker, the
 --     icon pickers (macros, guild bank tabs, equipment sets), the battleground score and results,
---     the quest timer, the old tutorial box, the nameplate tutorial, help tips (HelpTip) and help
---     plates, the move pad, name autocomplete, the browser-settings and IME candidate boxes, the
+--     the quest timer, the old tutorial box, the nameplate tutorial, help plates (the "?" button's
+--     boxes), the move pad, name autocomplete, the browser-settings and IME candidate boxes, the
 --     LFG listing tooltip, the GM chat and survey status boxes.
+--   More in BlizzardExtras.lua (through ns.Blizz, below): the collections' side tabs and filter
+--     badges, the calendar's side panels, click casting, the cooldown manager's tabs and lists,
+--     the communities' inner dialogs, the guild bank's tabs, the confirm boxes' extra parts, the
+--     world map's pin button, the auction house's filter badge and buy dialog.
 -- Left alone on purpose: Edit Mode (the player's choice), the settings panel, the dungeon-ready
 -- dialog and the ping tutorial (BlizzardSettings pack), everything DaylightUI dresses or replaces,
+-- HelpTip's pooled help tips (shown from inside secure code; see the note at the help plates),
 -- the cooldown manager's layout dialogs (Edit Mode's own templates), and windows whose content
 -- this client never has (garrisons, covenants, Azerite, islands, Torghast, pet battles and the
 -- like). Gamepad-only pieces (the input legend, the gamepad loot roll) only show with a
@@ -627,6 +634,9 @@ end)
 
 -- DaylightUI's: loot ("You received"), money; and the other item toasts, whose art is the item.
 local TOAST_SKIP = { "LootAlertSystem", "MoneyWonAlertSystem", "LootUpgradeAlertSystem", "LegendaryItemAlertSystem" }
+-- DaylightUI's too since its 1.8.3, while its System skins are on (Window skins): the new recipe
+-- toast. With those off (or an older DaylightUI) it's dressed here as before.
+local TOAST_DAYLIGHT = { "NewRecipeLearnedAlertSystem" }
 -- Kept: the picture that says what it is (icon, dungeon, tabard, dig site race, quest).
 local TOAST_KEEP = { "Icon", "icon", "IconTexture", "IconOverlay", "dungeonTexture", "heroicIcon", "EmblemIcon",
 	"GuildBanner", "GuildTabardBackground", "GuildTabardEmblem", "GuildTabardBorder", "DigsiteTypeTexture",
@@ -635,6 +645,7 @@ local TOAST_INSET = 8   -- px the box sits inside the toast's frame (its art has
 local ICON_PAD = 2
 
 local toastSkip       -- alert system -> true, made the first time a toast shows
+local toastDaylight   -- alert system -> true (TOAST_DAYLIGHT), made with toastSkip
 local toastShown = setmetatable({}, { __mode = "k" })   -- toast -> when it was last dressed
 
 -- Every texture of a frame but the kept ones: erased.
@@ -694,17 +705,36 @@ local function Toast(Kit, f)
 	Words(Kit, f, 1)
 end
 
+-- Whether this DaylightUI dresses the toasts in TOAST_DAYLIGHT itself (1.8.3 and later).
+local function DaylightDressesToasts()
+	local get = C_AddOns and C_AddOns.GetAddOnMetadata
+	local ok, version = pcall(get, "DaylightUI", "Version")
+	if not ok or type(version) ~= "string" then return false end
+	local a, b, c = version:match("^(%d+)%.(%d+)%.?(%d*)")
+	a, b, c = tonumber(a) or 0, tonumber(b) or 0, tonumber(c) or 0
+	if a ~= 1 then return a > 1 end
+	if b ~= 8 then return b > 8 end
+	return c >= 3
+end
+
 local function DressToast(f)
 	if type(f) ~= "table" or not Usable(f) or not On() then return end
 	if not toastSkip then
-		toastSkip = {}
+		toastSkip, toastDaylight = {}, {}
 		for _, name in ipairs(TOAST_SKIP) do
 			local q = _G[name]
 			if type(q) == "table" then toastSkip[q] = true end
 		end
+		if DaylightDressesToasts() then
+			for _, name in ipairs(TOAST_DAYLIGHT) do
+				local q = _G[name]
+				if type(q) == "table" then toastDaylight[q] = true end
+			end
+		end
 	end
 	-- (A loot toast without its queue is still a loot toast.)
 	if (f.queue ~= nil and toastSkip[f.queue]) or f.lootItem ~= nil then return end
+	if f.queue ~= nil and toastDaylight[f.queue] and ns.DaylightHas("Skins", "packs.system") then return end
 	-- Once a show: AddAlertFrame calls AlertFrame_ShowNewAlert, both hooked, in the same moment.
 	-- (Kept in a table of ours: nothing is written on the game's frames.)
 	local now = GetTime()
@@ -773,9 +803,7 @@ local CATEGORY_WASH = 0.16
 local function CategoryRow(btn)
 	local hl = btn.Highlight
 	if not IsTexture(hl) then return end
-	local r, g, b = ns.AccentOf(KEY)
-	hl:SetColorTexture(r, g, b, CATEGORY_WASH)
-	hl:SetVertexColor(1, 1, 1)
+	ns.FillAccent(hl, CATEGORY_WASH, nil, KEY)
 	hl:SetBlendMode("BLEND")
 end
 
@@ -975,11 +1003,13 @@ QuietEntry("CreateChannelPopup")
 
 -- Role check, quick keybind ---------------------------------------------------------------------
 -- RolePollPopup: Border, CloseButton, three RolePollRoleButtonTemplate buttons (their radio
--- checkButtons stay), acceptButton. QuickKeybindFrame (protected): BG (DialogBorderTemplate),
--- Header, three description strings, UseCharacterBindingsButton (UICheckButtonTemplate: kept, its
--- Text inked), DefaultsButton / CancelButton / OkayButton.
+-- checkButtons stay), acceptButton. DaylightUI's "system" skins dress it themselves: here only
+-- while those are off. QuickKeybindFrame (protected): BG (DialogBorderTemplate), Header, three
+-- description strings, UseCharacterBindingsButton (UICheckButtonTemplate: kept, its Text inked),
+-- DefaultsButton / CancelButton / OkayButton.
 
 Entry("RolePollPopup", function(f, Kit)
+	if ns.DaylightHas("Skins", "packs.system") then return end
 	ShellWindow(Kit, f)
 	Kit.Close(f.CloseButton)
 	if Controls() then StaticButton(Kit, f.acceptButton) end
@@ -1216,7 +1246,8 @@ PanelEntry("GuildControlUI")
 -- three dropdowns).
 
 -- Window chrome only, silent: the game opens it from Edit Mode's cooldown manager settings, and
--- Edit Mode owns the action bars' layout; nothing of ours may run inside its calls.
+-- Edit Mode owns the action bars' layout; nothing of ours may run inside its calls. Its tabs,
+-- dropdowns and category headers get art only in BlizzardExtras.lua.
 Entry("CooldownViewerSettings", function(f, Kit)
 	ShellWindow(Kit, f)
 	Kit.Close(f.CloseButton)
@@ -1758,6 +1789,15 @@ Entry("PlayerSpellsFrame", function(f, Kit)
 	end
 end)
 
+-- What BlizzardExtras.lua (loaded right after this file) builds its windows with: its entries go
+-- in this file's list, so they're dressed by the same passes below.
+ns.Blizz = {
+	KEY = KEY, Kind = Kind, IsTexture = IsTexture, FontOf = FontOf, Words = Words, DialogArt = DialogArt,
+	ShellWindow = ShellWindow, Window = Window, Panel = Panel, Walk = Walk, Quiet = Quiet,
+	StaticButton = StaticButton, StaticEditBox = StaticEditBox, TipPanel = TipPanel, Entry = Entry,
+	QUIET = QUIET,
+}
+
 -- ---------------------------------------------------------------------------------------------
 -- When: at login (the always-loaded windows; out of combat), and when each Blizzard addon that
 -- holds one of the others loads. Those are DaylightUI skins of this plugin's, so DaylightUI runs
@@ -1776,7 +1816,8 @@ ns.me.On("Login", function() ns.WithKit(Soon) end)
 for _, addon in ipairs({ "Blizzard_PlayerSpells", "Blizzard_WorldMap", "Blizzard_BattlefieldMap", "Blizzard_TimeManager", "Blizzard_GuildControlUI",
 	"Blizzard_DeathRecap", "Blizzard_MacroUI", "Blizzard_GuildBankUI", "Blizzard_HelpFrame",
 	"Blizzard_ReportFrame", "Blizzard_Communities", "Blizzard_MovePad", "Blizzard_GMChatUI",
-	"Blizzard_WowSurveyUI", "Blizzard_GroupFinder_VanillaStyle", "Blizzard_PVPMatch" }) do
+	"Blizzard_WowSurveyUI", "Blizzard_GroupFinder_VanillaStyle", "Blizzard_PVPMatch", "Blizzard_Collections",
+	"Blizzard_Calendar", "Blizzard_ClickBindingUI", "Blizzard_CooldownViewer", "Blizzard_AuctionHouseUI" }) do
 	ns.Pack(addon, nil, function() TryAll() end)
 end
 

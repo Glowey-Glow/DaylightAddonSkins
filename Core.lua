@@ -115,12 +115,14 @@ end
 ns.LOOK = {
 	own = false,
 	font = "addon", size = 1, outline = "keep", shadow = false,
-	daylightColors = true, daylightAccent = true, accent = { 0.25, 0.85, 0.6 },
+	daylightColors = true, daylightAccent = true, accentMode = "daylight", accent = { 0.25, 0.85, 0.6 },
 	ownOpacity = false, opacity = 0.85, border = true, ownBorder = false, borderPx = 8, bevel = true,
+	gradientBorder = false,
 	controls = true,
 }
 -- The ones a shell is drawn from: a change to any other leaves the shells as they are.
-local SHELL_LOOK = { own = true, ownOpacity = true, opacity = true, border = true, ownBorder = true, borderPx = true, bevel = true }
+local SHELL_LOOK = { own = true, ownOpacity = true, opacity = true, border = true, ownBorder = true, borderPx = true, bevel = true,
+	accentMode = true, daylightAccent = true, gradientBorder = true }
 
 local function LookDefault(key, name)
 	local caps = ns.caps[key]
@@ -171,13 +173,173 @@ ns.Look = Look
 -- Small helpers the packs share
 -- ---------------------------------------------------------------------------------------------
 
--- The accent `key`'s windows use: its own, when picked on its page, or DaylightUI's.
+-- The addon whose windows are being dressed right now: set round a pack's function and a watch's,
+-- so the shared helpers below know whose look to read without being told each time.
+local current
+
+-- The accent an addon's page can pick, the same choices as DaylightUI's own Accent setting:
+-- "daylight" (DaylightUI's accent as the player set it, a gradient one included), the Daylight
+-- gradient, the class color, the class gradient, or a custom color.
+ns.ACCENT_MODES = { daylight = true, gradient = true, class = true, classGradient = true, custom = true }
+
+local function DStyle()
+	local Style = type(DUI) == "table" and DUI.Style
+	return type(Style) == "table" and Style or nil
+end
+
+-- Which accent `key`'s windows use (one of ns.ACCENT_MODES). A page saved before the choices
+-- came (only "Use DaylightUI's accent" off) is its custom color.
+local function AccentMode(key)
+	if not key then return "daylight" end
+	local mode = Look(key, "accentMode")
+	if not ns.ACCENT_MODES[mode] then mode = "daylight" end
+	if mode == "daylight" and Look(key, "daylightAccent") == false then mode = "custom" end
+	return mode
+end
+ns.AccentMode = AccentMode
+
+-- Whether DaylightUI's gradients are on at all (General > Gradients off makes every accent one
+-- color, its own gradient accents too; an addon's own gradient follows that).
+local function GradientsOn()
+	local G = type(DUI) == "table" and DUI.Gradients
+	if type(G) ~= "table" or type(G.Flat) ~= "function" then return true end
+	local ok, flat = pcall(G.Flat)
+	return not (ok and flat)
+end
+
+local function ClassPair()
+	local Style = DStyle()
+	if not Style or type(Style.ClassAccentPair) ~= "function" then return nil end
+	local ok, lo, hi = pcall(Style.ClassAccentPair)
+	if ok and type(lo) == "table" and type(hi) == "table" then return lo, hi end
+	return nil
+end
+
+-- The two ends of `key`'s accent when it's a gradient ({ r, g, b } each, left to right; shared
+-- tables, not to be changed), or nil for a single-color accent.
+function ns.AccentPairOf(key)
+	local mode = AccentMode(key)
+	local Style = DStyle()
+	if not Style then return nil end
+	if mode == "daylight" then
+		if type(Style.AccentPair) ~= "function" then return nil end
+		local ok, lo, hi = pcall(Style.AccentPair)
+		if ok and type(lo) == "table" and type(hi) == "table" then return lo, hi end
+		return nil
+	end
+	if not GradientsOn() then return nil end
+	if mode == "gradient" then
+		local shape = Style.GRADIENT_SHAPE
+		if type(shape) == "table" and type(shape[1]) == "table" then return shape[1], shape[2] end
+		return nil
+	end
+	if mode == "classGradient" then return ClassPair() end
+	return nil
+end
+
+-- The accent `key`'s windows use, as one color (text, thin lines, a single mark): its own, when
+-- picked on its page, or DaylightUI's. A gradient accent gives its middle, as DaylightUI does.
 function ns.AccentOf(key)
-	if key and Look(key, "daylightAccent") == false then
+	local mode = AccentMode(key)
+	if mode == "custom" then
 		local own = Look(key, "accent")
 		if type(own) == "table" and type(own[1]) == "number" then return own[1], own[2], own[3] end
+	elseif mode == "gradient" then
+		local Style = DStyle()
+		local m = Style and Style.GRADIENT_MID
+		if type(m) == "table" and type(m[1]) == "number" then return m[1], m[2], m[3] end
+	elseif mode == "classGradient" then
+		local lo, hi = ClassPair()
+		if lo then return (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2, (lo[3] + hi[3]) / 2 end
+	end
+	if mode == "class" or mode == "classGradient" then
+		local _, token = UnitClass("player")
+		local Style = DStyle()
+		if Style and type(Style.RawClassColor) == "function" then
+			local ok, r, g, b = pcall(Style.RawClassColor, token)
+			if ok and type(r) == "number" then return r, g, b end
+		end
 	end
 	return API.Accent()
+end
+
+-- A texture with a picture in `key`'s accent: tinted along the gradient when the accent is one
+-- (orientation "HORIZONTAL" by default; "VERTICAL" runs dark at the bottom to light at the top),
+-- otherwise the one color.
+function ns.PaintAccent(tex, alpha, orientation, key)
+	if not tex then return end
+	alpha = alpha or 1
+	local lo, hi = ns.AccentPairOf(key or current)
+	if lo and tex.SetGradient and CreateColor then
+		tex:SetVertexColor(1, 1, 1, alpha)
+		tex:SetGradient(orientation or "HORIZONTAL", CreateColor(lo[1], lo[2], lo[3], alpha), CreateColor(hi[1], hi[2], hi[3], alpha))
+		return
+	end
+	local r, g, b = ns.AccentOf(key or current)
+	tex:SetVertexColor(r, g, b, alpha)
+end
+
+-- A plain filled shape (a bar's fill, a line, a mark) in `key`'s accent: the gradient across it
+-- when the accent is one, otherwise the one color. Takes the place of tex:SetColorTexture(accent).
+function ns.FillAccent(tex, alpha, orientation, key)
+	if not tex then return end
+	alpha = alpha or 1
+	local lo, hi = ns.AccentPairOf(key or current)
+	if lo and tex.SetGradient and CreateColor then
+		tex:SetColorTexture(1, 1, 1, 1)
+		tex:SetVertexColor(1, 1, 1, alpha)
+		tex:SetGradient(orientation or "HORIZONTAL", CreateColor(lo[1], lo[2], lo[3], alpha), CreateColor(hi[1], hi[2], hi[3], alpha))
+		return
+	end
+	local r, g, b = ns.AccentOf(key or current)
+	tex:SetColorTexture(r, g, b, alpha)
+	-- (A plain vertex color clears a gradient put on before, when the accent was one.)
+	tex:SetVertexColor(1, 1, 1, 1)
+end
+
+-- Text in `key`'s accent: letter by letter along the gradient when the accent is one (the font
+-- string drawn white), otherwise the one color. Anything but a plain string is set as it is.
+function ns.AccentText(fs, text, key)
+	if not fs then return end
+	key = key or current
+	local lo, hi = ns.AccentPairOf(key)
+	if lo and type(text) == "string" and text ~= "" and not (issecretvalue and issecretvalue(text)) then
+		local mode = AccentMode(key)
+		local colored
+		if (mode == "gradient" or (mode == "daylight" and DStyle() and DStyle().AccentSweep and DStyle().AccentSweep() == "daylight"))
+			and type(DUI.GradientText) == "function" then
+			colored = DUI.GradientText(text)
+		else
+			local chars, out = {}, {}
+			for ch in text:gmatch("[%z\1-\127\194-\244][\128-\191]*") do chars[#chars + 1] = ch end
+			local n = #chars
+			for i, ch in ipairs(chars) do
+				local t = n > 1 and (i - 1) / (n - 1) or 0.5
+				out[i] = string.format("|cff%02x%02x%02x%s", floor((lo[1] + (hi[1] - lo[1]) * t) * 255 + 0.5),
+					floor((lo[2] + (hi[2] - lo[2]) * t) * 255 + 0.5), floor((lo[3] + (hi[3] - lo[3]) * t) * 255 + 0.5), ch)
+			end
+			colored = table.concat(out) .. "|r"
+		end
+		fs:SetText(colored)
+		fs:SetTextColor(1, 1, 1)
+		return
+	end
+	fs:SetText(text)
+	fs:SetTextColor(ns.AccentOf(key))
+end
+
+-- A shell lit in `key`'s accent (a picked tab's edge): its outline along the gradient when the
+-- accent is one. border = the single color to use otherwise ({ r, g, b }).
+function ns.LightShell(s, border, key)
+	local Kit = ns.Kit
+	if not s or not Kit then return end
+	local lo, hi = ns.AccentPairOf(key or current)
+	local Style = DStyle()
+	if lo and not s.lite and Style and type(Style.SetShellColors) == "function" and type(s.opts) == "table" then
+		Guard(Style.SetShellColors, s, border, nil, { lo, hi })
+		return
+	end
+	Kit.Paint(s, border)
 end
 
 -- Whether one of DaylightUI's modules is on.
@@ -207,9 +369,6 @@ function ns.FileIDs(paths)
 	return out
 end
 
--- The addon whose windows are being dressed right now: set round a pack's function and a watch's,
--- so the shared helpers below know whose look to read without being told each time.
-local current
 
 function ns.Controls(key)
 	return Look(key or current, "controls") ~= false
@@ -256,6 +415,73 @@ function ns.SafeFace(face)
 	if LOCALE == "ruRU" and not HasCyrillic(face) then return nil end
 	return face
 end
+
+-- Whether a string's text has letters a face has no glyphs for (they'd draw as empty boxes): on
+-- any client, a menu or list may name a language in its own alphabet (Ελληνικά, 한국어). By the
+-- UTF-8 lead byte, looked at only when the text has a byte from 0xCD up: Greek (U+0370 on: CD B0-BF,
+-- CE, CF; Greek Extended E1 BC-BF), Cyrillic (D0-D3: when the face lacks it, ns.SafeFace's list),
+-- Armenian, Hebrew, Arabic and the rest of the two-byte scripts (D4-DF), Indic and Thai (E0),
+-- Georgian, Hangul Jamo and the like (E1 80-B7), CJK, kana and Hangul (E3-ED) and the four-byte
+-- planes (F0-F4). Latin-1 and Latin Extended (C2-CC, E1 B8-BB) and punctuation (E2) are drawn.
+local function Foreign(text, face)
+	if type(text) ~= "string" or (issecretvalue and issecretvalue(text)) then return false end
+	if not text:find("[\205-\255]") then return false end
+	if text:find("\205[\176-\191]") or text:find("[\206\207\212-\224\227-\237\240-\244]")
+		or text:find("\225[\128-\183\188-\191]") then
+		return true
+	end
+	if text:find("[\208-\211]") then return not (type(face) == "string" and HasCyrillic(face)) end
+	return false
+end
+ns.Foreign = Foreign
+
+-- Strings given a face of ours: the string's own face (to go back to when its text turns to
+-- another alphabet), the face of ours it should have, and the ones kept on their own face for
+-- their text. Rechecked by every font follow (ns.FollowFont: each walk over a window), and as the
+-- text is set on a string whose addon gave it a SetText of its own (Mastercraft's, ns.Text): the
+-- game's own strings are never hooked (a field written on them would taint the game's calls).
+local ownFace = setmetatable({}, { __mode = "k" })
+local ourFace = setmetatable({}, { __mode = "k" })
+local keptFace = setmetatable({}, { __mode = "k" })
+local textHooked = setmetatable({}, { __mode = "k" })
+
+local function Recheck(fs)
+	local face = ourFace[fs]
+	if not face then return end
+	local ok, path, size, flags = pcall(fs.GetFont, fs)
+	if not ok or type(size) ~= "number" or size <= 0 then return end
+	local text = fs:GetText()
+	if Foreign(text, face) then
+		if path == face then
+			keptFace[fs] = true
+			fs:SetFont(ownFace[fs] or _G.STANDARD_TEXT_FONT, size, flags or "")
+		end
+	elseif keptFace[fs] and path ~= face then
+		keptFace[fs] = nil
+		fs:SetFont(face, size, flags or "")
+	end
+end
+
+-- The face fs gets: face, or its own (path) when its text needs letters face lacks. Strings (and
+-- text boxes) only: a font object has no text of its own.
+local function FaceFor(fs, path, face)
+	if face == nil or face == path then return face or path end
+	local kind = fs.GetObjectType and fs:GetObjectType()
+	if kind ~= "FontString" and kind ~= "EditBox" then return face end
+	if ownFace[fs] == nil and path ~= nil and path ~= face then ownFace[fs] = path end
+	ourFace[fs] = face
+	if not textHooked[fs] then
+		textHooked[fs] = true
+		if type(rawget(fs, "SetText")) == "function" then hooksecurefunc(fs, "SetText", Recheck) end
+	end
+	if Foreign(fs:GetText(), face) then
+		keptFace[fs] = true
+		return ownFace[fs] or path
+	end
+	keptFace[fs] = nil
+	return face
+end
+ns.FaceFor = FaceFor
 
 -- The player's font (DaylightUI's), when this client can draw in it.
 function ns.PlayerFace()
@@ -308,7 +534,7 @@ function ns.SetFont(key, fs, path, size, flags)
 	local t = Text(key)
 	if t.plain then return end
 	if t.scale and type(size) == "number" then size = floor(size * t.scale + 0.5) end
-	local face = t.face or path
+	local face = t.face and FaceFor(fs, path, t.face) or path
 	if face and size and size > 0 then fs:SetFont(face, size, t.flags or flags or "") end
 	if t.shadow and fs.SetShadowOffset then
 		fs:SetShadowColor(0, 0, 0, 0.9)
@@ -334,6 +560,18 @@ local function ShellOpts(key, opts)
 	if Look(key, "border") == false then out.noBorder = true end
 	if Look(key, "ownBorder") == true then out.borderPx = Look(key, "borderPx") end
 	if Look(key, "bevel") == false then out.noBevel = true end
+	-- "Gradient window borders" of its own: the outline along the addon's gradient accent, or kept
+	-- plain (DaylightUI's own switch would otherwise sweep it along DaylightUI's accent).
+	if not out.noBorder and not out.borderColor and not out.borderPair then
+		local lo, hi
+		if Look(key, "gradientBorder") == true then lo, hi = ns.AccentPairOf(key) end
+		local Style = DStyle()
+		if lo then
+			out.borderPair = { lo, hi }
+		elseif Style and type(Style.BORDER) == "table" and type(Style.BAND) == "table" then
+			out.borderColor, out.bandColor = Style.BORDER, Style.BAND
+		end
+	end
 	return out
 end
 
@@ -570,6 +808,13 @@ end)
 me.On("Login", function()
 	ready = true
 	Forget()
+	-- A page saved before the accent choices came, with "Use DaylightUI's accent" off: its custom
+	-- color is now the "Custom color" choice (the old switch is put back on as that's set).
+	for addon in pairs(ns.targets) do
+		if Setting(LookPath(addon, "daylightAccent")) == false and Setting(LookPath(addon, "accentMode")) ~= "custom" then
+			Guard(function() DUI:Set(ADDON, LookPath(addon, "accentMode"), "custom") end)
+		end
+	end
 	-- Shells made before the settings were there are DaylightUI's plain ones: right, unless the
 	-- player has their own look on.
 	ReshellAll()
@@ -583,6 +828,11 @@ me.On("SettingChanged", function(scope, path)
 	else
 		local key, name = string.match(path, "^look%.([^.]+)%.(.+)$")
 		if not key or not SHELL_LOOK[name] then return end
+		-- The accent is one choice now: the old "Use DaylightUI's accent" switch goes back on, so
+		-- picking DaylightUI's accent again isn't read as the custom color.
+		if name == "accentMode" and Setting(LookPath(key, "daylightAccent")) == false then
+			Guard(function() DUI:Set(ADDON, LookPath(key, "daylightAccent"), true) end)
+		end
 		redoKeys[key] = true
 	end
 	if not redoQueued then
@@ -607,7 +857,7 @@ function ns.Refont(fs, key)
 		ns.SetFont(key, fs, path, size, flags)
 	else
 		local face = ns.PlayerFace()
-		if face then fs:SetFont(face, size, flags or "") end
+		if face then fs:SetFont(FaceFor(fs, path, face), size, flags or "") end
 	end
 end
 
@@ -770,7 +1020,15 @@ function ns.FollowFont(fs, key)
 	if not Usable(fs) or not fs.GetFont then return end
 	local ok, path, size = pcall(fs.GetFont, fs)
 	if not ok or not size or size <= 0 then return end
-	if leftFace[fs] == path and leftSize[fs] == size then return end
+	if leftFace[fs] == path and leftSize[fs] == size then
+		-- (Its text may have turned to an alphabet our face lacks, or back.)
+		if ourFace[fs] then
+			Recheck(fs)
+			local ok3, nowPath, nowSize = pcall(fs.GetFont, fs)
+			if ok3 then leftFace[fs], leftSize[fs] = nowPath, nowSize end
+		end
+		return
+	end
 	ns.Refont(fs, key)
 	local ok2, nowPath, nowSize = pcall(fs.GetFont, fs)
 	if ok2 then leftFace[fs], leftSize[fs] = nowPath, nowSize end
@@ -789,7 +1047,10 @@ local FontsIn
 local function FontOn(fs, key, face)
 	if face then
 		local ok, path = pcall(fs.GetFont, fs)
-		if ok and path == face then return end
+		if ok and path == face then
+			if ourFace[fs] then Recheck(fs) end
+			return
+		end
 	end
 	ns.FollowFont(fs, key)
 end
@@ -950,7 +1211,9 @@ end
 -- accent (flat), the others neutral with their icon a little dimmed until the mouse is on them.
 -- ns.SideTile(tab, opts): opts.picked(tab) says whether it's picked (required); opts.icon = its
 -- icon texture (default tab.Icon or tab.icon); opts.mouse = the frame that takes the mouse
--- (default tab); opts.key = the addon whose accent it follows. Two ways of placing it:
+-- (default tab); opts.key = the addon whose accent it follows; opts.quiet: no script of ours on the
+-- tab's showing (a window the game shows from secure code): only the mouse is hooked, and the
+-- caller repaints from its own post-hooks (ns.SideTilesPaintSoon). Two ways of placing it:
 --   opts.copy: the icon is drawn again on a tile of ours (size opts.size, at opts.point of the tab,
 --     default its LEFT; a small symbol keeps its size with opts.iconSize) and the original hidden,
 --     for a template that moves, mirrors or masks its icon;
@@ -976,7 +1239,9 @@ function ns.SideTilePaint(tab)
 	else
 		border = Kit.TAB_BORDER
 	end
-	if t.shell then Kit.Paint(t.shell, border) end
+	if t.shell then
+		if on then ns.LightShell(t.shell, border, t.key) else Kit.Paint(t.shell, border) end
+	end
 	t.icon:SetAlpha((on or hover) and 1 or TILE_DIM)
 end
 
@@ -1043,7 +1308,7 @@ function ns.SideTile(tab, opts)
 	mouse:HookScript("OnLeave", paint)
 	-- A click anywhere may pick another tab: all of them, next frame.
 	mouse:HookScript("OnMouseUp", PaintTilesSoon)
-	tab:HookScript("OnShow", PaintTilesSoon)
+	if not opts.quiet then tab:HookScript("OnShow", PaintTilesSoon) end
 	ns.SideTilePaint(tab)
 	return t
 end

@@ -557,10 +557,10 @@ local function SuggestPaint()
 		row.text:SetTextColor(ink[1], ink[2], ink[3])
 		row.wash:SetShown(on or row:IsMouseOver())
 		if on then
-			local r, g, b = ns.AccentOf(KEY)
-			row.wash:SetColorTexture(r, g, b, 0.18)
+			ns.FillAccent(row.wash, 0.18, nil, KEY)
 		else
 			row.wash:SetColorTexture(1, 1, 1, 0.06)
+			row.wash:SetVertexColor(1, 1, 1, 1)
 		end
 	end
 end
@@ -902,8 +902,7 @@ local function PaintPick(row)
 	end
 	local on = row:IsShown() and Picked(row)
 	if on then
-		local r, g, b = ns.AccentOf(KEY)
-		wash:SetColorTexture(r, g, b, PICK_WASH)
+		ns.FillAccent(wash, PICK_WASH, nil, KEY)
 	end
 	wash:SetShown(on)
 end

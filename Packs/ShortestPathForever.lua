@@ -100,12 +100,11 @@ end
 -- row's auction-house highlight, the progress bar, the line over your own pinned row) in the accent.
 local function AccentRow(row)
 	if not ns.Usable(row) then return end
-	local r, g, b = ns.API.Accent()
 	if ns.Usable(row.highlight) then
 		row.highlight:SetDesaturated(true)
-		row.highlight:SetVertexColor(r, g, b, 0.55)
+		ns.PaintAccent(row.highlight, 0.55, nil, KEY)
 	end
-	if ns.Usable(row.bar) then row.bar:SetColorTexture(r, g, b, 0.55) end
+	if ns.Usable(row.bar) then ns.FillAccent(row.bar, 0.55, nil, KEY) end
 end
 
 ns.Watch(KEY, "ForeverLeaderboardsFrame", function(frame, Kit)
@@ -128,8 +127,7 @@ ns.Watch(KEY, "ForeverLeaderboardsFrame", function(frame, Kit)
 	end
 	AccentRow(frame.pinned)
 	if ns.Usable(frame.pinnedSeparator) then
-		local r, g, b = ns.API.Accent()
-		frame.pinnedSeparator:SetColorTexture(r, g, b, 0.35)
+		ns.FillAccent(frame.pinnedSeparator, 0.35, nil, KEY)
 	end
 	if ns.Usable(frame.scroll) then
 		ns.Guard(Kit.EachRow, frame.scroll, AccentRow, "DaylightAddonSkins")
@@ -204,10 +202,74 @@ local function HeaderColor()
 	return QColor("header", "VALUE")
 end
 
-local function LineColor()
+-- The player's class, when DaylightUI has a gradient pair for it (its tracker's class gradient).
+local function ClassGradient()
+	local G = type(_G.DaylightUI) == "table" and _G.DaylightUI.Gradients
+	local _, token = UnitClass("player")
+	if type(G) ~= "table" or type(token) ~= "string" or type(G.Has) ~= "function" or not G.Has(token) then return nil end
+	return G, token
+end
+
+-- A head's words in the tracker's header color, as DaylightUI's tracker draws them: letter by
+-- letter along the class gradient, or along DaylightUI's accent when that's a gradient, otherwise
+-- the one color.
+local function PaintHead(fs, words)
+	local mode = Quests("colors.headerMode")
+	if mode == "gradient" then
+		local G, token = ClassGradient()
+		if G and type(G.Text) == "function" then
+			local ok, colored = pcall(G.Text, token, words)
+			if ok and type(colored) == "string" then
+				fs:SetText(colored)
+				fs:SetTextColor(1, 1, 1)
+				return
+			end
+		end
+	elseif mode == "accent" then
+		local Style = type(_G.DaylightUI) == "table" and _G.DaylightUI.Style
+		if type(Style) == "table" and type(Style.PaintAccentText) == "function" and pcall(Style.PaintAccentText, fs, words) then return end
+	end
+	fs:SetText(words)
+	fs:SetTextColor(HeaderColor())
+end
+
+-- The line under a head, as DaylightUI's tracker draws it: along DaylightUI's gradient accent or
+-- the class gradient, or the one color.
+local function PaintLine(line, alpha)
 	local mode = Quests("colors.headerLineMode")
-	if mode ~= "custom" and mode ~= nil then return API.Accent() end
-	return QColor("headerLine", "LABEL")
+	if mode == "custom" or mode == nil then
+		local r, g, b = QColor("headerLine", "LABEL")
+		line:SetColorTexture(r, g, b, alpha)
+		return
+	end
+	local lo, hi
+	if mode == "gradient" then
+		local G, token = ClassGradient()
+		if G and type(G.PaintRGB) == "function" then
+			local ok, a, b = pcall(G.PaintRGB, token)
+			if ok and type(a) == "table" and type(b) == "table" then lo, hi = a, b end
+		end
+	elseif mode == "accent" then
+		local Style = type(_G.DaylightUI) == "table" and _G.DaylightUI.Style
+		if type(Style) == "table" and type(Style.AccentPair) == "function" then
+			local ok, a, b = pcall(Style.AccentPair)
+			if ok and type(a) == "table" and type(b) == "table" then lo, hi = a, b end
+		end
+	end
+	if lo and line.SetGradient and CreateColor then
+		line:SetColorTexture(1, 1, 1, 1)
+		line:SetVertexColor(1, 1, 1, alpha)
+		line:SetGradient("HORIZONTAL", CreateColor(lo[1], lo[2], lo[3], alpha), CreateColor(hi[1], hi[2], hi[3], alpha))
+		return
+	end
+	local r, g, b
+	if mode == "class" or mode == "gradient" then
+		local _, token = UnitClass("player")
+		local ok, cr, cg, cb = pcall(API.ClassColor, token)
+		if ok and cr then r, g, b = cr, cg, cb end
+	end
+	if not r then r, g, b = API.Accent() end
+	line:SetColorTexture(r, g, b, alpha)
 end
 
 -- Blizzard's tracker colors (OBJECTIVE_TRACKER_COLOR): a text in one of these is the section's
@@ -301,10 +363,13 @@ local function StyleSection(module, Kit)
 			local words = text:GetText()
 			-- (string.upper changes only a-z: words with other letters, "über", stay as they are
 			-- rather than come out half in capitals.)
-			if type(words) == "string" and not string.find(words, "[\128-\255]") and words ~= upper(words) then
-				text:SetText(upper(words))
+			-- (Without the colors put in last time, so they're neither capitalized nor colored twice.)
+			if type(words) == "string" then
+				words = string.gsub(string.gsub(words, "|c%x%x%x%x%x%x%x%x", ""), "|r", "")
+				if not string.find(words, "[\128-\255]") then words = upper(words) end
 			end
-			Ink(text, math.floor(QSize("header", 12) * zoom + 0.5), HeaderColor())
+			Ink(text, math.floor(QSize("header", 12) * zoom + 0.5))
+			if type(words) == "string" then PaintHead(text, words) else text:SetTextColor(HeaderColor()) end
 		end
 		local line = lines[module]
 		if not line then
@@ -314,8 +379,7 @@ local function StyleSection(module, Kit)
 			line:SetPoint("BOTTOMRIGHT", head, "BOTTOMRIGHT", 0, 0)
 			lines[module] = line
 		end
-		local r, g, b = LineColor()
-		line:SetColorTexture(r, g, b, 0.6)
+		PaintLine(line, 0.6)
 		if Kit and ns.Usable(head.MinimizeButton) and ns.Controls(KEY) and ns.Once(head.MinimizeButton) then
 			ns.Guard(Kit.CollapseButton, head.MinimizeButton)
 		end

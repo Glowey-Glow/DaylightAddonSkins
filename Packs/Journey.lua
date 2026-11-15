@@ -128,7 +128,6 @@ if type(env) ~= "table" or type(rawget(env, "UI")) ~= "table" or type(rawget(env
 	return
 end
 
-local API = ns.API
 local JUI = rawget(env, "UI")
 local abs, floor, min = math.abs, math.floor, math.min
 
@@ -145,8 +144,7 @@ local function RGB(c, fallback)
 end
 
 local function Accent()
-	if Look("daylightAccent") == false then return RGB(Look("accent")) end
-	local ok, r, g, b = pcall(API.Accent)
+	local ok, r, g, b = pcall(ns.AccentOf, KEY)
 	if ok and r then return r, g, b end
 	return 1, 0.82, 0
 end

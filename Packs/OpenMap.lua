@@ -363,7 +363,7 @@ local function SliderLook(slider)
 	mask:SetAllPoints(knob)
 	knob:AddMaskTexture(mask)
 	local function paint()
-		fill:SetColorTexture(ns.AccentOf(KEY))
+		ns.FillAccent(fill, 1, nil, KEY)
 		knob:SetVertexColor(1, 1, 1, (not slider.IsEnabled or slider:IsEnabled()) and 1 or 0.4)
 	end
 	paint()
@@ -507,8 +507,7 @@ end
 local PICKED_ALPHA = 0.22
 local accentFills = setmetatable({}, { __mode = "k" })   -- texture -> its alpha
 local function PaintFill(tex, a)
-	local r, g, b = ns.AccentOf(KEY)
-	tex:SetColorTexture(r, g, b, a)
+	ns.FillAccent(tex, a, nil, KEY)
 end
 local function AccentFill(tex, a)
 	accentFills[tex] = a
@@ -977,18 +976,33 @@ local function MapCorner(hide)
 	end
 end
 local function TuckMarkers()
-	if openView and openView:IsShown() then
+	if openView and openView:IsShown() and ns.Enabled(KEY) then
 		DJMarkers(true)
 		MapCorner(true)
 	end
 end
 
--- New markers Dungeon Journal puts up while the view is open are tucked away too.
+-- New markers Dungeon Journal puts up while the view is open are tucked away too. It makes a marker
+-- in the call that puts it up, or (the map not open yet, in combat) in one of its redraws over the
+-- next half second: tucked right after the call and once more after those. Its journal window keeps
+-- its own copies of the three calls (taken as it loads, before these hooks), so its Show on Map
+-- buttons go round them; every marker it puts up also points its waypoint arrow there
+-- (FDJ.SetWaypointArrow, called through its namespace), which is hooked for those.
+local function TuckSoon()
+	if not (openView and openView:IsShown()) then return end
+	C_Timer.After(0, TuckMarkers)
+	C_Timer.After(0.6, TuckMarkers)
+end
+local function TuckNow()
+	TuckMarkers()
+	TuckSoon()
+end
 local FDJ = _G.ForeverDungeonJournal_NS
 if type(FDJ) == "table" and type(FDJ.MapMarkers) == "table" then
 	for _, name in ipairs({ "ShowRecordedLocationOnMap", "ShowRouteOnMap", "ShowQuestStartOnMap" }) do
-		if type(FDJ.MapMarkers[name]) == "function" then hooksecurefunc(FDJ.MapMarkers, name, TuckMarkers) end
+		if type(FDJ.MapMarkers[name]) == "function" then hooksecurefunc(FDJ.MapMarkers, name, TuckNow) end
 	end
+	if type(FDJ.SetWaypointArrow) == "function" then hooksecurefunc(FDJ, "SetWaypointArrow", TuckSoon) end
 end
 
 local function EdgeTabs(list)
@@ -1174,6 +1188,30 @@ local function LogToggle(Kit)
 	if ns.Usable(t.OpenButton) then ns.Guard(Kit.PageButton, t.OpenButton, "right") end
 end
 
+-- The game's map pin button (Forever puts it in the map's top-left corner) only sets a flag that
+-- Blizzard's waypoint click handler reads, and that handler runs at priority 90. OpenMap's own
+-- click handler runs first (priority 1000) and takes every left click on its stitched map, so with
+-- the button on, a click zooms the map and no pin is placed. While OpenMap's map shows, the button
+-- turns on OpenMap's own pin mode instead (the one its menu's pin button and Ctrl-click use): the
+-- next click drops a pin there. Only a mode the button turned on is turned off with it.
+local pinArmed = false
+local function PinButton(m)
+	local btn = _G.WorldMapFrame and _G.WorldMapFrame.WorldMapTrackingPinButton
+	if not ns.Usable(btn) or type(btn.SetActive) ~= "function" then return end
+	if type(m.SetPinMode) ~= "function" or type(m.PinMode) ~= "function" or type(m.IsStitched) ~= "function" then return end
+	hooksecurefunc(btn, "SetActive", function(_, on)
+		if on then
+			if ns.Enabled(KEY) and m.IsStitched() and not m.PinMode() then
+				pinArmed = true
+				m.SetPinMode(true)
+			end
+		elseif pinArmed then
+			pinArmed = false
+			if m.PinMode() then m.SetPinMode(false) end
+		end
+	end)
+end
+
 ns.Pack(KEY, nil, function(Kit)
 	-- The menu is made with the map at login (SetupPanel), or later when the Gamepad UI is turned
 	-- off or OpenMap's map is let on beside it: looked for right after that call.
@@ -1235,6 +1273,7 @@ ns.Pack(KEY, nil, function(Kit)
 			if openView and openView:IsShown() then MapCorner(true) end
 		end)
 		ns.FollowMapRings(KEY)
+		PinButton(m)
 		if type(map.RefreshOverlayFrames) == "function" then
 			hooksecurefunc(map, "RefreshOverlayFrames", function()
 				if not ns.Enabled(KEY) then return end

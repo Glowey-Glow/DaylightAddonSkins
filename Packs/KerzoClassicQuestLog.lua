@@ -16,7 +16,8 @@
 --     count keeps its green), the icon buttons' gold square hover a white wash, the Abandon /
 --     Share / Track / Close buttons DaylightUI's (white when on, gray when off), the center
 --     divider of the two-column layout (its gold line faint, its arrow in the text ink, the accent
---     under the mouse), the What's New button.
+--     under the mouse), the gray band between list and detail in the stacked (vanilla) layout (its
+--     ground and shadow lines off, one faint line left), the What's New button.
 --   * The quest list: its parchment / dark ground and inset art off, an inset well; every row a
 --     faint white wash under the mouse; the picked quest's bar in the accent (not its difficulty
 --     color); headings in the label ink, their fold arrows in the text ink, the plus glow off; the
@@ -31,7 +32,9 @@
 --     and gold rim off; the party progress box quiet; the quest chain's hover a wash and its dark
 --     brown / red / green / blue words lightened so they read on a dark ground; the integration
 --     buttons' gold slot rings off; the hidden tab's arrow in the text ink; the Questie card a
---     flat dark box; the quest item button's gold rim neutral.
+--     flat dark box; the quest item button's gold rim neutral. The expansion tint behind a quest's
+--     text (Kerzo Quest Expansion's option; since 6.4.1 drawn on the Dark theme too, at half
+--     strength) is that quest's expansion color and stays.
 --   * Settings (its own window, or inside the game's Settings): the window shell; the section
 --     headings flat (open: a brighter box and value ink; closed: text ink; hover lighter), their
 --     + / - in the text ink, the gold glow off; its drawn checkboxes a box of the input look with an
@@ -246,8 +249,7 @@ local function Divider(kql)
 		-- (Both are WHITE8X8 its own scripts tint: tinted again after them.)
 		if IsTexture(d.Linea) then
 			if over then
-				local r, g, b = ns.AccentOf(KEY)
-				d.Linea:SetVertexColor(r, g, b, 0.8)
+				ns.PaintAccent(d.Linea, 0.8, nil, KEY)
 			else
 				d.Linea:SetVertexColor(1, 1, 1, 0.12)
 			end
@@ -258,6 +260,19 @@ local function Divider(kql)
 	d:HookScript("OnEnter", paint)
 	d:HookScript("OnLeave", paint)
 	paint()
+end
+
+-- The stacked (vanilla) layout's band between the list and the detail panel: a solid gray strip
+-- with four 1 px edge lines, made the first time that layout is laid out and colored only then.
+-- Its ground and three lines go; the light groove line stays, faint and neutral, between the two
+-- wells.
+local function VanillaBand(kql)
+	local sep = kql.SeparadorVanilla
+	if not Usable(sep) or not ns.Once(sep) then return end
+	for _, k in ipairs({ "Fondo", "BordeTop", "BordeBot", "RanuraSombra" }) do
+		if IsTexture(sep[k]) then sep[k]:SetAlpha(0) end
+	end
+	Quiet(sep.RanuraLuz)
 end
 
 local function Bar(kql, Kit)
@@ -312,12 +327,12 @@ local function Chrome(kql, Kit)
 	CloseArt(_G.KerzosQuestLogCloseButton or kql.CloseButton)
 	Bar(kql, Kit)
 	Divider(kql)
+	VanillaBand(kql)
 	local news = kql.BotonNovedadesCabecera
 	if Usable(news) then
 		TextButton(news, Kit)
 		if IsTexture(news.tinteNov) then
-			local r, g, b = ns.AccentOf(KEY)
-			news.tinteNov:SetColorTexture(r, g, b, 0.15)
+			ns.FillAccent(news.tinteNov, 0.15, nil, KEY)
 		end
 		Plain(news.GetFontString and news:GetFontString())
 	end
@@ -346,10 +361,9 @@ local function ListRow(row)
 	end
 	local sel = row.Seleccion
 	if IsTexture(sel) and sel:IsShown() then
-		local r, g, b = ns.AccentOf(KEY)
-		sel:SetColorTexture(r, g, b, 0.2)
-		-- (It tints the bar by the quest's difficulty first; that tint would multiply in.)
-		sel:SetVertexColor(1, 1, 1, 1)
+		-- (It tints the bar by the quest's difficulty first; that tint would multiply in: the fill
+		-- puts its own vertex colors back.)
+		ns.FillAccent(sel, 0.2, nil, KEY)
 		sel:SetBlendMode("BLEND")
 	end
 	AccentTint(row.Marca)
@@ -533,7 +547,7 @@ local function PaintCasilla(row)
 	local s = casillas[row]
 	if not s then return end
 	local on = IsTexture(row.CheckMark) and row.CheckMark:IsShown()
-	s.fill:SetColorTexture(ns.AccentOf(KEY))
+	ns.FillAccent(s.fill, 1, nil, KEY)
 	s.fill:SetShown(on)
 	local off = row.deshabilitada == true
 	s.box:SetAlpha(off and 0.4 or 1)
@@ -698,7 +712,7 @@ local function Settings(kql, Kit)
 	local banner = content.BannerKQE
 	if Usable(banner) then
 		FlatBox(banner, 0.3)
-		if IsTexture(banner.BordeIzq) then banner.BordeIzq:SetColorTexture(ns.AccentOf(KEY)) end
+		if IsTexture(banner.BordeIzq) then ns.FillAccent(banner.BordeIzq, 1, "VERTICAL", KEY) end
 		Ink(banner.Titulo, "VALUE")
 		Ink(banner.Desc, "TEXT")
 	end
@@ -812,9 +826,8 @@ local function Download(f)
 	Ink(f.FeaturesList, "TEXT")
 	Ink(f.Explicacion, "TEXT")
 	Ink(f.TextoNotas, "TEXT")
-	local r, g, b = ns.AccentOf(KEY)
 	for _, k in ipairs({ "bordeIzqFeat", "bordeIzqNotas" }) do
-		if IsTexture(f[k]) then f[k]:SetColorTexture(r, g, b, 0.8) end
+		if IsTexture(f[k]) then ns.FillAccent(f[k], 0.8, "VERTICAL", KEY) end
 	end
 	Quiet(f.lineaBanner)
 	Recode(f.TextoNotas, "|cffffd200", "LABEL")
@@ -873,10 +886,9 @@ local function Menu()
 		m:SetBackdropBorderColor(1, 1, 1, 0.1)
 	end
 	if type(m.filas) ~= "table" then return end
-	local r, g, b = ns.AccentOf(KEY)
 	for _, row in ipairs(m.filas) do
 		if Usable(row) and row:IsShown() then
-			if IsTexture(row.fondoHover) then row.fondoHover:SetColorTexture(r, g, b, 0.18) end
+			if IsTexture(row.fondoHover) then ns.FillAccent(row.fondoHover, 0.18, nil, KEY) end
 			Quiet(row.lineaSep)
 			local fs = row.texto
 			if Kind(fs) == "FontString" then

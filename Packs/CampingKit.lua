@@ -56,13 +56,12 @@ local alphas = setmetatable({}, { __mode = "k" })
 local function PaintAccent(region)
 	local how = accented[region]
 	if not how or not ns.Usable(region) then return end
-	local r, g, b = ns.AccentOf(KEY)
 	if how == "color" then
-		region:SetColorTexture(r, g, b, alphas[region] or 1)
+		ns.FillAccent(region, alphas[region] or 1, nil, KEY)
 	elseif how == "vertex" then
-		region:SetVertexColor(r, g, b, alphas[region] or 1)
+		ns.PaintAccent(region, alphas[region] or 1, nil, KEY)
 	else
-		region:SetTextColor(r, g, b)
+		region:SetTextColor(ns.AccentOf(KEY))
 	end
 end
 

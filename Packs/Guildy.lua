@@ -149,8 +149,7 @@ local accents = setmetatable({}, { __mode = "k" })   -- texture -> its alpha in 
 local function Accent(tex, alpha)
 	if not IsTexture(tex) then return end
 	accents[tex] = alpha
-	local r, g, b = ns.AccentOf(KEY)
-	tex:SetColorTexture(r, g, b, alpha)
+	ns.FillAccent(tex, alpha, nil, KEY)
 	tex:SetBlendMode("BLEND")
 end
 
@@ -1482,8 +1481,8 @@ end
 local function Repaint()
 	if not Kit or not On() then return end
 	local r, g, b = ns.AccentOf(KEY)
-	for tex, alpha in pairs(accents) do tex:SetColorTexture(r, g, b, alpha) end
-	for box in pairs(picked) do Kit.Paint(boxShell[box], { r, g, b }) end
+	for tex, alpha in pairs(accents) do ns.FillAccent(tex, alpha, nil, KEY) end
+	for box in pairs(picked) do ns.LightShell(boxShell[box], { r, g, b }, KEY) end
 	local colors = ns.Colors()
 	for fs, name in pairs(inked) do
 		local c = colors[name]

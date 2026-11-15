@@ -259,6 +259,8 @@ local function FitFont(fs)
 	end
 	local size0, flags0 = baseSize[fs], baseFlags[fs]
 	leftText[fs] = text
+	-- (Words in an alphabet the player's font lacks keep the game's: ns.FaceFor.)
+	if ns.FaceFor then face = ns.FaceFor(fs, path, face) end
 	fs:SetFont(face, size0, flags0)
 	if fs.IsTruncated then
 		local s = size0

@@ -435,7 +435,7 @@ local function SliderLook(slider, withTrack)
 	mask:SetAllPoints(s.knob)
 	s.knob:AddMaskTexture(mask)
 	local function paint()
-		if s.fill then s.fill:SetColorTexture(ns.AccentOf(KEY)) end
+		if s.fill then ns.FillAccent(s.fill, 1, nil, KEY) end
 		local on = not slider.IsEnabled or slider:IsEnabled()
 		s.knob:SetVertexColor(1, 1, 1, on and 1 or 0.4)
 	end
@@ -560,7 +560,7 @@ local function PaintTab(Kit, tab)
 	local look = Kit.TabOf and Kit.TabOf(tab)
 	if type(look) == "table" and ns.Usable(look.line) then
 		if state == "SELECTED" then
-			look.line:SetColorTexture(ns.AccentOf(KEY))
+			ns.FillAccent(look.line, 1, nil, KEY)
 			look.line:Show()
 		else
 			look.line:Hide()

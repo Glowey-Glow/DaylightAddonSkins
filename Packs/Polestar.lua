@@ -26,7 +26,6 @@ if type(T) ~= "table" or type(T.Palette) ~= "function" or type(T.Refresh) ~= "fu
 	return
 end
 
-local API = ns.API
 local KEY = "Polestar"
 
 local function On()
@@ -46,16 +45,9 @@ end
 
 local function Overlay(p)
 	local colors = ns.Colors()
-	local ar, ag, ab = API.Accent()
+	local ar, ag, ab = ns.AccentOf(KEY)
 	local value, text, off = colors.VALUE, colors.TEXT, colors.OFF
 
-	-- The player's own accent for Polestar, when they picked one on its page.
-	if ns.Look(KEY, "daylightAccent") == false then
-		local own = ns.Look(KEY, "accent")
-		if type(own) == "table" and type(own[1]) == "number" and type(own[2]) == "number" and type(own[3]) == "number" then
-			ar, ag, ab = own[1], own[2], own[3]
-		end
-	end
 
 	-- Text ladder and what follows it (Polestar's own text colors when the player said so).
 	if ns.Look(KEY, "daylightColors") ~= false then

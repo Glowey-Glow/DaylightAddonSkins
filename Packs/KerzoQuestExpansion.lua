@@ -182,7 +182,7 @@ local function CheckRow(row, Kit)
 	fill:SetSize(8, 8)
 	fill:SetPoint("CENTER")
 	local function paint()
-		fill:SetColorTexture(ns.AccentOf(KEY))
+		ns.FillAccent(fill, 1, nil, KEY)
 		fill:SetShown(mark:IsShown())
 	end
 	hooksecurefunc(mark, "Show", paint)

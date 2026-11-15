@@ -8,17 +8,25 @@ Requires **DaylightUI** with its **Window Skins** module on.
 
 ## Addons it skins
 
-BugSack · Camping Kit · Dialogue UI · DoesItDie · Dungeon Journal · Forever Fishing · Forever Leveling BiS · **Guildy (new)** · Journey Guides · Keep or Toss · Kerzo Classic Quest Log · Kerzo Quest Expansion · LayerSwap · LFG Forever · LootTriage · OneForAll · OpenMap · Polestar · Questie · RareScanner · Shortest Path Forever · Spoken · Total RP 3 · TrueshotLodge
+BugSack · Camping Kit · Dialogue UI · DoesItDie · Dungeon Journal · Forever Fishing · Forever Leveling BiS · Guildy · **High Fidelity World Map (new)** · Journey Guides · Keep or Toss · Kerzo Classic Quest Log · Kerzo Quest Expansion · LayerSwap · LFG Forever · LootTriage · **Mastercraft (new)** · OneForAll · OpenMap · Polestar · Questie · RareScanner · Shortest Path Forever · Spoken · Total RP 3 · TrueshotLodge
 
 Only the ones you have installed are skinned; the rest are skipped. Nothing to set up: each takes the DaylightUI look the next time you open its windows.
 
 ## The game's own windows
 
-The game windows DaylightUI's Window Skins leave bare get the same look: the ready and role checks, queue, invite and PvP popups, the color picker, the "Return to graveyard" button and death recap, the stopwatch and Quick Keybind, chat settings and the channels window, the zone map (Shift-M), alert and level-up toasts, help, report and friend windows, icon pickers, help tips and more. Also the **Options window** (Esc > Options), every setting in it and the addon pages inside it, and the **dungeon-ready dialog**. Edit Mode stays the game's.
+The game windows DaylightUI's Window Skins leave bare get the same look: the ready and role checks, queue, invite and PvP popups, the color picker, the "Return to graveyard" button and death recap, the stopwatch and Quick Keybind, chat settings and the channels window, the zone map (Shift-M), alert and level-up toasts, help, report and friend windows, icon pickers, help tips and more. Also the **Options window** (Esc > Options), every setting in it and the addon pages inside it, and the **dungeon-ready dialog**. New in 1.12.0: the **profession window**, the **character window** (and currency transfer), Collections tabs, the Calendar panels, Click Casting, the Cooldown Manager settings, guild bank tabs, confirm boxes' gold and item lines, the map pin button, and the game's own gossip, quest, vendor, trainer, mail, social, bag and bank windows whenever DaylightUI's own version is switched off. Edit Mode stays the game's.
 
 All pop-up menus (right-click menus and dropdowns, any addon's) and every addon's AceConfig settings lose the game's gold.
 
 ---
+
+## New in 1.12.0
+- **Gradients:** with "Use DaylightUI's settings" on, skinned windows keep your DaylightUI accent as it is, Daylight or class gradient included. Each addon's own page can pick DaylightUI's accent, Daylight gradient, Class color, Class gradient or Custom, plus **Gradient window borders**.
+- **New skins:** Mastercraft (kept on its flat Classic style while skinned) and High Fidelity World Map (its HD/SD button, blend slider, cave map window and settings).
+- **More game windows** (see above), every one built to the full DaylightUI standard.
+- Text in other alphabets (Greek, Korean, Chinese...) keeps a font that can draw it instead of empty boxes.
+- Updates followed: LayerSwap 1.14.25, Mastercraft 2.0.1, Kerzo Classic Quest Log 6.4.1, Dungeon Journal 2.0.8, DaylightUI 1.8.3.
+- **OpenMap:** the game's map pin button places a pin again.
 
 ## New in 1.11.0
 - **Guildy** skinned throughout: its window, tabs, lists, menus, member card, score panel, dialogs, options and level-60 banner, in the DaylightUI look. Its tabard, portraits, charts and class colors stay. Blizzard's guild window it sits on stays hidden underneath.

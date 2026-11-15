@@ -39,6 +39,16 @@
 --     a quiet flat box, their buttons and scroll bars DaylightUI's.
 --   * The "Hide quests" box above the boss icon size control on its dungeon maps: a flat box, its
 --     check DaylightUI's.
+--   * The RPG Mode "I already did this dungeon" box (2.0.8, from a locked page or the button under
+--     a hidden boss): the window shell in place of its gold dialog edge, its two buttons
+--     DaylightUI's (the box made wider when DaylightUI's button font needs it), its title in the
+--     value ink, the dungeon's gold name in the value ink.
+--   * An item set's row of pieces (2.0.8, a click on a set piece): the window shell in place of its
+--     tooltip edge; the piece you clicked framed in the accent, not gold (the others keep their
+--     quality edge); a faint white hover.
+--   * The Loot Filter's "no items match" panel (a popup inside the journal, see Loot Filter): the
+--     window shell, its title in the value ink.
+--   * The one-time update notice it shows after login: the window shell, its button DaylightUI's.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -126,8 +136,7 @@ local rowsDone = setmetatable({}, { __mode = "k" })
 local function Row(r)
 	if rowsDone[r] then return end
 	rowsDone[r] = true
-	local ar, ag, ab = ns.AccentOf(KEY)
-	if ns.Usable(r.sel) and ar then r.sel:SetColorTexture(ar, ag, ab, 0.16) end
+	if ns.Usable(r.sel) then ns.FillAccent(r.sel, 0.16, nil, KEY) end
 	local hl = r.GetHighlightTexture and r:GetHighlightTexture()
 	if ns.Usable(hl) then hl:SetColorTexture(1, 1, 1, 0.06) end
 	Quiet(r.line)
@@ -217,6 +226,15 @@ local function LootFilter(win)
 			if ns.Usable(check) and check.HookScript then check:HookScript("OnEnter", menus) end
 		end
 	end
+end
+
+-- Its "no items match" panel over the journal (made the first time a filter finds nothing): the
+-- shell like the filter's own popup, its gold title in the value ink after DaylightUI's walk.
+local function NoMatch(panel)
+	Popup(panel)
+	Settle(function()
+		if ns.Enabled(KEY) then Ink(panel.title, "VALUE") end
+	end)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -444,6 +462,92 @@ local function QuestToggle(q, Kit)
 	if ns.Controls(KEY) and ns.Usable(q.check) then ns.Guard(Kit.Check, q.check) end
 end
 
+-- One of DaylightUI's inks as an inline color code.
+local function Hex(ink)
+	local c = ns.Colors()[ink]
+	if not c then return nil end
+	return string.format("|cff%02x%02x%02x", c[1] * 255, c[2] * 255, c[3] * 255)
+end
+
+-- The RPG Mode "I already did this dungeon" box. It writes the dungeon's name in gold inline each
+-- time it fills its words (a click on its own buttons fills them again, through no call of its own
+-- that can be hooked): the gold is swapped as the words are set.
+local GOLD_NAME = "|cffffd100"
+local function ValueName(fs)
+	if not ns.Usable(fs) or fs.dasRecoding or not ns.Enabled(KEY) then return end
+	local text, hex = fs:GetText(), Hex("VALUE")
+	if type(text) ~= "string" or not hex then return end
+	local out = string.gsub(text, GOLD_NAME, hex)
+	if out == text then return end
+	fs.dasRecoding = true
+	fs:SetText(out)
+	fs.dasRecoding = nil
+end
+
+-- It sizes its two buttons, and the box round them, to their words before the box is first dressed;
+-- DaylightUI's button font can be wider. A button its words outgrow is widened and the box laid out
+-- again the way it does it (the row centered, 34 px each side, its heights from top to bottom).
+local DONE_GAP, DONE_SIDE = 12, 34
+local function RefitDone(box)
+	local ok, back = box.ok, box.back
+	if not (ns.Usable(ok) and ns.Usable(back)) then return end
+	local grew = false
+	for _, b in ipairs({ ok, back }) do
+		local fs = b:IsShown() and b.GetFontString and b:GetFontString()
+		local need = fs and math.ceil((fs:GetStringWidth() or 0) + 36) or 0
+		if need > (b:GetWidth() or 0) then
+			b:SetWidth(need)
+			grew = true
+		end
+	end
+	if not grew then return end
+	local single = not ok:IsShown()
+	local row = single and back:GetWidth() or (ok:GetWidth() + DONE_GAP + back:GetWidth())
+	local width = math.max(box:GetWidth() or 400, math.ceil(row + 2 * DONE_SIDE))
+	box:SetWidth(width)
+	if not single then
+		ok:ClearAllPoints()
+		ok:SetPoint("BOTTOMLEFT", box, "BOTTOM", -row / 2, 18)
+	end
+	local title, text = box.title, box.text
+	if not (ns.Usable(title) and ns.Usable(text)) then return end
+	title:SetWidth(width - 2 * DONE_SIDE)
+	text:SetWidth(width - 2 * DONE_SIDE)
+	text:SetHeight(0)
+	local textHeight = math.max(text:GetStringHeight() or 0, 12)
+	text:SetHeight(textHeight)
+	local titleHeight = math.max(title:GetStringHeight() or 0, 16)
+	box:SetHeight(math.ceil(22 + titleHeight + 8 + textHeight + 16 + 24 + 18))
+end
+
+local function RPGDone(box, Kit)
+	if Window(box, Kit) then
+		Ink(box.title, "VALUE")
+		if ns.Usable(box.text) then hooksecurefunc(box.text, "SetText", ValueName) end
+	end
+	ValueName(box.text)
+	RefitDone(box)
+end
+
+-- An item set's row of pieces (made the first time a set piece is clicked, filled again on every
+-- show): the shell once; on each fill the piece you clicked framed in the accent and the hovers
+-- white.
+local function SetStrip(strip, owner)
+	if ns.Once(strip) then
+		ns.NoBackdrop(strip)
+		ns.Shell(strip, { window = true }, KEY)
+	end
+	local item = type(owner) == "table" and owner.item
+	local current = type(item) == "table" and tonumber(item[1]) or nil
+	for _, c in ipairs(type(strip.cells) == "table" and strip.cells or {}) do
+		if ns.Usable(c) and c:IsShown() then
+			if current and c.id == current and ns.Usable(c.edge) then ns.FillAccent(c.edge, 1, nil, KEY) end
+			local hl = c.GetHighlightTexture and c:GetHighlightTexture()
+			if ns.Usable(hl) and First(hl) then hl:SetColorTexture(1, 1, 1, 0.1) end
+		end
+	end
+end
+
 local MENU_NAMES = { "ForeverDungeonJournalRunLogMenu", "ForeverDungeonJournalTrackerMenu",
 	"ForeverDungeonJournalOnyxiaMenu", "ForeverDungeonJournalSleepingBagMenu", "ForeverDungeonJournalLFGMenu",
 	"ForeverDungeonJournalFavouriteContextMenu" }
@@ -536,6 +640,19 @@ ns.Pack(KEY, nil, function(Kit)
 			if ns.Enabled(KEY) and ns.Usable(win) then ns.Guard(LootFilter, win) end
 		end)
 	end
+	if type(FDJ.ShowLootFilterList) == "function" then
+		hooksecurefunc(FDJ, "ShowLootFilterList", function(frame)
+			local panel = type(frame) == "table" and frame.lootFilterResults
+			if ns.Enabled(KEY) and ns.Usable(panel) then ns.Guard(NoMatch, panel) end
+		end)
+	end
+	-- An item set's row: filled (and shown) on every hover of a set piece once it was clicked.
+	if type(FDJ.UpdateSetStrip) == "function" then
+		hooksecurefunc(FDJ, "UpdateSetStrip", function(owner)
+			local strip = FDJ.setStrip
+			if ns.Enabled(KEY) and ns.Usable(strip) and strip:IsShown() then ns.Guard(SetStrip, strip, owner) end
+		end)
+	end
 	-- Inside a dungeon, both Dungeon Journal and OpenMap lay a dungeon map over the world map, one on
 	-- top of the other (its floor buttons, its "World Map" toggle and its boss icon size poking
 	-- through OpenMap's). The player picked OpenMap's (2026-11-12): while OpenMap is loaded, each
@@ -621,6 +738,7 @@ ns.Pack(KEY, nil, function(Kit)
 	After("ShowOnyxiaPopup", Global("ForeverDungeonJournalOnyxiaPopup"), Onyxia)
 	After("ShowModeChooser", Global("ForeverDungeonJournalModeChooser"), Chooser)
 	After("ShowRPGConfirm", Global("ForeverDungeonJournalRPGConfirm"), Window)
+	After("ShowRPGDoneBox", Global("ForeverDungeonJournalRPGDone"), RPGDone)
 	After("ShowExportDialog", Global("FDJExportFrame"), Export)
 	After("ShowProgressExport", Global("FDJProgressExportFrame"), Export)
 	After("ShowProgressImport", Global("FDJProgressImportFrame"), Export)
@@ -694,6 +812,9 @@ ns.Pack(KEY, nil, function(Kit)
 	for _, name in ipairs(MENU_NAMES) do ns.Watch(KEY, name, Menu) end
 	ns.Watch(KEY, "ForeverDungeonJournalTrackerClosedNotice", Window)
 	ns.Watch(KEY, "ForeverDungeonJournalUnlockToast", Toast)
+	-- (The update notice is shown from a timer of its own three seconds after login, through no call
+	-- that can be hooked: found by name in the frame it's made.)
+	ns.Watch(KEY, "ForeverDungeonJournalNotice", Window)
 	ns.Watch(KEY, function() return FDJ.foreverHint end, Window)
 	ns.Watch(KEY, "ForeverDungeonJournalRPGIntro", function()
 		JournalPopups(_G.ForeverDungeonJournalFrame)

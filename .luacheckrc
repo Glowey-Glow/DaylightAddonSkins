@@ -18,6 +18,7 @@ read_globals = {
 	"C_Timer",
 	"CreateFont",
 	"CreateFrame",
+	"CreateColor",
 	"EnumerateFrames",
 	"ExecuteFrameScript",
 	"GameFontHighlight",
