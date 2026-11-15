@@ -1,5 +1,13 @@
 # DaylightUI Addon Skins
 
+## 1.10.0
+- New: skins for Kerzo Classic Quest Log (its theme kept on Dark while skinned, given back when the skin is off), Kerzo Quest Expansion and LFG Forever (1.5.0's Player ratings tab included).
+- Every text in a skinned window is in DaylightUI's font from the first open, and stays in it: a refresh, a reused list row or a hover that puts the addon's own font back is followed. Kerzo (its "Default" font; one you pick in its settings stays), Questie's settings, Dungeon Journal, OpenMap's panels, LFG Forever, OneForAll and Shortest Path Forever now use it; tabs and buttons sized for the game's narrower font are measured again, so nothing is cut short. Game windows' labels, the combat log's tabs, tutorials and the Settings window's addon pages too; a label too long for the space shrinks a pixel or two instead of going back to the game's font. Item counts keep the game's number font.
+- Buttons keep DaylightUI's font after the mouse has been over them (the game menu's Options and Exit Game showed the game's large serif).
+- Alert toasts (a recipe learned, an achievement, a dungeon done, a new pet or mount...) are in DaylightUI's look every time, not only the first: their art is masked for good, and a recipe's toast shows the square icon of what it makes.
+- The game's settings dropdowns are DaylightUI's; RareScanner's Loot, Map and Chat option trees are no longer gold; Kerzo's options no longer overlap their footer in the game's AddOn Options.
+- Windows are dressed in the very frame they open (hooked where each addon builds or opens them), so there's no flash of the old look.
+
 ## 1.9.0
 - The game's pop-up menus (right-click menus, dropdowns, the world map's Show: filters, every addon's) lose their last gold: headings in DaylightUI's label color, ticks and radio dots in your accent, submenu arrows light gray.
 - Every addon's AceConfig settings (RareScanner's, and any other's): the side menu's items in DaylightUI's colors instead of gold, the picked and hovered one bright; the profile page's "Current Profile" name no longer gold.

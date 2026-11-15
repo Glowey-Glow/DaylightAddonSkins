@@ -200,21 +200,16 @@ local function Now()
 end
 
 ns.Pack("BugSack", "BugSack", function()
-	-- The window is made on its first opening. Watched for first (so a failing hook below can't
-	-- keep it undressed); dressed straight after the minimap button's click or /bugsack opened it,
-	-- and when it pops up by itself on an error, as soon as it's found.
+	-- The window is made on its first opening, and every opening goes through BugSack:OpenSack
+	-- (the minimap button's left click, /bugsack, and the sack popping up by itself on an error)
+	-- or BugSack:OpenConfig (the right click): dressed straight after either, before it's drawn.
+	-- The watch stays as a fallback (so a failing hook below can't keep it undressed).
 	ns.Watch(KEY, "BugSackFrame", function(frame, Kit) Dress(frame, Kit) end)
-	pcall(function()
-		local ldb = type(LibStub) == "table" and LibStub("LibDataBroker-1.1", true)
-		local obj = ldb and ldb:GetDataObjectByName("BugSack")
-		if type(obj) == "table" and type(obj.OnClick) == "function" then
-			hooksecurefunc(obj, "OnClick", function() ns.Guard(Now) end)
+	local addon = _G.BugSack
+	if type(addon) ~= "table" then return end
+	for _, method in ipairs({ "OpenSack", "OpenConfig" }) do
+		if type(addon[method]) == "function" then
+			hooksecurefunc(addon, method, function() ns.Guard(Now) end)
 		end
-	end)
-	pcall(function()
-		local slash = _G.SlashCmdList
-		if type(slash) == "table" and type(slash.BugSack) == "function" then
-			hooksecurefunc(slash, "BugSack", function() ns.Guard(Now) end)
-		end
-	end)
+	end
 end, { window = true, controls = true, text = true })

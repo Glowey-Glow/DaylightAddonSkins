@@ -18,7 +18,6 @@ local _, ns = ...
 if not ns.ok then return end
 
 local KEY = "TrueshotLodge"
-local API = ns.API
 
 local Kit
 local abs = math.abs
@@ -58,7 +57,6 @@ end
 local picks = setmetatable({}, { __mode = "k" })      -- a list row's picked overlay
 local accentLines = setmetatable({}, { __mode = "k" }) -- the filter buttons' "on" lines, the name link
 local headerLabels = setmetatable({}, { __mode = "k" }) -- the list headings' words
-local lastAccent = { 0, 0, 0 }
 
 local function PaintPick(tex)
 	local r, g, b = ns.AccentOf(KEY)
@@ -154,7 +152,7 @@ local rowText = setmetatable({}, { __mode = "k" })
 local TEXT_OPTS = { checks = false, scrollBars = false }
 
 -- A texture of `frame`'s in the HIGHLIGHT layer (the row's hover wash), as a quiet white one.
-local function WashHighlight(frame, ...)
+local function WashHighlight(_, ...)
 	for i = 1, select("#", ...) do
 		local r = select(i, ...)
 		if IsTexture(r) and r:GetDrawLayer() == "HIGHLIGHT" then
@@ -742,7 +740,7 @@ end
 -- words and an accent line along the bottom, off = DaylightUI's label ink, and no glow.
 local filterLines = setmetatable({}, { __mode = "k" })  -- button -> its line
 local filterOf = setmetatable({}, { __mode = "k" })     -- font string -> button
-local inking = false
+local filterInking = false
 
 local function NoGlow(btn)
 	local glow = btn.ftGlow
@@ -760,7 +758,7 @@ local function FilterState(btn, on)
 	if line then line:SetShown(on) end
 	local fs = btn:GetFontString()
 	if Usable(fs) then
-		inking = true
+		filterInking = true
 		if on then
 			Ink(fs, "VALUE")
 		elseif btn.IsEnabled and not btn:IsEnabled() then
@@ -768,13 +766,13 @@ local function FilterState(btn, on)
 		else
 			Ink(fs, "LABEL")
 		end
-		inking = false
+		filterInking = false
 	end
 	NoGlow(btn)
 end
 
 local function FilterInk(fs, r, g, b)
-	if inking or not ns.Enabled(KEY) then return end
+	if filterInking or not ns.Enabled(KEY) then return end
 	local btn = filterOf[fs]
 	if not btn then return end
 	if Near(r, g, b, GOLD) then
@@ -966,7 +964,6 @@ local function Repaint()
 	for slider in pairs(sliderFills) do SliderPaint(slider) end
 	for btn, on in pairs(titleOn) do TitleTint(btn, on) end
 	for btn in pairs(slotShells) do SlotPaint(btn) end
-	lastAccent[1], lastAccent[2], lastAccent[3] = ns.AccentOf(KEY)
 end
 
 local hooked = false
@@ -986,7 +983,6 @@ local function Hooks()
 end
 
 ns.Pack(KEY, "TrueshotLodge", function()
-	lastAccent[1], lastAccent[2], lastAccent[3] = ns.AccentOf(KEY)
 	-- Its slash command and minimap button are set up as its own load finishes: hooked once they're there.
 	Hooks()
 	if not hooked then C_Timer.After(0, Hooks) end

@@ -54,7 +54,6 @@ if type(Look) ~= "table" or type(Look.Window) ~= "function" or type(Look.Panel) 
 end
 
 local KEY = "OpenMap"
-local API = ns.API
 
 local function Mod()
 	local ok, m = pcall(OM.GetModule, OM, "worldmap")
@@ -126,7 +125,7 @@ local function RecodeText(text)
 end
 
 -- A frame's edge: its lit gold in the accent, bronze a quiet neutral line.
-local function EdgeFor(r, g, b, a)
+local function EdgeFor(r, g, b)
 	if BrightGold(r, g, b) then
 		local ar, ag, ab = ns.AccentOf(KEY)
 		return ar, ag, ab, 1
@@ -185,9 +184,9 @@ local backed = setmetatable({}, { __mode = "k" })
 local function InkBackdrop(f)
 	if backed[f] or not f.SetBackdropBorderColor or not f.GetBackdrop or not f:GetBackdrop() then return end
 	backed[f] = true
-	local function edge(self, r, g, b, a)
+	local function edge(self, r, g, b)
 		if busy or type(r) ~= "number" then return end
-		local nr, ng, nb, na = EdgeFor(r, g, b, a or 1)
+		local nr, ng, nb, na = EdgeFor(r, g, b)
 		if nr then
 			busy = true
 			self:SetBackdropBorderColor(nr, ng, nb, na)
@@ -542,7 +541,7 @@ end)
 
 local DressSoon   -- (below: dressed on the next frame)
 
-local function Piece(Kit, f, view)
+local function Piece(Kit, f)
 	if done[f] then return end
 	-- (a tab on the map's edge is the rail's or the dungeon's: EdgeTab, from their hooks)
 	if f.bg and f.selected and f.hover and f.icon then return end
@@ -640,7 +639,7 @@ local function WalkFrame(Kit, f, depth, view, count, ...)
 		local r = select(i, ...)
 		if not done[r] then ns.Guard(Region, r, view) end
 	end
-	if not done[f] then ns.Guard(Piece, Kit, f, view) end
+	if not done[f] then ns.Guard(Piece, Kit, f) end
 	-- The regions as they were, unless the dressing added some (the Kit's and ours never take one
 	-- away): then all of them again.
 	if f:GetNumRegions() == count then MarkDone(...) else MarkDone(f:GetRegions()) end
@@ -652,9 +651,14 @@ Walk = function(Kit, f, depth, view)
 	WalkFrame(Kit, f, depth, view, f:GetNumRegions(), f:GetRegions())
 end
 
+-- (Then its words: the strings it makes from the game's font templates (GameFontNormal and kin,
+-- in Map/Panel, Nav, Paint, Flights, Friends, Extras) never go through Look:Font, so they kept the
+-- game's Friz Quadrata. The player's font on every string of the frame; those Look:Font already
+-- gave the player's face are passed over.)
 local function Dress(f)
 	if not ns.Enabled(KEY) or not ns.Usable(f) then return end
 	ns.WithKit(function(Kit) Walk(Kit, f, 0, _G.OpenMapDungeonView) end)
+	ns.FontsIn(f, KEY)
 end
 ns.OpenMapDress = Dress
 
@@ -856,7 +860,7 @@ end
 -- The settings menu
 -- ---------------------------------------------------------------------------------------------
 
-local function Menu(menu, Kit)
+local function Menu(menu)
 	if not ns.Once(menu) then return end
 	-- Its own ground (the same recipe as the helpers', kept private): a nine-slice child and two
 	-- BACKGROUND textures, or a dialog backdrop on clients without the nine-slice.
@@ -1171,9 +1175,14 @@ local function LogToggle(Kit)
 end
 
 ns.Pack(KEY, nil, function(Kit)
+	-- The menu is made with the map at login (SetupPanel), or later when the Gamepad UI is turned
+	-- off or OpenMap's map is let on beside it: looked for right after that call.
 	ns.Watch(KEY, "OpenMapMenu", Menu)
 	local m = Mod()
 	if not m then return end
+	if type(m.SetupPanel) == "function" then
+		hooksecurefunc(m, "SetupPanel", function() ns.WatchNow() end)
+	end
 	-- Its edge tabs are given their face here (the rail's, every refresh): dressed as they're faced.
 	-- The rail lights its tabs after this and then ends its refresh in PlaceDungeonTabs, where Rail
 	-- paints each one lit or not: here a tab is only set up (its frame off, our outline made), unless
@@ -1240,7 +1249,18 @@ ns.Pack(KEY, nil, function(Kit)
 	if type(m.PlaceDungeonTabs) == "function" then
 		hooksecurefunc(m, "PlaceDungeonTabs", QueueCorner)
 	end
-	-- The dungeon view is made the first time a dungeon's map opens.
+	-- The dungeon view is made the first time a dungeon's map opens. Its maker is OpenMap's own,
+	-- out of reach, but just after it shows it asks whether its tabs are up (DungeonTabsShown):
+	-- dressed there, before its floor and side panel are filled (the hooks View puts on them dress
+	-- those as they come).
 	ns.Watch(KEY, "OpenMapDungeonView", function(view) View(view) end)
+	if type(m.DungeonTabsShown) == "function" then
+		hooksecurefunc(m, "DungeonTabsShown", function()
+			local view = _G.OpenMapDungeonView
+			if view and not views[view] then ns.WatchNow() end
+		end)
+	end
+	-- The list of dungeons at one entrance is drawn through Look:Dropdown as it's made, and is
+	-- dressed there (above); this is only the safety net.
 	ns.Watch(KEY, "OpenMapDungeonChooser", function(chooser) Follow(chooser) end)
 end)

@@ -26,7 +26,11 @@ if not ns.ok then return end
 
 local KEY = "Questie"
 
+-- Its settings, menus and popups are made from the game's serif font templates: the player's font
+-- goes on their words (font = "daylight"). Its tracker's font is a Questie setting of its own and
+-- nothing here touches the tracker's words.
 ns.Target(KEY, "Questie", { window = true, controls = true, text = true, shadow = true, colors = true,
+	font = "daylight",
 	extraTab = "DaylightUI",
 	extra = function()
 		return { ns.HandoverGroup(KEY) }
@@ -106,6 +110,83 @@ local function Hairlines(...)
 	end
 end
 
+-- The row's height again, with its words in the player's font: Questie grew the row from its
+-- labels' heights as it made them (QuestieOptionsControls _AddRowLabels: the title alone, or title
+-- + description + 2 with the title moved to the row's top), in the game's font. Only rows whose
+-- labels sit on a row frame of their own (checkboxes, radios, text lines); a dropdown's, a box's
+-- and a container's title sits above its widget. Never shrunk.
+local function FitRow(control)
+	local title, desc = control.titleFrame, control.descriptionFrame
+	if not ns.Usable(title) then return end
+	local wrapper = title:GetParent()
+	if not ns.Usable(wrapper) or wrapper == control then return end
+	if not ns.Usable(desc) then
+		local h = title:GetStringHeight()
+		if type(h) == "number" and h > wrapper:GetHeight() then
+			wrapper:SetHeight(h)
+			control:SetHeight(h)
+		end
+		return
+	end
+	local h = title:GetStringHeight() + desc:GetStringHeight() + 2
+	if h <= wrapper:GetHeight() or h <= control:GetHeight() then return end
+	-- (Its indent: the x of the title's LEFT point on the row frame.)
+	local indent = 0
+	for i = 1, title:GetNumPoints() do
+		local point, _, _, x = title:GetPoint(i)
+		if point == "LEFT" and type(x) == "number" then indent = x end
+	end
+	control:SetHeight(h)
+	title:SetPoint("TOPLEFT", control, "TOPLEFT", indent, 0)
+end
+
+-- Its text button sizes itself to its label on every SetText (its own SetText, which puts
+-- GameFontHighlight back on first): the player's font after each, and wider when the label in
+-- it no longer fits (up to the row's width; a label it already wraps keeps its wrap).
+local BUTTON_PADDING = 24
+local function FitButton(button)
+	if not ns.Enabled(KEY) then return end
+	local fs = button.GetFontString and button:GetFontString()
+	if not ns.Usable(fs) then return end
+	ns.FollowFont(fs, KEY)
+	if fs:GetWordWrap() then return end
+	local need = (fs:GetStringWidth() or 0) + BUTTON_PADDING
+	local row = button:GetParent()
+	local most = ns.Usable(row) and row:GetWidth() or need
+	if need > button:GetWidth() then button:SetWidth(math.min(need, most)) end
+end
+
+local fitted = setmetatable({}, { __mode = "k" })
+local function FollowButton(button)
+	if fitted[button] or type(button.SetText) ~= "function" then return end
+	fitted[button] = true
+	local set = button.SetText
+	button.SetText = function(self, ...)
+		set(self, ...)
+		FitButton(self)
+	end
+	FitButton(button)
+end
+
+-- The player's font on a row's words (names, sentences, a slider's name, ends and value) as it is
+-- made, then its height again; a text button its label.
+local function ControlFonts(control)
+	if ns.PlainText(KEY) then return end
+	local w = control.widget
+	ns.FollowFont(control.titleFrame, KEY)
+	ns.FollowFont(control.descriptionFrame, KEY)
+	ns.FollowFont(control.valueDisplay, KEY)
+	if type(w) == "table" then
+		ns.FollowFont(w.Text, KEY)
+		ns.FollowFont(w.Low, KEY)
+		ns.FollowFont(w.High, KEY)
+	end
+	FitRow(control)
+	local item = control.itemData
+	if type(item) == "table" and item.type == "button" and ns.Usable(w) then FollowButton(w) end
+	ns.FontsIn(control, KEY)
+end
+
 local function DressControl(Kit, control)
 	local item, w = control.itemData, control.widget
 	local kind = type(item) == "table" and item.type
@@ -177,8 +258,9 @@ local function CanvasChrome(Kit, canvas, controls)
 	if not ns.Usable(content) then return end
 	Hairlines(content:GetRegions())
 	for _, region in ipairs({ content:GetRegions() }) do
-		if region:GetObjectType() == "FontString" and region:GetFontObject() == _G.GameFontNormalHuge then
-			Ink(region, "VALUE")
+		if region:GetObjectType() == "FontString" then
+			if region:GetFontObject() == _G.GameFontNormalHuge then Ink(region, "VALUE") end
+			ns.FollowFont(region, KEY)
 		end
 	end
 end
@@ -214,6 +296,9 @@ if Controls and type(Controls.Create) == "function" then
 	local origCreate = Controls.Create
 	Controls.Create = function(parent, ...)
 		local control = origCreate(parent, ...)
+		if type(control) == "table" and ns.Enabled(KEY) and InWindow(parent) then
+			ns.Guard(ControlFonts, control)
+		end
 		if type(control) == "table" and ns.Enabled(KEY) and ns.Controls(KEY) and InWindow(parent) then
 			ns.WithKit(function(Kit) DressControl(Kit, control) end)
 			-- A tab's canvas is built over several frames, its scroll bar after the first pause.
@@ -282,7 +367,8 @@ ns.Watch(KEY, "QuestieStandaloneSettings", function(frame, Kit)
 			end
 		end
 	end
-	ns.DressOnShow(frame, nil, tabs)
+	-- (fonts: its title, tab names and page words, followed on every show.)
+	ns.DressOnShow(frame, { fonts = true }, tabs)
 	local queued = false
 	local function Run()
 		queued = false
@@ -306,9 +392,18 @@ ns.Watch(KEY, "QuestieStandaloneSettings", function(frame, Kit)
 	end
 end)
 
+-- The window is made on its first opening (ShowFrame, through every way it opens: the minimap
+-- button, the tracker, the slash command, the menu): looked for right after that call, once its
+-- tabs are made and before it's drawn.
+local OptionsEngine = Module("QuestieOptionsEngine")
+if OptionsEngine and type(OptionsEngine.ShowFrame) == "function" then
+	hooksecurefunc(OptionsEngine, "ShowFrame", function() ns.WatchNow() end)
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- Right-click menus: L_DropDownListQuestie1..n. The library shows one of its two backdrops on every
--- open; both are kept at nothing and the shell is the menu's ground.
+-- open; both are kept at nothing and the shell is the menu's ground. The first three are made as
+-- the library loads, so they are there at login; the rest follow the library's CreateFrames.
 -- ---------------------------------------------------------------------------------------------
 
 -- Its rows: the quest-title hover bar becomes a faint white wash (the library only shows and hides
@@ -415,6 +510,33 @@ local function MenuRows(list)
 	end
 end
 
+-- Its rows' words (GameFontHighlightSmallLeft, set again on every fill) in the player's font once
+-- the list is shown (the library fills it first and sizes it in its own OnShow, which runs before
+-- this one); the list wider when a row no longer fits, as the library works out a row's width.
+local function MenuFonts(list)
+	if not ns.Enabled(KEY) or ns.PlainText(KEY) then return end
+	local name = list:GetName()
+	local count = list.numButtons
+	if not name or type(count) ~= "number" then return end
+	local lib = type(LibStub) == "table" and LibStub("LibUIDropDownMenuQuestie-4.0", true)
+	local widest = 0
+	for j = 1, count do
+		local btn = _G[name .. "Button" .. j]
+		if not btn then break end
+		ns.FollowFont(_G[name .. "Button" .. j .. "NormalText"], KEY)
+		if lib and type(lib.UIDropDownMenu_GetButtonWidth) == "function" then
+			local ok, w = pcall(lib.UIDropDownMenu_GetButtonWidth, lib, btn)
+			if ok and type(w) == "number" and w > widest then widest = w end
+		end
+	end
+	if list.noResize or type(list.maxWidth) ~= "number" or widest <= list.maxWidth then return end
+	for j = 1, count do
+		local btn = _G[name .. "Button" .. j]
+		if btn then btn:SetWidth(widest) end
+	end
+	list:SetWidth(widest + 25)
+end
+
 local function Menu(list)
 	if not ns.Usable(list) then return end
 	if ns.Once(list) then
@@ -422,6 +544,8 @@ local function Menu(list)
 			if ns.Usable(part) then part:SetAlpha(0) end
 		end
 		ns.Shell(list, nil, KEY)
+		list:HookScript("OnShow", MenuFonts)
+		if list:IsShown() then MenuFonts(list) end
 	end
 	if ns.Controls(KEY) then MenuRows(list) end
 end
@@ -508,8 +632,16 @@ ns.Watch(KEY, "QuestieTutorialChooseObjectiveType", function(frame)
 	ns.DressOnShow(frame)
 end)
 
+-- Made a little after login, only until a choice is made (Tutorial.CreateChooseObjectiveTypeFrame,
+-- shown as it's made): looked for right after that call.
+local Tutorial = Module("Tutorial")
+if Tutorial and type(Tutorial.CreateChooseObjectiveTypeFrame) == "function" then
+	hooksecurefunc(Tutorial, "CreateChooseObjectiveTypeFrame", function() ns.WatchNow() end)
+end
+
 -- ---------------------------------------------------------------------------------------------
--- Its tracker (made at login, only while Questie's tracker is the one in use). Its backdrop color
+-- Its tracker (made a few frames after login as Questie starts up, only while Questie's tracker is
+-- the one in use: TrackerBaseFrame.Initialize, followed below). Its backdrop color
 -- is set again on every update and by its fader; each color asked for is turned into the opacity
 -- of a holder carrying the shell, and the backdrop itself kept clear.
 -- ---------------------------------------------------------------------------------------------
@@ -533,7 +665,7 @@ ns.Watch(KEY, "Questie_BaseFrame", function(base)
 			holder:SetAlpha(math.min(1, alpha / math.max(full or 1, 0.01)))
 		end
 	end
-	hooksecurefunc(base, "SetBackdropColor", function(self, r, g, b, a)
+	hooksecurefunc(base, "SetBackdropColor", function(self, _, _, _, a)
 		if busy or not ns.Enabled(KEY) then return end
 		busy = true
 		Follow(a)
@@ -556,6 +688,12 @@ ns.Watch(KEY, "Questie_BaseFrame", function(base)
 	pcall(base.SetBackdropBorderColor, base, 0, 0, 0, 0)
 	busy = false
 end)
+
+-- Looked for right after the tracker's frame is made, before Questie first colors or shows it.
+local TrackerBase = Module("TrackerBaseFrame")
+if TrackerBase and type(TrackerBase.Initialize) == "function" then
+	hooksecurefunc(TrackerBase, "Initialize", function() ns.WatchNow() end)
+end
 
 -- ---------------------------------------------------------------------------------------------
 -- Its own late tooltips: the minimap waypoint tooltip (made on the first hover of an NPC's path on
@@ -602,6 +740,17 @@ end
 ns.Watch(KEY, "QuestieWaypointMinimapTooltip", Tip)
 ns.Watch(KEY, "QuestieGamepadMapTooltip", Tip)
 
+-- Both are shown through MapIconTooltip.ShowOnTooltip (as GameTooltip is, for every map icon
+-- hovered): a tooltip of its own shown there is looked for right after, before it's drawn. (The
+-- gamepad one is made hidden a little after login and found then; the minimap one is made on the
+-- first hover of a path, in that very call.)
+local IconTooltip = Module("MapIconTooltip")
+if IconTooltip and type(IconTooltip.ShowOnTooltip) == "function" then
+	hooksecurefunc(IconTooltip, "ShowOnTooltip", function(_, tip)
+		if tip and tip ~= GameTooltip and not tipped[tip] then ns.WatchNow() end
+	end)
+end
+
 -- DaylightUI's tooltip opacity changed: the shells made here follow.
 ns.me.On("SettingChanged", function(scope, path)
 	if scope ~= "Tooltip" or path ~= "bgAlpha" or not ns.Enabled(KEY) or next(ownTips) == nil then return end
@@ -646,14 +795,14 @@ local function GetPath(p, key)
 	return t
 end
 local function SetPath(p, key, value)
-	local t, last = p, nil
+	local t = p
 	local parts = {}
 	for part in string.gmatch(key, "[^.]+") do parts[#parts + 1] = part end
 	for i = 1, #parts - 1 do
 		if type(t[parts[i]]) ~= "table" then t[parts[i]] = {} end
 		t = t[parts[i]]
 	end
-	last = parts[#parts]
+	local last = parts[#parts]
 	t[last] = value
 end
 

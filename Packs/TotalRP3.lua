@@ -887,7 +887,7 @@ if type(mixin) == "table" and type(mixin.SetSelected) == "function" then
 	end)
 end
 
-ns.Pack(KEY, nil, function(Kit)
+ns.Pack(KEY, nil, function()
 	Learn()
 	ns.Watch(KEY, "TRP3_MainFrame", MainFrame)
 	for _, name in ipairs(GLOWS) do ns.Watch(KEY, name, Glow) end

@@ -20,13 +20,21 @@ local function HasAtlas(frame, atlas)
 	return false
 end
 
--- Looked for only while the game's Settings window is open, twice a second.
+-- The dialog is made the first time it opens, by its What's New button atop LootTriage's settings
+-- pages (an unnamed button of the addon's, left of the game's Defaults button): a click on it
+-- looks at once, so the dialog is dressed before it's drawn. Otherwise it's looked for only while
+-- the game's Settings window is open, every fifth frame.
 local beat = 0
+local clicked = false
 local function Find()
 	local settings = _G.SettingsPanel
 	if not settings or not settings:IsShown() then return end
-	beat = beat + 1
-	if beat % 5 ~= 0 then return end
+	if clicked then
+		clicked = false
+	else
+		beat = beat + 1
+		if beat % 5 ~= 0 then return end
+	end
 	for _, child in ipairs({ UIParent:GetChildren() }) do
 		if ns.Usable(child) and child:GetObjectType() == "Frame" and not child:GetName()
 			and child:IsShown() and child:GetFrameStrata() == "DIALOG" and HasAtlas(child, BORDER) then
@@ -35,7 +43,39 @@ local function Find()
 	end
 end
 
+-- The addon's What's New button: an unnamed button of the addon's, on the game's Defaults button
+-- (which is only read, and left as it is). Every such button there is hooked, in case another
+-- addon puts one of its own in the same place.
+local function NewsButtons()
+	local list = _G.SettingsPanel and _G.SettingsPanel.Container and _G.SettingsPanel.Container.SettingsList
+	local defaults = list and list.Header and list.Header.DefaultsButton
+	local found = {}
+	if not defaults then return found end
+	for _, child in ipairs({ defaults:GetChildren() }) do
+		if ns.Usable(child) and child:GetObjectType() == "Button" and not child:GetName()
+			and child:GetText() == _G.GAMEMENU_NEW_BUTTON then
+			local _, rel = child:GetPoint(1)
+			if rel == defaults then found[#found + 1] = child end
+		end
+	end
+	return found
+end
+
+local hooked = setmetatable({}, { __mode = "k" })
+local function Clicked()
+	clicked = true
+	ns.WatchNow()
+end
+
 ns.Pack("LootTriage", "LootTriage", function()
+	ns.Watch("LootTriage", function() return NewsButtons()[1] end, function()
+		for _, button in ipairs(NewsButtons()) do
+			if not hooked[button] then
+				hooked[button] = true
+				button:HookScript("OnClick", Clicked)
+			end
+		end
+	end)
 	ns.Watch("LootTriage", Find, function(dialog, Kit)
 		if not ns.Once(dialog) then return end
 		for _, region in ipairs({ dialog:GetRegions() }) do

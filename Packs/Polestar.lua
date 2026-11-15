@@ -386,6 +386,13 @@ ns.Watch(KEY, "PolestarMinimapButton", function(btn)
 	Fit()
 end)
 
+-- The button is made at login, or later when the player first turns it on in Polestar's settings
+-- (Maps.RefreshMinimapButton): looked for right after that call, in the frame it is made.
+local Maps = P.Maps
+if type(Maps) == "table" and type(Maps.RefreshMinimapButton) == "function" then
+	hooksecurefunc(Maps, "RefreshMinimapButton", function() ns.WatchNow() end)
+end
+
 -- Windows made before this file ran (the guide window) are repainted at login, and everything
 -- follows when the DaylightUI look changes. One repaint a frame at most, however many asked.
 local queued = false

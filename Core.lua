@@ -349,10 +349,16 @@ end
 -- Frames made late (on a window's first open): looked for by name until they turn up
 -- ---------------------------------------------------------------------------------------------
 
+-- The fast path is the rule: a pack hooks the call that makes or opens a window and dresses it
+-- right there (ns.WatchNow() runs every pending watch at once, for hooks that only know "something
+-- may have been made"). The watches below are the safety net, and even they look every frame
+-- (only while one is still waiting): a window made by a click or an event is found in that same
+-- frame, before the game draws it, so it never shows undressed. Each look is a name lookup or a
+-- small function per waiting window.
 local watches = {}
-local ticker
-local TICK, SLOW_TICK, SLOW_AFTER = 0.2, 2, 60
-local tickSince, slow = nil, false
+local watcher = CreateFrame("Frame")
+watcher:Hide()
+local ticking = false
 
 local function Found(w, frame)
 	ns.WithKit(function(Kit)
@@ -365,13 +371,16 @@ local function Found(w, frame)
 end
 
 local function Tick()
+	-- (A window found can make another watch, or a hook can ask again mid-look: one look at a time.)
+	if ticking then return end
+	ticking = true
 	for i = #watches, 1, -1 do
 		local w = watches[i]
 		if ready and not ns.Enabled(w.key) then
 			-- Its addon is switched off (a switch takes hold after a reload): not looked for again.
 			table.remove(watches, i)
 		else
-			local get, frame = w.get, nil
+			local get, frame = w.get
 			if type(get) == "string" then
 				frame = _G[get]
 			else
@@ -384,27 +393,22 @@ local function Tick()
 			end
 		end
 	end
-	if #watches == 0 and ticker then
-		ticker:Cancel()
-		ticker = nil
-		return
-	end
-	-- A window not made in the first minute is looked for every few seconds from then on.
-	if ticker and not slow and tickSince and GetTime() - tickSince > SLOW_AFTER then
-		slow = true
-		ticker:Cancel()
-		ticker = C_Timer.NewTicker(SLOW_TICK, Tick)
-	end
+	ticking = false
+	if #watches == 0 then watcher:Hide() end
 end
+watcher:SetScript("OnUpdate", Tick)
 
 -- ns.Watch(key, get, fn): `get` = a global frame name or a function returning the frame (or nil);
--- fn(frame, Kit) runs once, when it exists.
+-- fn(frame, Kit) runs once, when it exists. The fallback: pair it with a hook on the call that
+-- makes the window (and ns.WatchNow() or the dressing called from that hook).
 function ns.Watch(key, get, fn)
 	watches[#watches + 1] = { key = key, get = get, fn = fn }
-	if not ticker and ns.loggedIn then
-		tickSince, slow = GetTime(), false
-		ticker = C_Timer.NewTicker(TICK, Tick)
-	end
+	if ns.loggedIn then watcher:Show() end
+end
+
+-- Every pending watch looked at now (from a hook on an addon's open / build call).
+function ns.WatchNow()
+	if ns.loggedIn and #watches > 0 then Guard(Tick) end
 end
 
 local boot = CreateFrame("Frame")
@@ -412,9 +416,9 @@ boot:RegisterEvent("PLAYER_LOGIN")
 boot:SetScript("OnEvent", function(self)
 	self:UnregisterEvent("PLAYER_LOGIN")
 	ns.loggedIn = true
-	if #watches > 0 and not ticker then
-		tickSince, slow = GetTime(), false
-		ticker = C_Timer.NewTicker(TICK, Tick)
+	if #watches > 0 then
+		watcher:Show()
+		Tick()
 	end
 end)
 
@@ -706,13 +710,74 @@ end
 -- regions are gone through as they come (no table made of them): it runs on every show.
 local Walk
 
+-- The face and size each string was last left at by the walk: a string the addon has put its own
+-- font back on since (a refresh, a pooled row, SetFontObject on a state change) is done again;
+-- one that's still as it was left isn't touched (so a size scale is never applied twice).
+local leftFace = setmetatable({}, { __mode = "k" })
+local leftSize = setmetatable({}, { __mode = "k" })
+
+-- The player's font for `key` on a string, unless it's still as this left it.
+function ns.FollowFont(fs, key)
+	if not Usable(fs) or not fs.GetFont then return end
+	local ok, path, size = pcall(fs.GetFont, fs)
+	if not ok or not size or size <= 0 then return end
+	if leftFace[fs] == path and leftSize[fs] == size then return end
+	ns.Refont(fs, key)
+	local ok2, nowPath, nowSize = pcall(fs.GetFont, fs)
+	if ok2 then leftFace[fs], leftSize[fs] = nowPath, nowSize end
+end
+
+-- Every string (and text box) in a window at any depth, through ns.FollowFont: check buttons'
+-- labels and edit boxes included, which the dressing walk below doesn't open up. For windows an
+-- addon fills with game font templates its own font code never reaches. A string already in key's
+-- face is passed over: a pack's own font hook put it there, with any size scale already applied.
+-- Regions and children are gone through as the game hands them back (no table made): it runs on
+-- every show.
+local FONT_SKIP = { GameTooltip = true, Model = true, PlayerModel = true, DressUpModel = true,
+	ModelScene = true, Cooldown = true, SimpleHTML = true, MessageFrame = true, Minimap = true }
+local FontsIn
+
+local function FontOn(fs, key, face)
+	if face then
+		local ok, path = pcall(fs.GetFont, fs)
+		if ok and path == face then return end
+	end
+	ns.FollowFont(fs, key)
+end
+
+local function FontsAmong(key, face, ...)
+	for i = 1, select("#", ...) do
+		local r = select(i, ...)
+		if Usable(r) and r:GetObjectType() == "FontString" then FontOn(r, key, face) end
+	end
+end
+
+local function FontsBelow(key, face, depth, ...)
+	for i = 1, select("#", ...) do FontsIn((select(i, ...)), key, face, depth) end
+end
+
+FontsIn = function(f, key, face, depth)
+	if depth > 10 or not Usable(f) then return end
+	local kind = f:GetObjectType()
+	if FONT_SKIP[kind] then return end
+	if f.GetRegions then FontsAmong(key, face, f:GetRegions()) end
+	if kind == "EditBox" then FontOn(f, key, face) end
+	if f.GetChildren then FontsBelow(key, face, depth + 1, f:GetChildren()) end
+end
+
+-- key's text look on every string under root (left alone when key's text is the addon's own).
+function ns.FontsIn(root, key)
+	key = key or current
+	if not key then return end
+	local t = Text(key)
+	if t.plain then return end
+	FontsIn(root, key, t.face, 0)
+end
+
 local function WalkRegions(key, ...)
 	for i = 1, select("#", ...) do
 		local region = select(i, ...)
-		if not done[region] and Usable(region) and region:GetObjectType() == "FontString" then
-			done[region] = true
-			ns.Refont(region, key)
-		end
+		if Usable(region) and region:GetObjectType() == "FontString" then ns.FollowFont(region, key) end
 	end
 end
 
@@ -907,7 +972,7 @@ function ns.SideTile(tab, opts)
 		local ok, atlas = pcall(source.GetAtlas, source)
 		if ok and type(atlas) == "string" and atlas ~= "" then icon:SetAtlas(atlas) else icon:SetTexture(source:GetTexture()) crop() end
 		hooksecurefunc(source, "SetTexture", function(_, file) icon:SetTexture(file) crop() end)
-		hooksecurefunc(source, "SetAtlas", function(_, atlas) icon:SetAtlas(atlas) end)
+		hooksecurefunc(source, "SetAtlas", function(_, a) icon:SetAtlas(a) end)
 		Kit.Erase(source)
 	else
 		-- Behind the tab's own parts, round the icon.
@@ -1035,21 +1100,21 @@ local handQueued = false
 local function ApplyAllHandovers()
 	handQueued = false
 	if not ready then return end
-	local waiting = false
+	local pending = false
 	local sv = SV()
 	-- One repair pass: settings given to DaylightUI before the fix were cleared instead of switched
 	-- off (so the addon read its default, on). Each addon's own pass, once its settings are there.
 	if type(sv.repaired) ~= "table" then sv.repaired = {} end
 	for addon, h in pairs(handovers) do
 		local repair = not sv.repaired[addon]
-		local ok, done = xpcall(ApplyHandover, geterrorhandler(), addon, h, repair)
-		if ok and done == false then
-			waiting = true
+		local ok, finished = xpcall(ApplyHandover, geterrorhandler(), addon, h, repair)
+		if ok and finished == false then
+			pending = true
 		elseif ok and repair then
 			sv.repaired[addon] = true
 		end
 	end
-	return waiting
+	return pending
 end
 -- Once, a moment after the last change: a slider being dragged in DaylightUI's options changes
 -- its setting on every step.

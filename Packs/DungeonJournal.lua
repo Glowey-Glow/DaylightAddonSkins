@@ -448,11 +448,64 @@ local MENU_NAMES = { "ForeverDungeonJournalRunLogMenu", "ForeverDungeonJournalTr
 	"ForeverDungeonJournalOnyxiaMenu", "ForeverDungeonJournalSleepingBagMenu", "ForeverDungeonJournalLFGMenu",
 	"ForeverDungeonJournalFavouriteContextMenu" }
 
--- Both windows are made the first time they open, through its exported toggles. Dressing them right
--- after the toggle runs puts the look on in the same frame they first show; the look-out for them
--- by name (which checks only every 2 seconds once the first minute after login has passed, so the
--- window showed undressed that long) stays as the fallback. Each is dressed once either way.
+-- ---------------------------------------------------------------------------------------------
+-- Its own fonts: since 2.0.8 the journal draws its words with copies of the game's font objects
+-- (ForeverDJ_<name>, Core/Fonts.lua) carrying the game's Friz Quadrata and Morpheus files by
+-- name, so neither DaylightUI's font nor its journal skin reaches them. Those copies take the
+-- player's font (their size and outline kept), in the client's languages DaylightUI's fonts have
+-- the letters of; each one's own Korean / Chinese / Russian member is never touched. The ones
+-- changed are remembered (with the size and outline they had), so a new DaylightUI font follows.
+-- They stay changed until the next login if the skin is turned off.
+-- ---------------------------------------------------------------------------------------------
+
+local LOCAL_FONTS = { koKR = true, zhCN = true, zhTW = true, ruRU = true }
+local ownChanged = {}   -- font object -> { size, flags } it had before
+
+local function GameSerif(path)
+	if type(path) ~= "string" then return false end
+	path = string.lower(path)
+	return string.find(path, "frizqt__", 1, true) ~= nil or string.find(path, "morpheus", 1, true) ~= nil
+end
+
+local function OwnFontsInDaylight()
+	if not ns.Enabled(KEY) then return end
+	local locale = _G.GetLocale and _G.GetLocale() or ""
+	if LOCAL_FONTS[locale] then return end
+	local FDJ = _G.ForeverDungeonJournal_NS
+	local own = type(FDJ) == "table" and FDJ.OwnFontObjects
+	if type(own) ~= "table" then return end
+	local okFace, face = pcall(ns.API.Font)
+	if not okFace or type(face) ~= "string" then return end
+	local prefix = type(FDJ.OWN_FONT_PREFIX) == "string" and FDJ.OWN_FONT_PREFIX or "ForeverDJ_"
+	for name in pairs(own) do
+		local font = _G[prefix .. name]
+		-- (A font family: its Latin member is the one these locales draw with.)
+		if type(font) == "table" and type(font.GetFontObjectForAlphabet) == "function" then
+			local okM, member = pcall(font.GetFontObjectForAlphabet, font, "roman")
+			if okM and type(member) == "table" then font = member end
+		end
+		if type(font) == "table" and type(font.GetFont) == "function" and type(font.SetFont) == "function" then
+			local was = ownChanged[font]
+			if not was then
+				local ok, path, size, flags = pcall(font.GetFont, font)
+				if ok and GameSerif(path) and type(size) == "number" and size > 0 then
+					was = { size, flags or "" }
+					ownChanged[font] = was
+				end
+			end
+			if was then pcall(font.SetFont, font, face, was[1], was[2]) end
+		end
+	end
+end
+
+-- A new DaylightUI font (or text style): the copies follow.
+ns.me.On("StyleChanged", function() ns.Guard(OwnFontsInDaylight) end)
+
+-- Every window here is made the first time it opens, so each is dressed right after the call or
+-- click that makes or opens it, in the same frame it first shows; the look-out by name stays as the
+-- fallback. Each is dressed once either way.
 ns.Pack(KEY, nil, function(Kit)
+	OwnFontsInDaylight()
 	ns.Watch(KEY, "ForeverDungeonJournalRunLog", RunLog)
 	ns.Watch(KEY, "ForeverDungeonJournalLootFilter", LootFilter)
 	local FDJ = _G.ForeverDungeonJournal_NS
@@ -528,6 +581,37 @@ ns.Pack(KEY, nil, function(Kit)
 	end
 	local function Global(name) return function() return _G[name] end end
 	local function Field(name) return function() return FDJ[name] end end
+	-- What its own click scripts open (a small menu, a note), from functions it keeps to itself: the
+	-- button that opens it is hooked once, when it's found, and what it opened is dressed right after
+	-- the click, in the same frame.
+	local clicked = setmetatable({}, { __mode = "k" })
+	local function AfterClick(btn, script, get, fn)
+		if not ns.Usable(btn) or not btn.HookScript or clicked[btn] then return end
+		clicked[btn] = true
+		btn:HookScript(script, function()
+			if not ns.Enabled(KEY) then return end
+			local f = get()
+			if ns.Usable(f) then ns.Guard(fn, f, Kit) end
+		end)
+	end
+	-- The home page's icons, made with its header: the Character Logs, Sleeping Bag and Onyxia
+	-- icons' right-click menus, and the Forever emblem's "back to full view" note.
+	local function HomeIcons(frame)
+		if type(frame) ~= "table" then return end
+		AfterClick(frame.runLogButton, "OnClick", Global("ForeverDungeonJournalRunLogMenu"), Menu)
+		AfterClick(frame.sleepingBagButton, "OnClick", Global("ForeverDungeonJournalSleepingBagMenu"), Menu)
+		AfterClick(frame.onyxiaButton, "OnClick", Global("ForeverDungeonJournalOnyxiaMenu"), Menu)
+		AfterClick(frame.foreverFilterButton, "OnClick", Field("foreverHint"), Window)
+	end
+	-- The tracker's own openers: a right-click on it or its top opens its menu, its X the "tracker
+	-- closed" notice. (A right-click on a rare's portrait opens the menu too; those are left to the
+	-- look-out below.)
+	local function TrackerOpeners(t)
+		local menu = Global("ForeverDungeonJournalTrackerMenu")
+		AfterClick(t, "OnMouseUp", menu, Menu)
+		AfterClick(t.handle, "OnMouseUp", menu, Menu)
+		AfterClick(ns.FindClose(t), "OnClick", Global("ForeverDungeonJournalTrackerClosedNotice"), Window)
+	end
 	local function TrackerLoot()
 		local t = _G.ForeverDungeonJournalRunTracker
 		return type(t) == "table" and t.lootRow or nil
@@ -547,8 +631,16 @@ ns.Pack(KEY, nil, function(Kit)
 	After("ToggleBugReportWindow", function(frame) return type(frame) == "table" and frame.bugReportWindow or nil end, Popup)
 	After("UpdateMapQuestToggle", function(panel) return type(panel) == "table" and panel.fdjQuestToggle or nil end, QuestToggle)
 	-- The home page header is laid out again after every home refresh; the RPG Mode note is made
-	-- the first time it's due.
-	After("UpdateRPGHeader", function(frame) return frame end, JournalPopups)
+	-- the first time it's due, and the header's icons the first time it's laid out.
+	After("UpdateRPGHeader", function(frame) return frame end, function(frame)
+		JournalPopups(frame)
+		HomeIcons(frame)
+	end)
+	-- The page-unlocked toast: shown just before the home cards are refreshed (a page opening), or
+	-- through its map toast call.
+	local function UnlockToast() return _G.ForeverDungeonJournalUnlockToast end
+	After("RefreshHomeCards", UnlockToast, Toast)
+	After("RPGToast", UnlockToast, Toast)
 
 	-- The tracker is made the first time a run is tracked, its two hints the first time they're
 	-- due; all three in UpdateRunTracker, which runs every second while it's up (here: three
@@ -559,11 +651,18 @@ ns.Pack(KEY, nil, function(Kit)
 			if all or not ns.Enabled(KEY) then return end
 			if not tracker then
 				tracker = _G.ForeverDungeonJournalRunTracker
-				if tracker then ns.Guard(Tracker, tracker, Kit) end
+				if tracker then
+					ns.Guard(Tracker, tracker, Kit)
+					TrackerOpeners(tracker)
+				end
 			end
 			if not trackerHint then
 				trackerHint = FDJ.trackerHint
-				if trackerHint then ns.Guard(Window, trackerHint, Kit) end
+				if trackerHint then
+					ns.Guard(Window, trackerHint, Kit)
+					-- (A right-click on it opens the tracker's menu.)
+					AfterClick(trackerHint, "OnClick", Global("ForeverDungeonJournalTrackerMenu"), Menu)
+				end
 			end
 			if not bossHint then
 				bossHint = FDJ.bossHint
@@ -573,8 +672,9 @@ ns.Pack(KEY, nil, function(Kit)
 		end)
 	end
 
-	-- The quest trackers: redrawn through RefreshQuestTracker (and a moment after the Track button,
-	-- which redraws on the next frame from a local of its own).
+	-- The quest trackers: redrawn through RefreshQuestTracker and ToggleQuestTracking (the Track
+	-- buttons), both dressed right after they run; a moment after the Track button too, for a redraw
+	-- it leaves for the next frame.
 	if type(FDJ.RefreshQuestTracker) == "function" then
 		hooksecurefunc(FDJ, "RefreshQuestTracker", function()
 			if ns.Enabled(KEY) then QuestTrackers(Kit) end
@@ -582,13 +682,17 @@ ns.Pack(KEY, nil, function(Kit)
 	end
 	if type(FDJ.ToggleQuestTracking) == "function" then
 		hooksecurefunc(FDJ, "ToggleQuestTracking", function()
+			if ns.Enabled(KEY) then QuestTrackers(Kit) end
 			C_Timer.After(0.1, function()
 				if ns.Enabled(KEY) then QuestTrackers(Kit) end
 			end)
 		end)
 	end
 
-	-- Made by functions of its own that can't be hooked: looked out for by name (or field).
+	-- The look-out by name (or field), as the safety net for all of the above. It's the only way
+	-- for two of them: the quest trackers its next-frame redraw makes after quest log events (from a
+	-- frame of its own with no name), and the quest page toast (from a quest accepted or turned in).
+	-- Either is found in the frame it's made, or at worst the next.
 	ns.Watch(KEY, "ForeverDungeonJournalQuestTracker", function(_, K) QuestTrackers(K) end)
 	for _, name in ipairs(MENU_NAMES) do ns.Watch(KEY, name, Menu) end
 	ns.Watch(KEY, "ForeverDungeonJournalTrackerClosedNotice", Window)
@@ -597,8 +701,10 @@ ns.Pack(KEY, nil, function(Kit)
 	ns.Watch(KEY, "ForeverDungeonJournalRPGIntro", function()
 		JournalPopups(_G.ForeverDungeonJournalFrame)
 	end)
+	-- (The journal itself is made at login.)
 	ns.Watch(KEY, "ForeverDungeonJournalFrame", function(frame)
 		JournalPopups(frame)
+		HomeIcons(frame)
 		frame:HookScript("OnShow", JournalPopups)
 	end)
 end)

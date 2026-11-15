@@ -50,7 +50,7 @@ end
 -- atlas or file name, so every menu built from the game's templates is covered, whichever addon
 -- filled it). Each is set only when it isn't ours already. Colors the game gives on purpose (a
 -- gray disabled entry, a class color) aren't gold and stay.
-local GOLD_R, GOLD_G, GOLD_B = 1, 0.82, 0
+local GOLD_R, GOLD_G = 1, 0.82
 local function NearGold(r, g, b)
 	return r and math.abs(r - GOLD_R) < 0.06 and math.abs(g - GOLD_G) < 0.08 and b < 0.25
 end
@@ -124,8 +124,8 @@ local function FixRegions(font, ...)
 				return
 			end
 		elseif inks and kind == "Texture" and r:IsShown() then
-			local kind = KindOf(r)
-			if kind and not pcall(Tint, r, kind == "mark" and inks.accent or inks.text) then
+			local part = KindOf(r)
+			if part and not pcall(Tint, r, part == "mark" and inks.accent or inks.text) then
 				blocked = true
 				return
 			end

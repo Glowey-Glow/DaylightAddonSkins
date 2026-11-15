@@ -87,12 +87,27 @@ local function Washed(b)
 	return true
 end
 
-local function InkTree(w)
+local InkTree
+-- A line DaylightUI hadn't dressed yet when this looked (its hook on a tree can run after this
+-- one's): looked at again a moment later, once.
+local retrying = setmetatable({}, { __mode = "k" })
+local function Retry(w)
+	if retrying[w] then return end
+	retrying[w] = true
+	C_Timer.After(0.05, function()
+		retrying[w] = nil
+		ns.Guard(InkTree, w, true)
+	end)
+end
+
+function InkTree(w, again)
 	if not ns.Enabled() or type(w) ~= "table" then return end
 	local buttons = w.buttons
 	if type(buttons) ~= "table" or not buttons[1] or not TreeFontsReady() then return end
+	local missed = false
 	for i = 1, #buttons do
 		local b = buttons[i]
+		if ns.Usable(b) and b.SetNormalFontObject and not Washed(b) and b:IsShown() then missed = true end
 		if ns.Usable(b) and b.SetNormalFontObject and Washed(b) then
 			-- level is AceGUI's own (1 = a top line, set on every refresh).
 			if b.level == nil or b.level == 1 then
@@ -104,6 +119,7 @@ local function InkTree(w)
 			end
 		end
 	end
+	if missed and not again then Retry(w) end
 end
 
 local function InkTreeSafe(w) ns.Guard(InkTree, w) end
@@ -168,6 +184,24 @@ function AceInks.Hook()
 			hooksecurefunc(AG, m, AceSeen)
 			AceInks.hooked[m] = AG[m]
 		end
+	end
+	-- A tree made before this started (and not shown yet, so no lines to find it by) is found when
+	-- it makes its first line: AceGUI numbers each new line (AceGUI30TreeButton<n>) as it makes it,
+	-- inside the tree's refresh; the line's tree is hooked once that refresh is over.
+	local m = "GetNextWidgetNum"
+	if type(AG[m]) == "function" and AG[m] ~= AceInks.hooked[m] then
+		hooksecurefunc(AG, m, function(_, kind)
+			if kind ~= "TreeGroupButton" then return end
+			local n = type(AG.counts) == "table" and AG.counts.TreeGroupButton
+			if type(n) ~= "number" then return end
+			C_Timer.After(0, function()
+				local b = _G["AceGUI30TreeButton" .. n]
+				if type(b) == "table" and type(b.obj) == "table" and b.obj.type == "TreeGroup" then
+					ns.Guard(HookTree, b.obj)
+				end
+			end)
+		end)
+		AceInks.hooked[m] = AG[m]
 	end
 end
 

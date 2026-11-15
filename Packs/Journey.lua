@@ -129,7 +129,6 @@ end
 
 local API = ns.API
 local JUI = rawget(env, "UI")
-local Color = rawget(env, "Color")
 local abs, floor, min = math.abs, math.floor, math.min
 
 local function Look(name) return ns.Look(KEY, name) end
@@ -309,7 +308,7 @@ local groups = setmetatable({}, { __mode = "k" })     -- step box -> its bar
 local flats = setmetatable({}, { __mode = "k" })      -- flat step button -> { fill, r, g, b }
 local menuRows = setmetatable({}, { __mode = "k" })
 local bars = {}                                       -- progress bar textures -> { r, g, b, alpha } Journey's
-local header, tooltip, arrow, logo
+local header, arrow, logo
 
 local GLUE = "glue%-tooltip%-background"
 
@@ -508,7 +507,6 @@ end
 
 local function Tooltip(tip)
 	if Look("tooltip") == false then return end
-	tooltip = tip
 	local function Hide()
 		if tip.NineSlice then tip.NineSlice:SetAlpha(0) end
 	end

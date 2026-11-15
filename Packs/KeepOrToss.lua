@@ -104,10 +104,22 @@ local function Notice(tip)
 	ns.Shell(tip, { noBevel = true }, KEY)
 end
 
+local hooked = false
+
 ns.Pack(KEY, "Keep or Toss", function(Kit)
+	-- The page and its detail pane are made as the addon loads: dressed here, before they can show.
 	if not _G.KeepOrTossFrame then return false end
 	Window(_G.KeepOrTossFrame, Kit)
 	Window(_G.KeepOrTossDetailFrame, Kit)
+	-- The introduction is made the first time it opens. "/kt intro" opens it through the addon's
+	-- slash command, so it's dressed right after that; from its settings button, or offered by
+	-- itself at login, it opens from inside the addon, and the watch finds it at most a frame later.
+	if not hooked and type(SlashCmdList) == "table" and type(SlashCmdList.KEEPORTOSS) == "function" then
+		hooked = true
+		hooksecurefunc(SlashCmdList, "KEEPORTOSS", function() ns.WatchNow() end)
+	end
 	ns.Watch(KEY, "KeepOrTossIntroFrame", Window)
+	-- The delete notice is made inside the addon, the first time a delete is confirmed, with
+	-- nothing to hook: the watch finds it at most a frame later.
 	ns.Watch(KEY, "KeepOrTossDeleteNotice", Notice)
 end, { controls = true })

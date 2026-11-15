@@ -80,7 +80,8 @@ local function Fonts(Kit, frame, light)
 	if not Usable(frame) or not frame.GetRegions then return end
 	for _, r in ipairs({ frame:GetRegions() }) do
 		-- (A string with no font size yet is left alone: the game hasn't set it up.)
-		local _, size = r.GetFont and r:GetFont()
+		local size
+		if r.GetFont then size = select(2, r:GetFont()) end
 		if Kind(r) == "FontString" and type(size) == "number" and size > 0 then
 			FontOf(Kit, r)
 			if light then Kit.Light(r) end
@@ -140,7 +141,7 @@ end
 -- DaylightUI's window shell, the title in the value ink on the left of the title row. For the
 -- windows Kit.Window doesn't suit: a "Close" text button where Kit.Window looks for the X, a
 -- minimize button, art that must stay, or a window the game shows from its own event code.
-local function ShellWindow(Kit, f, keep, quiet)
+local function ShellWindow(Kit, f, keep)
 	if not Usable(f) or dressed[f] then return end
 	dressed[f] = true
 	Kit.Strip(f, keep)
@@ -165,7 +166,7 @@ end
 -- CloseButton is a text button.
 local function Window(Kit, f, opts)
 	if TextClose(f) then
-		ShellWindow(Kit, f, nil, opts and opts.quiet)
+		ShellWindow(Kit, f)
 	else
 		Kit.Window(f, opts)
 	end
@@ -268,11 +269,54 @@ local function Slider(Kit, s)
 	end
 end
 
+-- The words a visited frame holds itself (not its children: the walk visits those), in the
+-- player's font: windows dressed only by the walk otherwise kept the game's. A game window's
+-- (key nil) through Kit.Refont, which leaves a string already in DaylightUI's window font as it is
+-- (so the strings this pack sized through Kit.Font keep their size); an addon's only when its
+-- caps put DaylightUI's font on its words (font = "daylight"), through ns.FollowFont. An addon
+-- left on its own font ("addon") is left alone.
+-- (face: the addon's face from its look. A string already in it was put there by its pack's own
+-- font hook, any size scale with it, and is passed over.)
+local function RefontAmong(Kit, key, face, ...)
+	for i = 1, select("#", ...) do
+		local r = select(i, ...)
+		if Kind(r) == "FontString" then
+			local ok, path, size = pcall(r.GetFont, r)
+			-- (No font size yet: the game hasn't set it up. The game's number font, item counts and
+			-- cooldown numbers in its narrow outlined face, stays: it's made to read on an icon.)
+			local number = type(path) == "string" and string.find(string.upper(path), "ARIALN", 1, true) ~= nil
+			if ok and type(size) == "number" and size > 0 and not number then
+				if not key then
+					Kit.Refont(r)
+				elseif path ~= face then
+					ns.FollowFont(r, key)
+				end
+			end
+		end
+	end
+end
+
+local function RegionFonts(Kit, frame, key)
+	if not frame.GetRegions then return end
+	local face
+	if key then
+		local caps = ns.caps[key]
+		if not (caps and caps.font == "daylight") or ns.PlainText(key) then return end
+		face = ns.FontFor(key, false, 1)
+	end
+	RefontAmong(Kit, key, face, frame:GetRegions())
+end
+
 -- What the walk hands every frame it passes (not the controls it dresses itself).
-local function Each(Kit, frame)
+local function Each(Kit, frame, key)
+	RegionFonts(Kit, frame, key)
 	local k = Kind(frame)
-	if k == "Slider" then
-		if Controls() then Slider(Kit, frame) end
+	if k == "Button" and frame.intrinsic == "DropdownButton" then
+		-- The game's dropdowns (WowStyle1 / WowStyle2...) are Buttons marked intrinsic =
+		-- "DropdownButton" on this client: the Kit's walk only knows the ones keyed "...Dropdown".
+		if ns.Controls(key or KEY) then Kit.Dropdown(frame) end
+	elseif k == "Slider" then
+		if ns.Controls(key or KEY) then Slider(Kit, frame) end
 	elseif k == "Frame" then
 		OldDropdown(Kit, frame)
 	end
@@ -285,8 +329,10 @@ end
 -- every frame the walk passes, after this pack's own.
 -- ---------------------------------------------------------------------------------------------
 
-local function Walk(Kit, f, opts, after, each)
+-- key: the addon whose on/off and controls setting the walk follows (left out: Game windows).
+local function Walk(Kit, f, opts, after, each, key)
 	opts = opts or {}
+	local function on() return ns.Enabled(key or KEY) end
 	local first, again = {}, {}
 	for k, v in pairs(opts) do
 		first[k] = v
@@ -294,7 +340,7 @@ local function Walk(Kit, f, opts, after, each)
 	end
 	again.shownOnly = true
 	local function visit(frame)
-		Each(Kit, frame)
+		Each(Kit, frame, key)
 		if each then each(frame) end
 	end
 	first.each, again.each = visit, visit
@@ -302,7 +348,7 @@ local function Walk(Kit, f, opts, after, each)
 	local queue
 	local function run()
 		queued = false
-		if not Usable(f) or not f:IsShown() or not On() then return end
+		if not Usable(f) or not f:IsShown() or not on() then return end
 		if InCombatLockdown() then
 			if not waiting then
 				waiting = true
@@ -328,6 +374,14 @@ local function Walk(Kit, f, opts, after, each)
 	f:HookScript("OnShow", queue)
 	return queue
 end
+
+-- Shared with the other packs (they run after login, when this file has loaded):
+-- ns.Walk(Kit, f, opts, after, each, key), and the controls the Kit's walk doesn't know.
+ns.Walk = Walk
+function ns.Slider(s) if ns.Kit then Slider(ns.Kit, s) end end
+function ns.OldDropdown(dd) if ns.Kit then OldDropdown(ns.Kit, dd) end end
+function ns.Words(frame, depth) if ns.Kit then Words(ns.Kit, frame, depth) end end
+ns.TextButton = TextButton
 
 -- The usual window and its walk.
 local function Panel(Kit, f, walkOpts, after, each)
@@ -420,7 +474,7 @@ end
 
 local function Quiet(Kit, f, keep, skip)
 	if not Usable(f) then return end
-	ShellWindow(Kit, f, keep, true)
+	ShellWindow(Kit, f, keep)
 	local name = f:GetName()
 	CornerButton(Kit, f.CloseButton or (name and _G[name .. "CloseButton"]))
 	CornerButton(Kit, f.minimizeButton)
@@ -562,6 +616,13 @@ Entry("GhostFrame", function(f, Kit)
 end)
 
 -- Alert toasts ----------------------------------------------------------------------------------
+-- Every toast of the game's alert frame (a recipe learned, an achievement, a dungeon done, a new
+-- pet or mount...) goes through AlertFrame:AddAlertFrame and the global AlertFrame_ShowNewAlert as
+-- it shows. Both are post-hooked as this file loads (the alert frame is the game's own, there from
+-- the start), so no toast comes before the hook; whichever runs first dresses it, the other finds
+-- it done. The frames are pooled and the game sets their art again on each toast, so the art is
+-- erased (a transparent mask, which nothing the game does later undoes) on every show, not once;
+-- the outline, the icon's frame and the words are made once per frame.
 
 -- DaylightUI's: loot ("You received"), money; and the other item toasts, whose art is the item.
 local TOAST_SKIP = { "LootAlertSystem", "MoneyWonAlertSystem", "LootUpgradeAlertSystem", "LegendaryItemAlertSystem" }
@@ -569,15 +630,20 @@ local TOAST_SKIP = { "LootAlertSystem", "MoneyWonAlertSystem", "LootUpgradeAlert
 local TOAST_KEEP = { "Icon", "icon", "IconTexture", "IconOverlay", "dungeonTexture", "heroicIcon", "EmblemIcon",
 	"GuildBanner", "GuildTabardBackground", "GuildTabardEmblem", "GuildTabardBorder", "DigsiteTypeTexture",
 	"QuestTexture", "BonusStar", "Watermark" }
--- Erased for good (the game fades and re-shows these on every toast): banners, glows, gold rings.
-local TOAST_ERASE = { "glow", "shine", "Background", "BGAtlas", "OldAchievement", "GuildBorder", "dungeonArt",
-	"raidArt", "ToastBackground", "EmblemBackground", "EmblemBorder", "StandardBackground", "FancyBackground" }
 local TOAST_INSET = 8   -- px the box sits inside the toast's frame (its art has a clear margin)
 local ICON_PAD = 2
 
+local toastSkip       -- alert system -> true, made the first time a toast shows
+local toastShown = setmetatable({}, { __mode = "k" })   -- toast -> when it was last dressed
+
+-- Every texture of a frame but the kept ones: erased.
+local function EraseArt(Kit, frame, keep)
+	for _, r in ipairs({ frame:GetRegions() }) do
+		if IsTexture(r) and not keep[r] then Kit.Erase(r) end
+	end
+end
+
 local function Toast(Kit, f)
-	if dressed[f] then return end
-	dressed[f] = true
 	local keep = {}
 	for _, k in ipairs(TOAST_KEEP) do
 		if IsTexture(f[k]) then keep[f[k]] = true end
@@ -587,18 +653,37 @@ local function Toast(Kit, f)
 	local atlas = IsTexture(ring) and ring.GetAtlas and ring:GetAtlas()
 	local quality = type(atlas) == "string" and string.find(string.lower(atlas), "itemborder", 1, true) ~= nil
 	if quality then keep[ring] = true end
-	Kit.Strip(f, keep)
-	for _, k in ipairs(TOAST_ERASE) do
-		local t = f[k]
-		if IsTexture(t) and not keep[t] then Kit.Erase(t) end
-	end
-	if IsTexture(ring) and not quality then Kit.Erase(ring) end
-	if Usable(f.glowFrame) and IsTexture(f.glowFrame.glow) then Kit.Erase(f.glowFrame.glow) end
-	-- An achievement's icon is a frame of its own: its gold ring and bling off, the picture outlined.
+	-- The art, every show: banners, rings, glows and the unnamed backgrounds alike.
+	EraseArt(Kit, f, keep)
+	if Usable(f.glowFrame) then EraseArt(Kit, f.glowFrame, keep) end
+	-- An achievement's icon is a frame of its own: its gold ring and bling off, the picture kept.
 	local icon = f.Icon
 	if Kind(icon) == "Frame" then
 		if IsTexture(icon.Bling) then Kit.Erase(icon.Bling) end
 		if IsTexture(icon.Overlay) then Kit.Erase(icon.Overlay) end
+	elseif IsTexture(icon) and not quality then
+		-- Square, like DaylightUI's icons: the round portrait mask the game puts on a recipe's icon
+		-- (again on every toast, in its setup) taken off, the icon's own edge cropped.
+		if icon.SetMask and not pcall(icon.SetMask, icon, nil) then pcall(icon.SetMask, icon, "") end
+		-- A recipe's toast shows the profession's round emblem: the square icon of what the recipe
+		-- makes goes in its place (the recipe's own icon when it makes no item).
+		local recipe = f.recipeID
+		if type(recipe) == "number" then
+			local square
+			local T = _G.C_TradeSkillUI
+			if T and T.GetRecipeOutputItemData then
+				local ok, out = pcall(T.GetRecipeOutputItemData, recipe)
+				if ok and type(out) == "table" then square = out.icon end
+			end
+			local Spell = _G.C_Spell
+			if not square and Spell and Spell.GetSpellTexture then square = Spell.GetSpellTexture(recipe) end
+			if square then icon:SetTexture(square) end
+		end
+		icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	end
+	if dressed[f] then return end
+	dressed[f] = true
+	if Kind(icon) == "Frame" then
 		if IsTexture(icon.Texture) then Kit.Outline(icon.Texture, ICON_PAD, "outline") end
 	elseif IsTexture(icon) and not quality then
 		Kit.Outline(icon, ICON_PAD, "outline")
@@ -608,20 +693,36 @@ local function Toast(Kit, f)
 	Words(Kit, f, 1)
 end
 
-Entry(function() return type(_G.AlertFrame_ShowNewAlert) == "function" or nil end, function(_, Kit)
-	local skip = {}
-	for _, name in ipairs(TOAST_SKIP) do
-		local q = _G[name]
-		if type(q) == "table" then skip[q] = true end
+local function DressToast(f)
+	if type(f) ~= "table" or not Usable(f) or not On() then return end
+	if not toastSkip then
+		toastSkip = {}
+		for _, name in ipairs(TOAST_SKIP) do
+			local q = _G[name]
+			if type(q) == "table" then toastSkip[q] = true end
+		end
 	end
-	hooksecurefunc("AlertFrame_ShowNewAlert", function(f)
-		if type(f) ~= "table" or not On() then return end
-		-- (A loot toast without its queue is still a loot toast.)
-		if (f.queue ~= nil and skip[f.queue]) or f.lootItem ~= nil then return end
-		if not Usable(f) or not ns.Kit then return end
+	-- (A loot toast without its queue is still a loot toast.)
+	if (f.queue ~= nil and toastSkip[f.queue]) or f.lootItem ~= nil then return end
+	-- Once a show: AddAlertFrame calls AlertFrame_ShowNewAlert, both hooked, in the same moment.
+	-- (Kept in a table of ours: nothing is written on the game's frames.)
+	local now = GetTime()
+	if toastShown[f] == now then return end
+	toastShown[f] = now
+	if ns.Kit then
 		Guard(Toast, ns.Kit, f)
-	end)
-end)
+	else
+		-- (Before DaylightUI's skins have started: dressed the moment they have.)
+		ns.WithKit(function(Kit) if f:IsShown() then Guard(Toast, Kit, f) end end)
+	end
+end
+
+if type(_G.AlertFrame_ShowNewAlert) == "function" then
+	hooksecurefunc("AlertFrame_ShowNewAlert", DressToast)
+end
+if type(_G.AlertFrame) == "table" and type(_G.AlertFrame.AddAlertFrame) == "function" then
+	hooksecurefunc(_G.AlertFrame, "AddAlertFrame", function(_, f) DressToast(f) end)
+end
 
 -- Zone map (Shift-M) ----------------------------------------------------------------------------
 -- BattlefieldMapFrame: ScrollContainer (the map) and BorderFrame (strata HIGH, setAllPoints: the
@@ -723,6 +824,9 @@ local function CombatTabs(Kit, skip)
 			dressed[tab] = true
 			TabArtOff(Kit, tab)
 			Kit.Tab(tab, CombatTabPicked)
+			-- The game sized it to its name in its own font (ChatConfigCombat_OnLoad); in the
+			-- tab look's the name ran past it and was cut short: sized again the way it does.
+			if type(PanelTemplates_TabResize) == "function" then Guard(PanelTemplates_TabResize, tab, 0) end
 			combatTabs[#combatTabs + 1] = tab
 		end
 	end
@@ -740,6 +844,8 @@ local function ChatWindowTabs(Kit, manager)
 			windowTabSet[tab] = true
 			TabArtOff(Kit, tab)
 			Kit.Tab(tab, WindowTabPicked)
+			-- (Sized to its name again, now in the tab look's font: ChatWindowTabMixin's own sizing.)
+			if type(tab.UpdateWidth) == "function" then Guard(tab.UpdateWidth, tab) end
 			windowTabs[#windowTabs + 1] = tab
 		end
 	end
@@ -933,7 +1039,7 @@ local lists = setmetatable({}, { __mode = "k" })   -- list -> { { check, uncheck
 local UNCHECKED = 0.55
 local HOVER_WASH = 0.08
 
-local function MenuRow(Kit, list, btn)
+local function MenuRow(list, btn)
 	if dressed[btn] then return end
 	dressed[btn] = true
 	local name = btn:GetName()
@@ -968,7 +1074,7 @@ local function MenuList(Kit, list)
 	for j = 1, 512 do
 		local btn = _G[name .. "Button" .. j]
 		if not Usable(btn) then break end
-		MenuRow(Kit, list, btn)
+		MenuRow(list, btn)
 	end
 end
 
@@ -1200,7 +1306,7 @@ end)
 -- The abandon-instance popup (StaticPopupTemplate, like DaylightUI's StaticPopup1..4: its BG and
 -- Border off, ButtonContainer buttons, ExtraButton, EditBox, all quiet).
 Entry("InstanceAbandonPopup", function(f, Kit)
-	ShellWindow(Kit, f, nil, true)
+	ShellWindow(Kit, f)
 	if Usable(f.BG) then Kit.Hide(f.BG) end
 	if Controls() then
 		local c = f.ButtonContainer
@@ -1362,7 +1468,7 @@ IconPicker("GearManagerPopupFrame")
 
 -- Quest timer (Border, Header, the timer lines; under the quest tracker).
 Entry("QuestTimerFrame", function(f, Kit)
-	ShellWindow(Kit, f, nil, true)
+	ShellWindow(Kit, f)
 	Words(Kit, f, 2)
 end)
 
@@ -1395,6 +1501,16 @@ Entry("TutorialFrame", function(f, Kit)
 	end
 	FontOf(Kit, _G.TutorialFrameText)
 end)
+
+-- Each tutorial it shows sets its own font object on the text (TutorialFrame_Update: the
+-- tutorial's font, or GameFontNormal), after which Kit.Font (done once) doesn't put the player's
+-- back: Kit.Refont after each.
+if type(_G.TutorialFrame_Update) == "function" then
+	hooksecurefunc("TutorialFrame_Update", function()
+		local Kit = ns.Kit
+		if Kit and On() and Kind(_G.TutorialFrameText) == "FontString" then Kit.Refont(_G.TutorialFrameText) end
+	end)
+end
 
 -- The nameplate tutorial (ButtonFrameTemplate: its picture cards and their frames kept).
 Entry("NamePlatesTutorial", function(f, Kit)

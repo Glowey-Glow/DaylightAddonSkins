@@ -1314,7 +1314,7 @@ local function About(panel, Kit)
 end
 
 -- The custom NPC import / export dialog, over the settings window.
-local function Import(f, Kit)
+local function Import(f)
 	if ns.Usable(f.NineSlice) then ns.Kill(f.NineSlice) end
 	if ns.Usable(f.Border) and f.Border:GetObjectType() == "Frame" then ns.Kill(f.Border) end
 	ns.PlainWindow(f, nil, KEY)
@@ -1416,7 +1416,9 @@ ns.Pack(KEY, nil, function(Kit)
 		if scope == "Tooltip" and path == "bgAlpha" and ns.Enabled(KEY) then Reopacity() end
 	end)
 
-	-- The addon compartment's tooltip, made on its first hover.
+	-- The addon compartment's tooltip, made on its first hover. (The compartment looks its hover
+	-- function up by name on every hover, so the hook here is the one it calls; the look-out by name
+	-- stays as the fallback.)
 	if type(_G.RareScanner_OnAddonCompartmentEnter) == "function" then
 		hooksecurefunc("RareScanner_OnAddonCompartmentEnter", function()
 			Tip(_G.RareScanner_AddonCompartimentTooltip)
@@ -1442,6 +1444,9 @@ ns.Pack(KEY, nil, function(Kit)
 			if ns.Enabled(KEY) then ns.Guard(ns.MapRings) end
 		end
 	end
+	-- The route bar: dressed straight away wherever a route starts from outside its own code (the
+	-- map opening, its map menu, a popup's button; see RouteSoon). Its slash command starts one from
+	-- functions it keeps to itself, so that one is left to the look-out by name.
 	ns.Watch(KEY, "RSRouteProgressBar", RouteBar)
 
 	-- Its popups, on every Spawn.
@@ -1516,9 +1521,13 @@ ns.Pack(KEY, nil, function(Kit)
 	local loads = CreateFrame("Frame")
 	loads:RegisterEvent("ADDON_LOADED")
 	loads:SetScript("OnEvent", function() HookAce() end)
+	-- Its About panel and import window are both made while it loads (before login), so they're
+	-- found as soon as the look-out starts, long before either can show.
 	ns.Watch(KEY, "RareScannerAboutPanel", About)
 	ns.Watch(KEY, "RSImportNpcsFrame", Import)
 
-	-- The telemetry export window, made the first time it's asked for.
+	-- The telemetry export window, made the first time it's asked for. Only its slash command asks,
+	-- through functions it keeps to itself, so there's nothing to hook: the look-out by name finds it
+	-- in the frame it's made, or at worst the next.
 	ns.Watch(KEY, "RareScannerTelemetryExportFrame", Telemetry)
 end)

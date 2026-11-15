@@ -183,12 +183,44 @@ local function Guarded(fn)
 	return function(...) ns.Guard(fn, ...) end
 end
 
--- Its side panels, dialogs and lists are made on their first open, while the window is up: looked
--- for twice a second while it is shown, and not at all while it is hidden.
+-- The buttons in a window, `depth` levels down: a click on one looks again at once (after its own
+-- click has run), for the panel, dialog or list it may just have made and opened, so that is
+-- dressed before it's drawn.
+local clicks = setmetatable({}, { __mode = "k" })
+local HookClicks
+local function HookChildren(depth, look, ...)
+	for i = 1, select("#", ...) do
+		local child = select(i, ...)
+		if ns.Usable(child) then
+			if child:GetObjectType() == "Button" then
+				if not clicks[child] then
+					clicks[child] = true
+					child:HookScript("OnClick", look)
+				end
+			elseif depth > 0 then
+				HookClicks(child, depth - 1, look)
+			end
+		end
+	end
+end
+function HookClicks(f, depth, look)
+	if ns.Usable(f) and f.GetChildren then HookChildren(depth, look, f:GetChildren()) end
+end
+
+-- Its side panels, dialogs and lists are made on their first open, while the window is up, by a
+-- click on one of its buttons: each of them looks again straight after its click. Looked for
+-- twice a second as well while it is shown (for one opened some other way, and to reach buttons
+-- made since), and not at all while it is hidden.
 local function Main(frame)
 	if not On() then return end
 	local ticker
-	local function Look() Scan(frame, 2) end
+	local function Clicked()
+		if On() then ns.Guard(Scan, frame, 2) end
+	end
+	local function Look()
+		Scan(frame, 2)
+		HookClicks(frame, 5, Clicked)
+	end
 	frame:HookScript("OnShow", Guarded(function()
 		Look()
 		if not ticker then ticker = C_Timer.NewTicker(0.5, Guarded(Look)) end
@@ -201,24 +233,6 @@ local function Main(frame)
 	end)
 	Look()
 	if frame:IsShown() and not ticker then ticker = C_Timer.NewTicker(0.5, Guarded(Look)) end
-end
-
--- The gear panel's buttons, `depth` levels down: a click on one (a selector's box among them)
--- looks again at once, for the list it may just have moved into the Character frame.
-local clicks = setmetatable({}, { __mode = "k" })
-local function HookClicks(f, depth, look)
-	for _, child in ipairs({ f:GetChildren() }) do
-		if ns.Usable(child) then
-			if child:GetObjectType() == "Button" then
-				if not clicks[child] then
-					clicks[child] = true
-					child:HookScript("OnClick", look)
-				end
-			elseif depth > 0 then
-				HookClicks(child, depth - 1, look)
-			end
-		end
-	end
 end
 
 -- My gear beside the Character frame: on a holder of its own in the Character frame.
@@ -240,16 +254,35 @@ local function Sheet()
 			end
 		end
 	end
+	-- The panel is made and shown by its own hook on the Character frame's showing, which runs
+	-- before this one (it's put on when it loads): looked for right away, so it's dressed before
+	-- it's drawn, and again a frame and half a second on, in case it comes up late.
 	cf:HookScript("OnShow", function()
+		ns.Guard(Look)
 		C_Timer.After(0, Guarded(Look))
 		C_Timer.After(0.5, Guarded(Look))
 	end)
 	if cf:IsShown() then C_Timer.After(0, Guarded(Look)) end
 end
 
+-- Its main window and What's new are made on their first opening, by calls it keeps to itself.
+-- What reaches them from outside is hooked: /bis (and its key binding, which runs /bis), the
+-- addon compartment's entry and the minimap button, each looking at once after it has run, so
+-- the window is dressed before it's drawn. What's new also opens a few seconds after login, by
+-- a timer of its own, and the window from its other buttons and the wish list: those are found
+-- by the watches, a frame late at most.
+local function Opened() ns.WatchNow() end
+
 ns.Watch(KEY, "ForeverLevelingBiSFrame", Main)
 ns.Watch(KEY, "ForeverLevelingBiSWhatsNew", function(frame)
-	if On() then Scan(frame, 0) end
+	if not On() then return end
+	Scan(frame, 0)
+	-- Its buttons (Open, and each change's "Try it now") may open the main window.
+	HookClicks(frame, 3, Opened)
+end)
+-- (The button is made at login.)
+ns.Watch(KEY, "ForeverLevelingBiSMinimapButton", function(button)
+	button:HookScript("OnClick", Opened)
 end)
 
 local ok = false
@@ -258,6 +291,13 @@ ns.Pack(KEY, nil, function()
 	ok = true
 	Sheet()
 	RestyleAll()
+	local slash = _G.SlashCmdList
+	if type(slash) == "table" and type(slash.FOREVERLEVELINGBIS) == "function" then
+		hooksecurefunc(slash, "FOREVERLEVELINGBIS", Opened)
+	end
+	if type(_G.ForeverLevelingBiS_OnAddonCompartmentClick) == "function" then
+		hooksecurefunc("ForeverLevelingBiS_OnAddonCompartmentClick", Opened)
+	end
 end)
 
 -- Its text follows the DaylightUI font, and this plugin's page for it.

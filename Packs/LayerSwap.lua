@@ -552,13 +552,18 @@ local function Options(o, Kit)
 	if ns.Controls(KEY) then
 		ns.Guard(Kit.Auto, o, { rows = false })
 	end
+	-- Its "Open the panel" button is one more click that makes the panel.
+	local open = _G.LayerSwapOptionsOpen
+	if ns.Usable(open) and open:GetParent() == o then open:HookScript("OnClick", Catch) end
 end
 
 -- ---------------------------------------------------------------------------------------------
 
-ns.Pack(KEY, nil, function(Kit)
+ns.Pack(KEY, nil, function()
 	if not ns.Enabled(KEY) then return end
 	ApplyDock()
+	-- Made at login (the mini bar hidden until then, the options page inside the game's options
+	-- window): the watches find them before they can show.
 	ns.Watch(KEY, "LayerSwapMini", Mini)
 	ns.Watch(KEY, "LayerSwapOptions", Options)
 	-- Made later, as they first open: dressed at once from the clicks that open them (and the

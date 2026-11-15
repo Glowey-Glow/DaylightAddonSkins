@@ -19,7 +19,8 @@
 --   * The pages addons draw themselves inside it (their canvas): the game's own controls on them,
 --     once the addon (or another of this plugin's packs) has had its turn: the game's text buttons
 --     (red ones too) as DaylightUI's buttons, its checkboxes, dropdowns and text boxes, the game's
---     gold words in DaylightUI's inks (big ones, the page titles, bright). Anything already dressed
+--     gold words in DaylightUI's inks (big ones, the page titles, bright), and words still in the
+--     game's serif font in your font (the game's size, as on its own pages). Anything already dressed
 --     by DaylightUI or another pack, AceGUI pages (DaylightUI's Ace3 look has those) and sliders
 --     are left to them.
 --   * The Ping System window (PingSystemTutorial, from the Ping System page): the window shell,
@@ -225,12 +226,13 @@ local function InkLabel(fs)
 	elseif Near(r, g, b, GOLD) or Near(r, g, b, WHITE_INK) then SetInkOf(fs, c.TEXT) end
 end
 
--- The player's font on a string at the game's size, unless the words would no longer fit (the
--- game cuts a long label short with "..."): then the game's font stays for those words. The game
--- sets its font object again as it fills a row, picks a tab or hovers a category: whenever the
--- string's font or words are no longer what this pack left, it's done again from the game's new
--- font (its size included).
-local basePath, baseSize, baseFlags = weak(), weak(), weak()   -- string -> the game's font
+-- The player's font on a string at the game's size. Words that no longer fit in it (the game cuts
+-- a long label short with "...") are made a pixel smaller at a time, at most two, until they fit;
+-- the game's serif font never comes back. The game sets its font object again as it fills a row,
+-- picks a tab or hovers a category: whenever the string's font or words are no longer what this
+-- pack left, it's done again from the game's new font (its size included).
+local FIT_STEPS = 2
+local baseSize, baseFlags = weak(), weak()   -- string -> the game's size and outline
 local leftPath = weak()    -- string -> the font this pack left on it
 local leftText = weak()    -- string -> the words it was fitted for
 local playerFont
@@ -253,13 +255,34 @@ local function FitFont(fs)
 	if leftText[fs] == text and leftPath[fs] == path then return end
 	if path ~= leftPath[fs] then
 		-- The game's own font (first time, or the game set it again).
-		basePath[fs], baseSize[fs], baseFlags[fs] = path, size, flags or ""
+		baseSize[fs], baseFlags[fs] = size, flags or ""
 	end
 	local size0, flags0 = baseSize[fs], baseFlags[fs]
 	leftText[fs] = text
 	fs:SetFont(face, size0, flags0)
-	if fs.IsTruncated and fs:IsTruncated() then fs:SetFont(basePath[fs], size0, flags0) end
+	if fs.IsTruncated then
+		local s = size0
+		while fs:IsTruncated() and s > size0 - FIT_STEPS and s > 6 do
+			s = s - 1
+			fs:SetFont(face, s, flags0)
+		end
+	end
 	leftPath[fs] = fs:GetFont()
+end
+
+-- On an addon's own page: only a string still in the game's serif font (Friz Quadrata, Morpheus)
+-- or one this pack already fitted. A string in any other font was given it by the addon or by
+-- another pack of this plugin (Questie's, Kerzo's, LFG Forever's pages) and is theirs.
+local function GameSerif(path)
+	if type(path) ~= "string" then return false end
+	path = string.lower(path)
+	return string.find(path, "frizqt__", 1, true) ~= nil or string.find(path, "morpheus", 1, true) ~= nil
+end
+
+local function CanvasFitFont(fs)
+	local ok, path = pcall(fs.GetFont, fs)
+	if not ok or not path then return end
+	if GameSerif(path) or (leftPath[fs] ~= nil and leftPath[fs] == path) then FitFont(fs) end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -552,12 +575,6 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 
--- A small piece of art (an arrow or a +/-), as opposed to a row's long background.
-local function SmallTexture(r)
-	local w, h = r:GetSize()
-	return Num(w) and w > 0 and w <= 24 and Num(h) and h <= 24
-end
-
 -- A plain "+" or "-" in the text ink, in place of the game's gold +/- art.
 local glyphs = weak()      -- frame -> its glyph
 local MINUS = "-"          -- (plain: the font has no true minus sign)
@@ -679,7 +696,7 @@ local function StringsOf(frame, canvas, labelKeysAsLabels, depth, value, ...)
 				FitFont(r)
 				SetInk(r, Accent())
 			else
-				if not canvas then FitFont(r) end
+				if canvas then CanvasFitFont(r) else FitFont(r) end
 				InkGame(r, canvas or depth <= 1)
 			end
 		end
@@ -712,6 +729,9 @@ function Piece(f, parent, canvas, depth)
 	-- left to it for now.
 	if canvas and (type(f.obj) == "table" or Kit.Walking(f)) then return end
 	local kind = f:GetObjectType()
+	-- (The game's dropdowns are a Button template marked intrinsic = "DropdownButton": "Button" is
+	-- what GetObjectType says of them on this client, so they are known by the mark.)
+	if kind == "Button" and f.intrinsic == "DropdownButton" then kind = "DropdownButton" end
 	if kind == "CheckButton" then
 		if not (canvas and Kit.SwitchOf(f)) then Try1(Check, f) end
 	elseif kind == "Slider" then

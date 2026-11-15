@@ -18,7 +18,11 @@ if not ns.ok then return end
 
 local KEY = "ShortestPathForever"
 
+-- (font = "daylight": its settings panel's and menu's words, from the game's serif templates, in
+-- the player's font; their walks pass fonts = true, since that look keeps the generic walk off
+-- text. The tracker sections' fonts are set apart below and don't follow this.)
 ns.Target(KEY, "Shortest Path Forever", { window = true, controls = true, text = true, shadow = true,
+	font = "daylight",
 	defaults = { dock = true }, extraTab = "DaylightUI",
 	extra = function(at)
 		return {
@@ -64,7 +68,7 @@ ns.Watch(KEY, "ShortestPathForeverServicesPanel", function(panel, Kit)
 			end
 		end
 	end
-	ns.DressOnShow(panel)
+	ns.DressOnShow(panel, { fonts = true })
 end)
 
 ns.Watch(KEY, "ShortestPathForeverServicesTab", function(tab, Kit)
@@ -141,7 +145,7 @@ ns.Watch(KEY, "ForeverCoreContextMenu", function(menu, Kit)
 	ns.Shell(menu)
 	local scroll = menu.scroll
 	if ns.Controls(KEY) and type(scroll) == "table" and ns.Usable(scroll.ScrollBar) then ns.Guard(Kit.ScrollBar, scroll.ScrollBar) end
-	ns.DressOnShow(menu, { scrollBars = false })
+	ns.DressOnShow(menu, { scrollBars = false, fonts = true })
 end)
 
 -- ---------------------------------------------------------------------------------------------
@@ -418,7 +422,7 @@ local function Column()
 		box:Show()
 	end
 
-	local list, settled, boxX, boxY
+	local found, settled, boxX, boxY
 	-- The last look's place, size, alpha and scales; empty = look again.
 	local last = {}
 	local function Moved(...)
@@ -458,8 +462,8 @@ local function Column()
 			return
 		end
 		-- (The tracker's list: found once; the handle stands in until it is there.)
-		list = list or TrackerList(holder)
-		local list = list or holder
+		found = found or TrackerList(holder)
+		local list = found or holder
 		-- Nothing moved, grew, faded or changed size since the last look: nothing to do.
 		-- (Compared value by value: a string of them, made four times a second, was garbage.)
 		if not Moved(list:GetRight() or 0, list:GetTop() or 0, list:GetBottom() or 0, host:GetWidth() or 0,

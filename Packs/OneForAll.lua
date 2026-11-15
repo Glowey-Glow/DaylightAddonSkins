@@ -16,7 +16,10 @@ if not ns.ok then return end
 
 local KEY = "OneForAll"
 
+-- (font = "daylight": its windows' words, from the game's serif templates, in the player's font;
+-- the walks below pass fonts = true, since that look keeps the generic walk off text.)
 ns.Target(KEY, "OneForAll", { window = true, controls = true, text = true, shadow = true, colors = true,
+	font = "daylight",
 	defaults = { hideMapButton = false }, extraTab = "DaylightUI",
 	extra = function(at)
 		return {
@@ -33,7 +36,7 @@ local UI = type(OFA) == "table" and OFA.UI
 if type(UI) ~= "table" or type(UI.FramedPanel) ~= "function" or type(UI.WindowFrame) ~= "function" then return end
 
 -- Its pill switches and slim scroll bars stay its own (it overrides their SetChecked and paints them).
-local DRESS = { checks = false, scrollBars = false }
+local DRESS = { checks = false, scrollBars = false, fonts = true }
 
 local function Snapshot(frame)
 	local seen = {}
@@ -55,7 +58,6 @@ end
 -- green and red of its numbers) passes as it was.
 -- ---------------------------------------------------------------------------------------------
 
-local API = ns.API
 local max, min = math.max, math.min
 
 local function Accent() return ns.AccentOf(KEY) end

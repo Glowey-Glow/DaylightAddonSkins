@@ -4,7 +4,7 @@
 -- and it comes back at the next login. Every choice can be changed again on the addon's own page,
 -- and "Show the choices again" on the All windows page opens it with all of them.
 -- Built from DaylightUI's own widgets (API.Skin, API.Text, API.Switch, API.Button, API.Close).
-local ADDON, ns = ...
+local _, ns = ...
 if not ns.ok then return end
 
 local API = ns.API

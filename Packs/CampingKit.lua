@@ -368,7 +368,42 @@ end
 -- The pack
 -- ---------------------------------------------------------------------------------------------
 
+-- Its windows are made the first time they open: each is dressed right after the call or click
+-- that opens it, before it's drawn. The settings window and the placement bar open through Kit
+-- Core's shared table; "This campfire..." opens from the four buttons by the tent; the Kits menu
+-- from the shared minimap button. The watches below stay for every other way in (the kit's
+-- right-click menu, and the panel opened by itself).
+local OPENERS = {
+	CampingKitCampHeader = "OnMouseUp",
+	CampingKitCampListButton = "OnClick",
+	CampingKitCampLabel = "OnClick",
+	CampingKitCampFire = "OnClick",
+	LibDBIcon10_KitDock = "OnClick",
+}
+local hooked = false
+local function Now() ns.WatchNow() end
+
+local function HookOpeners()
+	if hooked then return end
+	hooked = true
+	local core = _G.KitCore
+	if type(core) == "table" then
+		if type(core.SetPanelUnlocked) == "function" then hooksecurefunc(core, "SetPanelUnlocked", Now) end
+		local proto = core.proto
+		if type(proto) == "table" and type(proto.OpenOptions) == "function" then
+			hooksecurefunc(proto, "OpenOptions", Now)
+		end
+	end
+	-- (The buttons are made at login, the minimap button only once a second kit shares it.)
+	for name, script in pairs(OPENERS) do
+		ns.Watch(KEY, name, function(b)
+			if ns.Usable(b) and b.HookScript then b:HookScript(script, Now) end
+		end)
+	end
+end
+
 ns.Pack(KEY, "Camping Kit", function()
+	HookOpeners()
 	ns.Watch(KEY, "CampingKitCampPanel", function(panel, Kit)
 		ClearGround(panel)
 		ns.PlainWindow(panel)
@@ -400,7 +435,7 @@ ns.Pack(KEY, "Camping Kit", function()
 	end)
 	-- The "Campfire..." label beside the tent (at a campfire): its gold words in DaylightUI's label
 	-- ink. The kit puts the gold back each time the mouse leaves it, so its color is followed;
-	-- white under the mouse stays.
+	-- white under the mouse stays. (Made at login, hidden: the watch finds it before it can show.)
 	ns.Watch(KEY, "CampingKitCampLabel", function(label)
 		local fs = label.text
 		if not ns.Usable(fs) or not fs.SetTextColor then return end
@@ -419,6 +454,8 @@ ns.Pack(KEY, "Camping Kit", function()
 		ink(fs)
 	end)
 	ns.Watch(KEY, "CampingKitOptions", OptionsWindow)
+	-- The editor opens only from a call kept inside the kit (and only with an older Kit Core than
+	-- the one it ships), so nothing can be hooked: the watch finds it, at most a frame later.
 	ns.Watch(KEY, "CampingKitAnnounceEditor", Editor)
 	ns.Watch(KEY, "KitCoreMoveBar", function(bar, Kit)
 		ns.PlainWindow(bar)
