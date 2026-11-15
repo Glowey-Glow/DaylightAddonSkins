@@ -27,7 +27,36 @@ local function Daylight(key)
 	return nil
 end
 
-local L = setmetatable({}, { __index = function(_, key) return Daylight(key) or key end })
+-- Keys whose English is word for word one of the game's global strings (same case, punctuation
+-- and holes), in the same sense: on a non-English client the game's own translation comes first,
+-- before this plugin's line and DaylightUI's; ours stays as the fallback when the client lacks the
+-- global. English clients keep ours. Left out on purpose: same words in another sense (Guide,
+-- Controls, Border, Appearance, Hostile NPCs), and Friendly NPCs, whose game word would not match
+-- its Hostile and Neutral neighbors.
+local ENGLISH = LOCALE:sub(1, 2) == "en"
+local GAME = {
+	["%s, %s"] = "LIST_DELIMITER",
+	["Always"] = "ALWAYS",
+	["Apply"] = "APPLY",
+	["Minimap"] = "MINIMAP_LABEL",
+	["None"] = "NONE",
+	["Off"] = "OFF",
+	["Style"] = "UNIT_NAMEPLATES_STYLE",
+}
+
+-- The game's text for a key in GAME, on a non-English client that has it; else nil.
+local function Game(key)
+	local global = not ENGLISH and GAME[key]
+	local v = global and _G[global]
+	if type(v) == "string" and v ~= "" then return v end
+	return nil
+end
+
+-- A language file's line for a key in GAME is kept only where the game has no text for it.
+local L = setmetatable({}, {
+	__index = function(_, key) return Game(key) or Daylight(key) or key end,
+	__newindex = function(t, key, value) rawset(t, key, Game(key) or value) end,
+})
 ns.L = L
 
 -- A DaylightUI module's name as its options list shows it in this language. The text here names

@@ -8,7 +8,7 @@ Requires **DaylightUI** with its **Window Skins** module on.
 
 ## Addons it skins
 
-BugSack · Camping Kit · Dialogue UI · DoesItDie · Dungeon Journal · Forever Fishing · Forever Leveling BiS · Journey Guides · Keep or Toss · **Kerzo Classic Quest Log (new)** · **Kerzo Quest Expansion (new)** · LayerSwap · **LFG Forever (new)** · LootTriage · OneForAll · OpenMap · Polestar · Questie · RareScanner · Shortest Path Forever · Spoken · Total RP 3 · TrueshotLodge
+BugSack · Camping Kit · Dialogue UI · DoesItDie · Dungeon Journal · Forever Fishing · Forever Leveling BiS · **Guildy (new)** · Journey Guides · Keep or Toss · Kerzo Classic Quest Log · Kerzo Quest Expansion · LayerSwap · LFG Forever · LootTriage · OneForAll · OpenMap · Polestar · Questie · RareScanner · Shortest Path Forever · Spoken · Total RP 3 · TrueshotLodge
 
 Only the ones you have installed are skinned; the rest are skipped. Nothing to set up: each takes the DaylightUI look the next time you open its windows.
 
@@ -19,6 +19,10 @@ The game windows DaylightUI's Window Skins leave bare get the same look: the rea
 All pop-up menus (right-click menus and dropdowns, any addon's) and every addon's AceConfig settings lose the game's gold.
 
 ---
+
+## New in 1.11.0
+- **Guildy** skinned throughout: its window, tabs, lists, menus, member card, score panel, dialogs, options and level-60 banner, in the DaylightUI look. Its tabard, portraits, charts and class colors stay. Blizzard's guild window it sits on stays hidden underneath.
+- Words the game already translates use the game's own wording on non-English clients.
 
 ## New in 1.10.1
 - **In your language:** Addon Skins' options and Override window in German, French, Spanish, Russian, Korean and Simplified Chinese (machine drafts, corrections welcome).
