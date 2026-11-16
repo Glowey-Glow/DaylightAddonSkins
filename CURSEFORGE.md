@@ -21,7 +21,7 @@ All pop-up menus (right-click menus and dropdowns, any addon's) and every addon'
 ---
 
 ## New in 1.12.0
-- **Gradients:** with "Use DaylightUI's settings" on, skinned windows keep your DaylightUI accent as it is, Daylight or class gradient included. Each addon's own page can pick DaylightUI's accent, Daylight gradient, Class color, Class gradient or Custom, plus **Gradient window borders**.
+- **Gradients:** with "Use DaylightUI's settings" on, skinned windows keep your DaylightUI accent as it is, Daylight or class gradient included. Each addon's own page can pick DaylightUI's accent, Daylight gradient, Class color, Class gradient or Custom, plus **Gradient window borders**. Skinned windows follow DaylightUI 1.8.4's window background color (Daylight, class or custom), OpenMap's and Mastercraft's panels included.
 - **New skins:** Mastercraft (kept on its flat Classic style while skinned) and High Fidelity World Map (its HD/SD button, blend slider, cave map window and settings).
 - **More game windows** (see above), every one built to the full DaylightUI standard.
 - Text in other alphabets (Greek, Korean, Chinese...) keeps a font that can draw it instead of empty boxes.
