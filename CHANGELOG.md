@@ -1,5 +1,14 @@
 # DaylightUI Addon Skins
 
+## 1.12.2
+- Game windows: the new-player tutorial banners, key prompts, keyboard and mouse intro, and pointer boxes use the DaylightUI look, their arrows and glow in your accent.
+- Game windows: the battleground and status bars at the top of the screen and under the minimap get DaylightUI bar edges; their fills, faction icons and colors stay.
+- Game windows: the external defensives buffs, the subscription offer window, the buttons and text of the voice chat toasts, the GM chat window, the behavior notices and their details window, and the auction house posting bar (without DaylightMogul) are dressed.
+- Game windows: the game's own damage meter windows get the DaylightUI window look while DaylightUI's meter is off.
+- Game windows: the world map's coordinates use DaylightUI's font, a size smaller where the row would cut them off.
+- Translations: the new accent and gradient border settings in German, French, Spanish, Russian, Korean and Simplified Chinese.
+- LayerSwap: the panel's two-line status no longer loses its second line in a larger font or text size: it steps down a size until both lines fit.
+
 ## 1.12.1
 - Its own icon: in the game's AddOns list and other menus (instead of the blank "?"), and on its page in DaylightUI's options.
 

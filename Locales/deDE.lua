@@ -232,3 +232,14 @@ L["How many you own, in item tooltips"] = "Wie viele du besitzt, in Gegenstands-
 L["Mastercraft takes the DaylightUI look at your next reload."] = "Mastercraft erhält den DaylightUI-Stil beim nächsten Neuladen."
 L["Who owns it, in item tooltips"] = "Wer es besitzt, in Gegenstands-Tooltips"
 L["Zone maps without Fog of War"] = "Zonenkarten ohne Nebel des Krieges"
+
+-- 2026-11-15 additions
+L["Class color"] = "Klassenfarbe"
+L["Class gradient"] = "Klassenfarbverlauf"
+L["Custom color"] = "Benutzerdefinierte Farbe"
+L["Daylight gradient"] = "Daylight-Verlauf"
+L["DaylightUI's accent"] = "DaylightUI-Akzent"
+L["Gradient window borders"] = "Verlaufs-Fensterränder"
+L["Mastercraft stays on its Classic style while Addon Skins dresses it. The style you picked (%s) comes back when its skin is off."] = "Mastercraft bleibt beim Stil „Klassisch“, solange Addon Skins es einkleidet. Dein gewählter Stil (%s) kehrt zurück, wenn sein Skin aus ist."
+L["This addon's accent: DaylightUI's own (a gradient one included), or one for this addon alone."] = "Akzent dieses Addons: der von DaylightUI (auch ein Verlauf) oder einer nur für dieses Addon."
+L["When this addon's accent is a gradient (Daylight's or your class's), its window borders run along it."] = "Ist der Akzent dieses Addons ein Verlauf (Daylight oder Klasse), folgen ihm die Fensterränder."

@@ -209,14 +209,33 @@ local function GuildEntry(ge)
 	Ink(ge.line, "TEXT")
 end
 
+-- The panel's status line: two lines in a box LayerSwap sized for the game's font. In a larger
+-- font (a text size above 100%, a taller face) the second line would be clipped, so the font steps
+-- down a size at a time until two lines and their spacing fit the box again. The box itself keeps
+-- its height: the rows under it are laid out from it.
+local function FitStatus(fs, room)
+	if not ns.Usable(fs) or type(room) ~= "number" or room <= 0 or not fs.GetLineHeight then return end
+	local spacing = fs.GetSpacing and fs:GetSpacing() or 0
+	for _ = 1, 6 do
+		local face, size, flags = fs:GetFont()
+		local line = fs:GetLineHeight()
+		if not face or not size or not line or line * 2 + spacing <= room + 0.5 or size <= 8 then return end
+		fs:SetFont(face, size - 1, flags or "")
+	end
+end
+
 local function Panel(p, Kit)
 	if not ns.Once(p) then return end
 	KillFlat(p:GetRegions())
 	ns.Shell(p, { window = true }, KEY)
+	-- (The status line's box is two lines of the game's font tall, set once by LayerSwap; the rows
+	-- below it are placed from that. Read before our font goes on.)
+	local statusRoom = ns.Usable(p.status) and p.status.GetHeight and p.status:GetHeight() or nil
 	for key, role in pairs(PANEL_TEXT) do
 		Font(p[key])
 		Ink(p[key], role)
 	end
+	FitStatus(p.status, statusRoom)
 	Font(p.evict)
 	for _, row in ipairs(type(p.rows) == "table" and p.rows or {}) do
 		Font(row.left)

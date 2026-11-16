@@ -36,6 +36,10 @@
 --     badges, the calendar's side panels, click casting, the cooldown manager's tabs and lists,
 --     the communities' inner dialogs, the guild bank's tabs, the confirm boxes' extra parts, the
 --     world map's pin button, the auction house's filter badge and buy dialog.
+--   And in BlizzardRare.lua (the same way): the external defensives' aura buttons, the new-player
+--     tutorials, the status widgets' bars, the subscription offer, the voice chat toasts, the GM
+--     chat window, the behavior notices, the game's own damage meter (while DaylightUI's is off),
+--     the auction house's posting bar and the world map's coordinates.
 -- Left alone on purpose: Edit Mode (the player's choice), the settings panel, the dungeon-ready
 -- dialog and the ping tutorial (BlizzardSettings pack), everything DaylightUI dresses or replaces,
 -- HelpTip's pooled help tips (shown from inside secure code; see the note at the help plates),
@@ -149,14 +153,16 @@ end
 -- DaylightUI's window shell, the title in the value ink on the left of the title row. For the
 -- windows Kit.Window doesn't suit: a "Close" text button where Kit.Window looks for the X, a
 -- minimize button, art that must stay, or a window the game shows from its own event code.
-local function ShellWindow(Kit, f, keep)
+-- noInset: leave f.Inset as it is (a window that hides its inset for good: its shade, a child of
+-- the window, would show anyway).
+local function ShellWindow(Kit, f, keep, noInset)
 	if not Usable(f) or dressed[f] then return end
 	dressed[f] = true
 	Kit.Strip(f, keep)
 	DialogArt(Kit, f)
 	-- (Always quiet: no script on the shell, which would run inside the game's own Show.)
 	Kit.Shell(f, "window", QUIET)
-	if Usable(f.Inset) then Kit.Inset(f.Inset) end
+	if Usable(f.Inset) and not noInset then Kit.Inset(f.Inset) end
 	local title = TitleOf(f)
 	if Kind(title) == "FontString" then
 		FontOf(Kit, title)
@@ -1789,13 +1795,13 @@ Entry("PlayerSpellsFrame", function(f, Kit)
 	end
 end)
 
--- What BlizzardExtras.lua (loaded right after this file) builds its windows with: its entries go
--- in this file's list, so they're dressed by the same passes below.
+-- What BlizzardExtras.lua and BlizzardRare.lua (loaded right after this file) build their windows
+-- with: their entries go in this file's list, so they're dressed by the same passes below.
 ns.Blizz = {
 	KEY = KEY, Kind = Kind, IsTexture = IsTexture, FontOf = FontOf, Words = Words, DialogArt = DialogArt,
 	ShellWindow = ShellWindow, Window = Window, Panel = Panel, Walk = Walk, Quiet = Quiet,
 	StaticButton = StaticButton, StaticEditBox = StaticEditBox, TipPanel = TipPanel, Entry = Entry,
-	QUIET = QUIET,
+	GlowBox = GlowBox, QUIET = QUIET,
 }
 
 -- ---------------------------------------------------------------------------------------------
@@ -1817,7 +1823,8 @@ for _, addon in ipairs({ "Blizzard_PlayerSpells", "Blizzard_WorldMap", "Blizzard
 	"Blizzard_DeathRecap", "Blizzard_MacroUI", "Blizzard_GuildBankUI", "Blizzard_HelpFrame",
 	"Blizzard_ReportFrame", "Blizzard_Communities", "Blizzard_MovePad", "Blizzard_GMChatUI",
 	"Blizzard_WowSurveyUI", "Blizzard_GroupFinder_VanillaStyle", "Blizzard_PVPMatch", "Blizzard_Collections",
-	"Blizzard_Calendar", "Blizzard_ClickBindingUI", "Blizzard_CooldownViewer", "Blizzard_AuctionHouseUI" }) do
+	"Blizzard_Calendar", "Blizzard_ClickBindingUI", "Blizzard_CooldownViewer", "Blizzard_AuctionHouseUI",
+	"Blizzard_NewPlayerExperience", "Blizzard_SubscriptionInterstitialUI", "Blizzard_BehavioralMessaging" }) do
 	ns.Pack(addon, nil, function() TryAll() end)
 end
 

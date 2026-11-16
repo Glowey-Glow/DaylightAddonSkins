@@ -808,6 +808,8 @@ end)
 me.On("Login", function()
 	ready = true
 	Forget()
+	-- (A trace left by a test build of the profession window skin: gone.)
+	if type(_G.DaylightAddonSkinsDB) == "table" then _G.DaylightAddonSkinsDB.profTrace = nil end
 	-- A page saved before the accent choices came, with "Use DaylightUI's accent" off: its custom
 	-- color is now the "Custom color" choice (the old switch is put back on as that's set).
 	for addon in pairs(ns.targets) do

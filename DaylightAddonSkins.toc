@@ -43,6 +43,7 @@ Packs\BugSack.lua
 Packs\TrueshotLodge.lua
 Packs\Blizzard.lua
 Packs\BlizzardExtras.lua
+Packs\BlizzardRare.lua
 Packs\BlizzardCharacter.lua
 Packs\BlizzardFallbacks.lua
 Packs\BlizzardProfessions.lua

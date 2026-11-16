@@ -232,3 +232,14 @@ L["How many you own, in item tooltips"] = "Сколько у вас есть, в
 L["Mastercraft takes the DaylightUI look at your next reload."] = "Mastercraft получит вид DaylightUI после следующей перезагрузки."
 L["Who owns it, in item tooltips"] = "У кого есть, в подсказках предметов"
 L["Zone maps without Fog of War"] = "Карты зон без тумана войны"
+
+-- 2026-11-15 additions
+L["Class color"] = "Цвет класса"
+L["Class gradient"] = "Градиент класса"
+L["Custom color"] = "Свой цвет"
+L["Daylight gradient"] = "Градиент Daylight"
+L["DaylightUI's accent"] = "Акцент DaylightUI"
+L["Gradient window borders"] = "Градиентная кайма окон"
+L["Mastercraft stays on its Classic style while Addon Skins dresses it. The style you picked (%s) comes back when its skin is off."] = "Mastercraft остаётся в стиле «Классический», пока его оформляет Addon Skins. Выбранный стиль (%s) вернётся, когда скин выключен."
+L["This addon's accent: DaylightUI's own (a gradient one included), or one for this addon alone."] = "Акцент этого аддона: акцент DaylightUI (в том числе градиент) или свой только для него."
+L["When this addon's accent is a gradient (Daylight's or your class's), its window borders run along it."] = "Если акцент этого аддона — градиент (Daylight или класса), кайма его окон идёт по нему."
