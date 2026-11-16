@@ -14,7 +14,7 @@ Only the ones you have installed are skinned; the rest are skipped. Nothing to s
 
 ## The game's own windows
 
-The game windows DaylightUI's Window Skins leave bare get the same look: the ready and role checks, queue, invite and PvP popups, the color picker, the "Return to graveyard" button and death recap, the stopwatch and Quick Keybind, chat settings and the channels window, the zone map (Shift-M), alert and level-up toasts, help, report and friend windows, icon pickers, help tips and more. Also the **Options window** (Esc > Options), every setting in it and the addon pages inside it, and the **dungeon-ready dialog**. New in 1.12.0: the **profession window**, the **character window** (and currency transfer), Collections tabs, the Calendar panels, Click Casting, the Cooldown Manager settings, guild bank tabs, confirm boxes' gold and item lines, the map pin button, and the game's own gossip, quest, vendor, trainer, mail, social, bag and bank windows whenever DaylightUI's own version is switched off. New in 1.12.2: new-player tutorials, battleground status bars, voice chat toasts, GM chat, the subscription offer, the game's damage meter and more. Edit Mode stays the game's.
+The game windows DaylightUI's Window Skins leave bare get the same look: the ready and role checks, queue, invite and PvP popups, the color picker, the "Return to graveyard" button and death recap, the stopwatch and Quick Keybind, chat settings and the channels window, the zone map (Shift-M), alert and level-up toasts, help, report and friend windows, icon pickers, help tips and more. Also the **Options window** (Esc > Options), every setting in it and the addon pages inside it, and the **dungeon-ready dialog**. New in 1.12.0: the **profession window**, the **character window** (and currency transfer), Collections tabs, the Calendar panels, Click Casting, the Cooldown Manager settings, guild bank tabs, confirm boxes' gold and item lines, the map pin button, and the game's own gossip, quest, vendor, trainer, mail, social, bag and bank windows whenever DaylightUI's own version is switched off. With DaylightUI 1.8.4, which dresses the gossip, quest, vendor, trainer, mail, social, character and spellbook windows itself when you pick them, those are left to DaylightUI so nothing is dressed twice. New in 1.12.2: new-player tutorials, battleground status bars, voice chat toasts, GM chat, the subscription offer, the game's damage meter and more. Edit Mode stays the game's.
 
 All pop-up menus (right-click menus and dropdowns, any addon's) and every addon's AceConfig settings lose the game's gold.
 
@@ -25,7 +25,7 @@ All pop-up menus (right-click menus and dropdowns, any addon's) and every addon'
 - **New skins:** Mastercraft (kept on its flat Classic style while skinned) and High Fidelity World Map (its HD/SD button, blend slider, cave map window and settings).
 - **More game windows** (see above), every one built to the full DaylightUI standard.
 - Text in other alphabets (Greek, Korean, Chinese...) keeps a font that can draw it instead of empty boxes.
-- Updates followed: LayerSwap 1.14.25, Mastercraft 2.0.1, Kerzo Classic Quest Log 6.4.1, Dungeon Journal 2.0.8, DaylightUI 1.8.3.
+- Updates followed: LayerSwap 1.14.25, Mastercraft 2.0.1, Kerzo Classic Quest Log 6.4.1, Dungeon Journal 2.0.8, DaylightUI 1.8.4.
 - **OpenMap:** the game's map pin button places a pin again.
 
 ## New in 1.11.0
