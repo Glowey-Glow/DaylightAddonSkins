@@ -1754,6 +1754,8 @@ end
 local spellsOwner = {}
 Entry("PlayerSpellsFrame", function(f, Kit)
 	if InCombatLockdown() then return end   -- (TryAll runs out of combat; a protected frame, so never in one)
+	-- DaylightUI 1.8.4 and later dress this window themselves while their System pack is on.
+	if ns.DaylightDressesGame("system") then return end
 	ShellWindow(Kit, f)
 	Kit.Close(f.CloseButton)
 	local mm = f.MaximizeMinimizeButton

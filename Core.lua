@@ -1455,6 +1455,28 @@ function ns.DaylightHas(scope, path, test)
 	return value == true
 end
 
+-- Whether the DaylightUI in use is this version or later (DaylightUI's toc version).
+function ns.DaylightAtLeast(a, b, c)
+	local get = C_AddOns and C_AddOns.GetAddOnMetadata
+	local ok, version = pcall(get, "DaylightUI", "Version")
+	if not ok or type(version) ~= "string" then return false end
+	local x, y, z = version:match("^v?(%d+)%.(%d+)%.?(%d*)")
+	x, y, z = tonumber(x) or 0, tonumber(y) or 0, tonumber(z) or 0
+	if x ~= a then return x > a end
+	if y ~= b then return y > b end
+	return z >= (c or 0)
+end
+
+-- DaylightUI 1.8.4 and later dress the game's own windows in its look whenever the player picks
+-- them over DaylightUI's (or DaylightUI lends one out), through its Window Skins: the "npc" pack
+-- (gossip, quests, the vendor, the trainer), "social" (the mailbox, a letter, the social window)
+-- and "system" (the character window, the spellbook and talents). While that pack is on, those
+-- windows are DaylightUI's to dress, and the Game windows skin here leaves them alone.
+function ns.DaylightDressesGame(pack)
+	if not ns.DaylightAtLeast(1, 8, 4) or not ns.ModuleOn("Skins") then return false end
+	return ns.DaylightHas("Skins", "packs." .. pack)
+end
+
 -- The conflicts to show: `all` = every one that is live or was given to DaylightUI; otherwise only
 -- the live ones not answered yet. Each: { addon, item, daylight = the current pick }.
 function ns.Conflicts(all)

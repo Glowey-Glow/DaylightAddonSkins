@@ -568,6 +568,8 @@ local function CharacterRun()
 	char.queued = false
 	local Kit, f = ns.Kit, _G.CharacterFrame
 	if not Kit or not On() or not CharacterOnScreen() then return end
+	-- DaylightUI 1.8.4 and later dress the game's character window themselves (its System pack).
+	if ns.DaylightDressesGame("system") then return end
 	if InCombatLockdown() then
 		if not char.waiting then
 			char.waiting = true
@@ -752,7 +754,7 @@ local SpellsSoon
 local function SpellPages()
 	spells.queued = false
 	local Kit, f = ns.Kit, _G.PlayerSpellsFrame
-	if not Kit or not On() or not Really(f) then return end
+	if not Kit or not On() or not Really(f) or ns.DaylightDressesGame("system") then return end
 	if InCombatLockdown() then
 		if not spells.waiting then
 			spells.waiting = true
@@ -815,8 +817,11 @@ local function SpellsStart(Kit)
 	if not Usable(f) then return false end
 	if InCombatLockdown() then return false end
 	for _, name in ipairs(DIALOGS) do Guard(Dialog, Kit, _G[name]) end
+	-- (DaylightUI 1.8.4 and later dress the window itself while its System pack is on: only the
+	-- loadout dialogs above are dressed here then.)
+	local daylight = ns.DaylightDressesGame("system")
 	local talents = f.TalentsFrame
-	if Usable(talents) and Controls() then
+	if Usable(talents) and Controls() and not daylight then
 		local load = talents.LoadSystem
 		if Usable(load) and Usable(load.Dropdown) then Kit.Dropdown(load.Dropdown) end
 		StaticIconButton(Kit, talents.ResetButton)
@@ -829,7 +834,7 @@ local function SpellsStart(Kit)
 		SearchPreview(Kit, talents.SearchPreviewContainer)
 	end
 	local book = f.SpellBookFrame
-	if Usable(book) and Controls() then SearchPreview(Kit, book.SearchPreviewContainer) end
+	if Usable(book) and Controls() and not daylight then SearchPreview(Kit, book.SearchPreviewContainer) end
 	local reg = _G.EventRegistry
 	if type(reg) == "table" and type(reg.RegisterCallback) == "function" then
 		for _, event in ipairs(SPELL_EVENTS) do

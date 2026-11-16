@@ -1,5 +1,8 @@
 # DaylightUI Addon Skins
 
+## 1.12.4
+- DaylightUI 1.8.4: when you pick the game's own window over DaylightUI's, DaylightUI now dresses it itself. Game windows now leave those windows to it, so they aren't dressed twice: gossip, quests, the vendor and the trainer (while DaylightUI's NPC window skins are on), the mailbox, letters and the social window (Social), and the character window and the spellbook and talents (System). The trainer's filter reset badge and the talent loadout dialogs are still added here. With an older DaylightUI, or that skin pack off, nothing changes.
+
 ## 1.12.3
 - Translations tidied: lines for text the plugin no longer shows are taken out of all six languages.
 

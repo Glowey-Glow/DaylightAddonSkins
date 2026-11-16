@@ -1,6 +1,7 @@
 -- Game windows, part two: the game's own windows that show when a DaylightUI window that replaces
 -- them is switched off (or when DaylightUI has none for this client's layout), which DaylightUI
--- leaves exactly as the game draws them. Same switch as the Blizzard pack ("Game windows"), same
+-- leaves exactly as the game draws them (from DaylightUI 1.8.4 its Window Skins dress the NPC,
+-- mail and social windows themselves while their pack is on: those are left to it). Same switch as the Blizzard pack ("Game windows"), same
 -- look through the Kit, built against the client's own interface code (wow-ui-source, branch
 -- "forever": the Mainline files plus their Camelot overrides).
 --   Gossip (GossipFrame) and the quest window (QuestFrame: greeting, details, progress, rewards,
@@ -89,11 +90,18 @@ local function DialogueOwns()
 	local loaded = C_AddOns and C_AddOns.IsAddOnLoaded
 	return type(loaded) == "function" and loaded("DialogueUI") == true
 end
-local function NpcOwned() return Flag("npcOwnWindow") or DialogueOwns() end
-local function VendorOwned() return Flag("npcOwnVendor") or Flag("vendorMogul") or MogulOwns("Vendor") end
+-- (DaylightUI 1.8.4 and later dress the game's own NPC, mail and social windows themselves while
+-- their Window Skins pack is on: ns.DaylightDressesGame. Those count as DaylightUI's too.)
+local function NpcSkin() return ns.DaylightDressesGame("npc") end
+local function NpcOwned() return Flag("npcOwnWindow") or DialogueOwns() or NpcSkin() end
+local function VendorOwned() return Flag("npcOwnVendor") or Flag("vendorMogul") or MogulOwns("Vendor") or NpcSkin() end
 local function TrainerOwned() return Flag("npcOwnTrainer") end
-local function MailOwned() return Flag("mailOwnWindow") or Flag("mailMogul") or MogulOwns("Mail") end
-local function SocialOwned() return ns.ModuleOn("Social") and Setting("Social", "enabled") == true end
+local function MailOwned()
+	return Flag("mailOwnWindow") or Flag("mailMogul") or MogulOwns("Mail") or ns.DaylightDressesGame("social")
+end
+local function SocialOwned()
+	return (ns.ModuleOn("Social") and Setting("Social", "enabled") == true) or ns.DaylightDressesGame("social")
+end
 local function BagsOwned() return ns.ModuleOn("Bags") and Setting("Bags", "enabled") ~= false end
 local function TrackerOwned() return Flag("questsOwnTracker") end
 
@@ -636,7 +644,7 @@ local function TrainerBadge(Kit, f)
 end
 
 local trainerHooked = false
-Fallback(Named("ClassTrainerFrame"), TrainerOwned, function(f, Kit)
+Fallback(Named("ClassTrainerFrame"), function() return TrainerOwned() or NpcSkin() end, function(f, Kit)
 	Kit.Window(f)
 	if Usable(f.bottomInset) then Kit.Inset(f.bottomInset) end
 	if Controls() then
@@ -652,9 +660,10 @@ Fallback(Named("ClassTrainerFrame"), TrainerOwned, function(f, Kit)
 	end
 end)
 
--- Lent by DaylightUI's NPC window for Beast Training: DaylightUI's Window Skins dress the window,
--- all but the filter's reset badge.
-Fallback(Named("ClassTrainerFrame"), function() return not TrainerOwned() end, function(f, Kit)
+-- Lent by DaylightUI's NPC window for Beast Training (or, from DaylightUI 1.8.4, the game's trainer
+-- picked over DaylightUI's): DaylightUI's Window Skins dress the window, all but the filter's
+-- reset badge.
+Fallback(Named("ClassTrainerFrame"), function() return not (TrainerOwned() or NpcSkin()) end, function(f, Kit)
 	TrainerBadge(Kit, f)
 end)
 
