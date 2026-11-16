@@ -1,5 +1,8 @@
 # DaylightUI Addon Skins
 
+## 1.12.3
+- Translations tidied: lines for text the plugin no longer shows are taken out of all six languages.
+
 ## 1.12.2
 - Game windows: the new-player tutorial banners, key prompts, keyboard and mouse intro, and pointer boxes use the DaylightUI look, their arrows and glow in your accent.
 - Game windows: the battleground and status bars at the top of the screen and under the minimap get DaylightUI bar edges; their fills, faction icons and colors stay.
