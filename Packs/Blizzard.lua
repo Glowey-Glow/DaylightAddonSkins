@@ -515,8 +515,9 @@ local entries = {}
 local left = 0
 
 -- get = a global frame name, or a function returning the thing to dress (nil while it isn't there).
-local function Entry(get, fn)
-	entries[#entries + 1] = { get = get, fn = fn }
+-- id = the window switch it follows (Windows.lua); left out, the one its name is listed under.
+local function Entry(get, fn, id)
+	entries[#entries + 1] = { get = get, fn = fn, id = id or ns.BlizzIdOf(get) }
 	left = left + 1
 end
 
@@ -525,7 +526,11 @@ local function TryAll()
 	if left == 0 or not Kit or not On() then return end
 	for i = 1, #entries do
 		local e = entries[i]
-		if not e.done then
+		if not e.done and not ns.BlizzOn(e.id) then
+			-- Its window's switch is off (a switch takes hold after a reload): not looked for again.
+			e.done = true
+			left = left - 1
+		elseif not e.done then
 			local target
 			if type(e.get) == "string" then
 				target = _G[e.get]
@@ -724,7 +729,7 @@ local function DaylightDressesToasts()
 end
 
 local function DressToast(f)
-	if type(f) ~= "table" or not Usable(f) or not On() then return end
+	if type(f) ~= "table" or not Usable(f) or not On() or not ns.BlizzOn("alerts") then return end
 	if not toastSkip then
 		toastSkip, toastDaylight = {}, {}
 		for _, name in ipairs(TOAST_SKIP) do

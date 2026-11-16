@@ -1,9 +1,9 @@
 -- This plugin's pages in DaylightUI's options, under the Plugins heading in the list on the left.
--- "All windows": the switch that keeps every window on DaylightUI's own settings, and one switch
--- per addon. Then a page per addon with what can be set for its windows alone (ns.Target's caps):
--- its text, its window shell, its controls. Each addon page opens with its own switch, "Use my own
--- settings": off, the page's rows are set aside and the addon follows DaylightUI (or the switch for
--- all windows); on, the rows are the addon's look.
+-- "All windows": the skin switches (Grid.lua), Addons and Blizzard. "Look and Feel": the switch that
+-- keeps every window on DaylightUI's own settings, a picker, and the picked addon's settings (what
+-- can be set for its windows alone, ns.Target's caps: its text, its window shell, its controls).
+-- Each addon's settings open with its own switch, "Custom Settings": off, its rows are set
+-- aside and the addon follows DaylightUI (or the switch for all windows); on, the rows are its look.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -21,7 +21,7 @@ end
 
 -- Fonts: DaylightUI's, the addon's own, and every font shared through LibSharedMedia. Fonts that
 -- other addons share after this file has run are added at login, into the same table.
-local fonts = { daylight = L["DaylightUI font"], addon = L["The addon's own font"] }
+local fonts = { daylight = L["DaylightUI font"], addon = L["Addon's font"] }
 local function gatherFonts()
 	local LSM = ns.LSM
 	if not LSM then return end
@@ -37,7 +37,7 @@ late:RegisterEvent("PLAYER_LOGIN")
 late:SetScript("OnEvent", gatherFonts)
 
 -- The accents an addon's page can pick: DaylightUI's own Accent choices, its gradients included.
-local ACCENTS = { daylight = L["DaylightUI's accent"], gradient = L["Daylight gradient"], class = L["Class color"],
+local ACCENTS = { daylight = L["DaylightUI accent"], gradient = L["Daylight gradient"], class = L["Class color"],
 	classGradient = L["Class gradient"], custom = L["Custom color"] }
 local ACCENT_ORDER = { "daylight", "gradient", "class", "classGradient", "custom" }
 
@@ -46,9 +46,9 @@ local OUTLINES = { keep = L["As the addon has it"], none = L["None"], thin = L["
 -- The switch at the top of each tab of an addon's page: the addon's own settings, or DaylightUI's.
 local function hintFor(addon)
 	return function()
-		return { type = "toggle", key = "look." .. addon .. ".own", label = string.format(L["Use my own settings for %s"], ns.targets[addon]),
+		return { type = "toggle", key = "look." .. addon .. ".own", label = string.format(L["Custom Settings for %s"], ns.targets[addon]),
 			desc = string.format(L["On: the settings on this page are used for %s. Off: it goes by the \"%s\" switch on the %s page (your choices here are kept)."],
-				ns.targets[addon], L["Use DaylightUI's settings for all windows"], L["All windows"]) }
+				ns.targets[addon], L["Use DaylightUI's settings for all windows"], L["Look and Feel"]) }
 	end
 end
 
@@ -94,7 +94,7 @@ local function lookGroups(addon, caps, tab, lead)
 		local items = {}
 		if lead then items[#items + 1] = hint() end
 		lead = false
-		items[#items + 1] = { type = "toggle", key = at .. "ownOpacity", label = L["Use my own background opacity"],
+		items[#items + 1] = { type = "toggle", key = at .. "ownOpacity", label = L["Custom background opacity"],
 			desc = L["Off: these windows follow DaylightUI's window background opacity."], disabled = following }
 		items[#items + 1] = { type = "slider", key = at .. "opacity", label = L["Background opacity"], min = 0, max = 1, step = 0.05, unit = "%",
 			desc = L["How solid the background of this addon's windows is."],
@@ -103,7 +103,7 @@ local function lookGroups(addon, caps, tab, lead)
 		groups[#groups + 1] = { label = L["Window border"], tab = tab, items = {
 			{ type = "toggle", key = at .. "border", label = L["Border"],
 			  desc = L["The border round this addon's windows."], disabled = following },
-			{ type = "toggle", key = at .. "ownBorder", label = L["Use my own border size"],
+			{ type = "toggle", key = at .. "ownBorder", label = L["Custom border size"],
 			  desc = L["Off: the border is the size set in DaylightUI."],
 			  disabled = function(get) return following(get) or get(at .. "border") == false end },
 			{ type = "slider", key = at .. "borderPx", label = L["Border size"], min = 1, max = 16, step = 1, unit = "px",
@@ -156,26 +156,19 @@ local function addonPage(addon)
 		groups = groups }
 end
 
-local switches = {}
-for _, addon in ipairs(ns.order) do
-	switches[#switches + 1] = {
-		type = "toggle", key = addon, label = ns.targets[addon], default = true,
-		desc = string.format(L["Dress %s's windows."], ns.targets[addon]),
-	}
-end
-switches[#switches + 1] = { type = "button", label = L["Reload interface"], func = function() ReloadUI() end }
-
 local pages = {
 	{ id = "addons", label = L["All windows"],
-	  desc = L["Dress your other addons' windows in the DaylightUI look. Reload the interface after turning an addon on or off."],
+	  desc = L["Pick which windows get the DaylightUI look. Reload to apply changes."],
 	  groups = {
-		{ label = L["DaylightUI's look"], items = {
-			{ type = "toggle", key = FOLLOW, label = L["Use DaylightUI's settings for all windows"],
-			  desc = L["On: every addon's windows follow your DaylightUI font, colors, accent and window opacity, except an addon whose own page has \"Use my own settings\" on."] },
-		} },
-		{ label = L["Addon windows"], items = switches },
+		-- The switches: one grid per section (Grid.lua), each card the page's full width.
+		{ label = L["Addons"], wide = true,
+		  desc = L["Your addons this plugin can dress. One you don't have shows a link to get it."],
+		  items = { ns.SkinGrid("addons") } },
+		{ label = L["Blizzard"], wide = true,
+		  desc = L["The game's own windows, each with a switch of its own."],
+		  items = { ns.SkinGrid("blizzard") } },
 		{ label = L["DaylightUI Override"],
-		  desc = L["When your addons do something DaylightUI already does, DaylightUI handles it unless you picked the addon. Each addon's own DaylightUI tab has a switch per feature and a button to give everything back."],
+		  desc = L["When your addons do something DaylightUI already does, DaylightUI handles it unless you picked the addon. On Look and Feel, each addon's settings have a switch per feature and a button to give everything back."],
 		  items = {
 			-- The button alone, centered under the text: no name of its own (it would only say the
 			-- button's words again); the button's words are its text.
@@ -194,9 +187,74 @@ local pages = {
 		} },
 	  } },
 }
+-- Look and Feel: every addon's look on one page, in DaylightUI's page tabs (only the open tab's
+-- cards are drawn, under the tab row). General: the switch for all windows and DaylightUI's own
+-- look (its font, accent and window rows, on its own settings: Grid.lua, ns.DaylightLookGroups).
+-- Text, Window, Controls and Extras: every addon's cards, each row hidden unless its addon is the
+-- one picked ("lookPick"), so a tab shows only the picked one's cards (a card with no row to show
+-- isn't drawn), then "Applies to": the addons the tab reaches, where one is picked.
+local TAB_GENERAL, TAB_TEXT, TAB_WINDOW, TAB_CONTROLS, TAB_EXTRAS =
+	L["General"], L["Text"], L["Window"], L["Controls"], L["Extras"]
+local TAB_OF = { [L["Font"]] = TAB_TEXT, [L["Text colors"]] = TAB_TEXT, [L["Accent"]] = TAB_TEXT,
+	[L["Window background"]] = TAB_WINDOW, [L["Window border"]] = TAB_WINDOW, [L["Controls"]] = TAB_CONTROLS }
+local TAB_ORDER = { TAB_TEXT, TAB_WINDOW, TAB_CONTROLS, TAB_EXTRAS }
+
+local byTab = { [TAB_TEXT] = {}, [TAB_WINDOW] = {}, [TAB_CONTROLS] = {}, [TAB_EXTRAS] = {} }
+local picks = {}
 for _, addon in ipairs(ns.order) do
 	local page = addonPage(addon)
-	if page then pages[#pages + 1] = page end
+	if page then
+		picks[#picks + 1] = addon
+		for _, g in ipairs(page.groups) do
+			local tab = TAB_OF[g.label] or TAB_EXTRAS
+			g.tab = tab
+			g.addon = addon
+			for _, item in ipairs(g.items or {}) do
+				local own = item.hidden
+				item.hidden = function(get)
+					if get(ns.LOOK_PICK) ~= addon then return true end
+					return own ~= nil and own(get) or false
+				end
+			end
+			local list = byTab[tab]
+			list[#list + 1] = g
+		end
+	end
 end
+local looks = {
+	{ label = L["DaylightUI's look"], tab = TAB_GENERAL, items = {
+		{ type = "toggle", key = FOLLOW, label = L["Use DaylightUI's settings for all windows"],
+		  desc = L["On: every addon's windows follow your DaylightUI font, colors, accent and window opacity, except an addon with \"Custom Settings\" on."] },
+	} },
+}
+for _, g in ipairs(ns.DaylightLookGroups(TAB_GENERAL)) do looks[#looks + 1] = g end
+
+-- The addon the other tabs show until one is clicked in a tab's "Applies to" list: the first
+-- addon from A to Z.
+table.sort(picks, function(a, b) return ns.targets[a]:lower() < ns.targets[b]:lower() end)
+ns.lookPickDefault = picks[1]
+-- Under each tab's cards, the addons that tab's settings reach: a Custom Settings switch each, and
+-- a click on a name shows that addon's settings above (Grid.lua, ns.LookList).
+for _, tab in ipairs(TAB_ORDER) do
+	local reach, seen = {}, {}
+	for _, g in ipairs(byTab[tab]) do
+		looks[#looks + 1] = g
+		if g.addon and not seen[g.addon] then
+			seen[g.addon] = true
+			reach[#reach + 1] = g.addon
+		end
+	end
+	if #reach > 0 then
+		looks[#looks + 1] = { label = L["Applies to"], tab = tab, wide = true,
+			desc = L["Switch on Custom Settings per addon. Click a name to show its settings above."],
+			items = { ns.LookList(reach) } }
+	end
+end
+pages[#pages + 1] = { id = "look", label = L["Look and Feel"],
+	desc = L["Fonts, text, accent and window looks for each addon you dress."],
+	groups = looks }
+
+-- The "Tell me when a newer version is out" switch (Update.lua), on the first page.
+if ns.UpdateGroup and pages[1] then table.insert(pages[1].groups, ns.UpdateGroup()) end
 
 ns.RegisterSettings(pages)

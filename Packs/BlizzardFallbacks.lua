@@ -277,13 +277,21 @@ end
 
 local defs = {}
 
+-- (The name each get looks up, for the window switches: Windows.lua.)
+local nameOf = {}
+local function Named(name)
+	local get = function() return _G[name] end
+	nameOf[get] = name
+	return get
+end
+
 local function Fallback(get, owned, dress, again)
-	defs[#defs + 1] = { get = get, owned = owned, dress = dress, again = again }
+	defs[#defs + 1] = { get = get, owned = owned, dress = dress, again = again, id = ns.BlizzIdOf(nameOf[get]) }
 end
 
 local Try
 Try = function(d, f)
-	if not On() or (d.owned and d.owned()) or not Really(f) then return end
+	if not On() or not ns.BlizzOn(d.id) or (d.owned and d.owned()) or not Really(f) then return end
 	if InCombatLockdown() then
 		if not d.waiting then
 			d.waiting = true
@@ -308,7 +316,6 @@ Try = function(d, f)
 	end
 end
 
-local function Named(name) return function() return _G[name] end end
 
 local left = 0
 local function HookAll()

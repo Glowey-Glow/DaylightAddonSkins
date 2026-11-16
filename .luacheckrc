@@ -30,6 +30,7 @@ read_globals = {
 	"InCombatLockdown",
 	"IsInInstance",
 	"IsLoggedIn",
+	"IsControlKeyDown",
 	"IsShiftKeyDown",
 	"LibStub",
 	"PanelTemplates_TabResize",

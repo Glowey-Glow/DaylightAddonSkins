@@ -431,7 +431,7 @@ for _, spec in ipairs(COMMUNITY_INNER) do
 			Kit.Light(title, ns.Colors().VALUE)
 		end
 		B.Words(Kit, f, 1)
-	end)
+	end, "communities")
 end
 
 -- Guild bank tabs -------------------------------------------------------------------------------

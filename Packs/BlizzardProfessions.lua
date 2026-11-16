@@ -61,7 +61,7 @@ local rows = setmetatable({}, { __mode = "k" })     -- list row -> { pick, picke
 local accents = setmetatable({}, { __mode = "k" })  -- texture -> { alpha, fill }
 local edges = setmetatable({}, { __mode = "k" })    -- book spell button -> its edge (ours)
 
-local function On() return ns.Enabled(KEY) end
+local function On() return ns.Enabled(KEY) and ns.BlizzOn("professions") end
 local function Controls() return ns.Controls(KEY) end
 
 local function Once(x)

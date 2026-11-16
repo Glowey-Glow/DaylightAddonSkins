@@ -152,7 +152,7 @@ local function LookPath(key, name)
 	return path
 end
 
--- Whether `key`'s windows follow DaylightUI's settings: yes, unless the player turned on "Use my own
+-- Whether `key`'s windows follow DaylightUI's settings: yes, unless the player turned on "Custom
 -- settings" on its page. (No key: the switch for all windows alone.) The switch for all windows only
 -- holds the addons that weren't given settings of their own.
 local function Following(key)
@@ -1598,6 +1598,13 @@ ns.Pack("DaylightUI_Skins")
 -- go in this plugin's own section of the options window, under the Plugins heading.
 function ns.RegisterSettings(pages)
 	defaults.followDaylight = true
+	-- The addon the Look and Feel page shows (picked from its tabs' "Applies to" lists).
+	defaults.lookPick = ns.lookPickDefault or "Blizzard"
+	-- One switch per game window (Windows.lua).
+	defaults.blizz = {}
+	for _, w in ipairs(ns.BLIZZ or {}) do
+		if w.id then defaults.blizz[w.id] = true end
+	end
 	defaults.look = {}
 	for addon in pairs(ns.targets) do
 		defaults[addon] = true

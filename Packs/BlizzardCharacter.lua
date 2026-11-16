@@ -48,7 +48,9 @@ local ipairs, pairs, type = ipairs, pairs, type
 
 local dressed = setmetatable({}, { __mode = "k" })   -- frames and controls of ours already done
 
-local function On() return ns.Enabled(KEY) end
+-- The character window (and its currency transfer window) and the spellbook have a switch each.
+local function On() return ns.Enabled(KEY) and ns.BlizzOn("character") end
+local function SpellsOn() return ns.Enabled(KEY) and ns.BlizzOn("spellbook") end
 local function Controls() return ns.Controls(KEY) end
 
 local function Kind(x)
@@ -695,7 +697,7 @@ local function PreviewRow(Kit, row)
 end
 
 local function PreviewRows(Kit, c)
-	if not On() or InCombatLockdown() then return end
+	if not SpellsOn() or InCombatLockdown() then return end
 	local box = c.ScrollBox
 	if Usable(box) and box.ForEachFrame then
 		pcall(box.ForEachFrame, box, function(row) Guard(PreviewRow, Kit, row) end)
@@ -714,7 +716,7 @@ local function SearchPreview(Kit, c)
 	Kit.Shell(c, "window", QUIET)
 	if type(c.UpdateResultsDisplay) == "function" then
 		hooksecurefunc(c, "UpdateResultsDisplay", function(self)
-			if On() then C_Timer.After(0, function() if ns.Kit then Guard(PreviewRows, ns.Kit, self) end end) end
+			if SpellsOn() then C_Timer.After(0, function() if ns.Kit then Guard(PreviewRows, ns.Kit, self) end end) end
 		end)
 	end
 	PreviewRows(Kit, c)
@@ -754,7 +756,7 @@ local SpellsSoon
 local function SpellPages()
 	spells.queued = false
 	local Kit, f = ns.Kit, _G.PlayerSpellsFrame
-	if not Kit or not On() or not Really(f) or ns.DaylightDressesGame("system") then return end
+	if not Kit or not SpellsOn() or not Really(f) or ns.DaylightDressesGame("system") then return end
 	if InCombatLockdown() then
 		if not spells.waiting then
 			spells.waiting = true
@@ -838,7 +840,7 @@ local function SpellsStart(Kit)
 	local reg = _G.EventRegistry
 	if type(reg) == "table" and type(reg.RegisterCallback) == "function" then
 		for _, event in ipairs(SPELL_EVENTS) do
-			reg:RegisterCallback(event, function() if On() then SpellsSoon() end end, spellsOwner)
+			reg:RegisterCallback(event, function() if SpellsOn() then SpellsSoon() end end, spellsOwner)
 		end
 	end
 	if Really(f) then SpellsSoon() end
@@ -866,7 +868,7 @@ end
 
 local function TryParts()
 	local Kit = ns.Kit
-	if not Kit or not ns.loggedIn or not On() then return end
+	if not Kit or not ns.loggedIn or not SpellsOn() then return end
 	for _, p in ipairs(PARTS) do
 		if not p.done and (p.addon == nil or Loaded(p.addon)) then
 			local ok, out = xpcall(p.fn, geterrorhandler(), Kit)
@@ -878,7 +880,7 @@ end
 -- A style change (the accent): this file's own accent marks and rows again, and the spellbook's
 -- headers (SpellsSoon). Only what this file painted; the rest is DaylightUI's and the Kit's.
 local function Restyle()
-	if not On() or not ns.Kit then return end
+	if not SpellsOn() or not ns.Kit then return end
 	PaintSidebarSoon()
 	for tex, how in pairs(accented) do
 		if Usable(tex) then

@@ -1,7 +1,7 @@
 -- The choice window: on first load (and whenever a new conflict turns up), the features your other
 -- addons do that DaylightUI already does, each with a switch: on = DaylightUI handles it (the
 -- default), off = the addon keeps it. Apply sets them (Core.lua, ns.Choose); Ask me later closes it
--- and it comes back at the next login. Every choice can be changed again on the addon's own page,
+-- and it comes back at the next login. Every choice can be changed again on Look and Feel (the addon picked),
 -- and "Show the choices again" on the All windows page opens it with all of them.
 -- Built from DaylightUI's own widgets (API.Skin, API.Text, API.Switch, API.Button, API.Close).
 local _, ns = ...
@@ -46,8 +46,8 @@ local function Build()
 	local sub = API.Text(frame, "body", "LEFT")
 	sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
 	sub:SetWidth(W - PAD * 2)
-	sub:SetText(string.format(L["Some of your addons do things DaylightUI already does. Pick who handles each one: on = DaylightUI (the addon's own is switched off), off = the addon keeps it. You can change any of these later: DaylightUI options, %s, %s, each addon's DaylightUI tab."],
-		ns.Module("Plugins"), L["Addons"]))
+	sub:SetText(string.format(L["Some of your addons do things DaylightUI already does. Pick who handles each one: on = DaylightUI (the addon's own is switched off), off = the addon keeps it. You can change any of these later in DaylightUI options: %s > %s > %s, with the addon picked."],
+		ns.Module("Plugins"), L["Addons"], L["Look and Feel"]))
 	Ink(sub, "TEXT")
 	frame.sub = sub
 

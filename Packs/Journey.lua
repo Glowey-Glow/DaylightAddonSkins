@@ -65,7 +65,7 @@ for _, l in ipairs(LINKS) do DEFAULTS[l[1]] = l[4] end
 local function Extra(at, following, hint)
 	local function off(get) return following(get) end
 	local linkItems = {
-		{ type = "toggle", key = at .. "ownLinks", label = L["Use my own link colors"],
+		{ type = "toggle", key = at .. "ownLinks", label = L["Custom link colors"],
 		  desc = L["Off: the quests, NPCs, items and places in the steps keep Journey's colors."], disabled = off },
 	}
 	for _, l in ipairs(LINKS) do

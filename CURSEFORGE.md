@@ -20,6 +20,14 @@ All pop-up menus (right-click menus and dropdowns, any addon's) and every addon'
 
 ---
 
+## New in 1.13.0
+- **One page of switches:** All windows now has two grids, **Addons** and **Blizzard**, A to Z, with Turn all on, Turn all off and Reload interface. Nothing is cut off: the grid fits as many columns as your window allows.
+- **Get Addon:** an addon you don't have shows "Get Addon" in your accent. Click it for its CurseForge link to copy.
+- **A switch per game window:** the old "Game windows" switch is now one switch each: Bags, Character Frame, Chat Settings, Guild Bank, Mail Frame, World Map and the rest. If you had Game windows off, they all start off.
+- **Look and Feel:** one page in place of a page per addon, in tabs: **General** (DaylightUI's own font, accent and window settings, right there to change), **Text**, **Window**, **Controls** and **Extras**. Under each tab, **Applies to** lists the addons it reaches, each with its **Custom Settings** switch; click a name to show its settings.
+- **Custom Settings** is the new name for "Use my own settings" (and Custom background opacity, Custom border size, Custom link colors).
+- **Update alert:** a chat line when a newer version is out (once a session; switch it off under Updates).
+
 ## New in 1.12.0
 - **Gradients:** with "Use DaylightUI's settings" on, skinned windows keep your DaylightUI accent as it is, Daylight or class gradient included. Each addon's own page can pick DaylightUI's accent, Daylight gradient, Class color, Class gradient or Custom, plus **Gradient window borders**. Skinned windows follow DaylightUI 1.8.4's window background color (Daylight, class or custom), OpenMap's and Mastercraft's panels included.
 - **New skins:** Mastercraft (kept on its flat Classic style while skinned) and High Fidelity World Map (its HD/SD button, blend slider, cave map window and settings).
@@ -70,9 +78,9 @@ Nothing is lost: the addon's own setting is switched off and kept, and can be gi
 ## Settings
 
 DaylightUI options > **Plugins > Addons**:
-- switch the skin off for any one addon, or for a group of the game's windows;
-- give an addon a look of its own (font, outline, shadow, size, window opacity, border, bevel, and for some its text colors and accent) with **Use my own settings**;
-- change the Override choices on the addon's **DaylightUI** tab, or **Give everything back**;
+- **All windows:** switch the skin off for any one addon or any one game window;
+- **Look and Feel:** give an addon a look of its own (font, outline, shadow, size, window opacity, border, bevel, and for some its text colors and accent) with **Custom Settings**, or change DaylightUI's own look on its General tab;
+- change the Override choices on the addon's **Extras** tab, or **Give everything back**;
 - open the Override window again with **Show the choices again** on the All windows page.
 
 It never changes other addons' files. It only changes their settings for features you hand over to DaylightUI, and puts them back as they were when you give them back.

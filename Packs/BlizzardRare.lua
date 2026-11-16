@@ -630,4 +630,4 @@ end, function(p, Kit)
 		end, coordOwner)
 	end
 	FitCoords()
-end)
+end, "worldmap")
