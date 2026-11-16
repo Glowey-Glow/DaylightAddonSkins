@@ -1,5 +1,9 @@
 # DaylightUI Addon Skins
 
+## 1.12.5
+- Game windows: the profession window's title now stops short of whatever sits beside its X, measured each time the window opens: DaylightUI 1.8.4's "Daylight UI window" link, Daylight Recipes' swap button, or both. A long profession name no longer runs under them.
+- DaylightUI 1.8.4's Background color (General > Appearance: Daylight, class tint or custom) now reaches the grounds drawn here: Mastercraft's window darks and OpenMap's quest log, side panel and hint grounds. They change as soon as you pick a new color. Windows on DaylightUI's shell already followed it.
+
 ## 1.12.4
 - DaylightUI 1.8.4: when you pick the game's own window over DaylightUI's, DaylightUI now dresses it itself. Game windows now leave those windows to it, so they aren't dressed twice: gossip, quests, the vendor and the trainer (while DaylightUI's NPC window skins are on), the mailbox, letters and the social window (Social), and the character window and the spellbook and talents (System). The trainer's filter reset badge and the talent loadout dialogs are still added here. With an older DaylightUI, or that skin pack off, nothing changes.
 

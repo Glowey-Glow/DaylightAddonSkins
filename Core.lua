@@ -1467,6 +1467,38 @@ function ns.DaylightAtLeast(a, b, c)
 	return z >= (c or 0)
 end
 
+-- The color behind DaylightUI's windows and panels: its own dark, from 1.8.4 the player's pick
+-- (General > Appearance > Background color: Daylight, a class tint or a custom color). Read
+-- when painting; a fresh table each time.
+local FALLBACK_BACK = { 0.078, 0.078, 0.090 }
+function ns.BackColor()
+	local Style = DUI and DUI.Style
+	local c
+	if type(Style) == "table" then
+		if type(Style.BackColor) == "function" then
+			local ok, v = pcall(Style.BackColor)
+			if ok and type(v) == "table" then c = v end
+		end
+		if not c and type(Style.BACKGROUND) == "table" then c = Style.BACKGROUND end
+	end
+	c = c or FALLBACK_BACK
+	return { c[1], c[2], c[3] }
+end
+
+-- A texture of ours (or one of an addon's taken over) as a window's ground, in that color at
+-- `alpha`, painted again whenever the look changes.
+local backs = setmetatable({}, { __mode = "k" })   -- texture -> alpha
+function ns.PaintBack(tex, alpha)
+	if type(tex) ~= "table" or type(tex.SetColorTexture) ~= "function" then return end
+	backs[tex] = alpha or 1
+	local c = ns.BackColor()
+	tex:SetColorTexture(c[1], c[2], c[3], backs[tex])
+end
+me.On("StyleChanged", function()
+	local c = ns.BackColor()
+	for tex, a in pairs(backs) do tex:SetColorTexture(c[1], c[2], c[3], a) end
+end)
+
 -- DaylightUI 1.8.4 and later dress the game's own windows in its look whenever the player picks
 -- them over DaylightUI's (or DaylightUI lends one out), through its Window Skins: the "npc" pack
 -- (gossip, quests, the vendor, the trainer), "social" (the mailbox, a letter, the social window)

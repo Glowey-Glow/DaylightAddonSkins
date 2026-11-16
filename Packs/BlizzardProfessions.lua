@@ -933,8 +933,54 @@ end
 -- The window
 -- ---------------------------------------------------------------------------------------------
 
--- Daylight Recipes puts its swap button (20 px) 6 px left of the X: the title stops short of both.
-local SWAP_ROOM = 26
+-- Beside the X other addons put their own controls in a row, each anchored to the one on its
+-- right: DaylightUI 1.8.4's "Daylight UI window" link, Daylight Recipes' swap button (20 px, left of
+-- the link when that shows). The title stops short of the leftmost one shown, measured each time
+-- the window opens (and again once those addons have placed theirs). Nothing of theirs touched.
+local SWAP_ROOM = 26   -- before the window has a size: room for Recipes' button
+local TITLE_GAP = 6
+
+local function BesideClose(f, right)
+	for i = 1, select("#", f:GetChildren()) do
+		local c = select(i, f:GetChildren())
+		if c ~= right and Usable(c) and c:IsShown() and c.GetNumPoints and c:GetNumPoints() > 0 then
+			local point, rel = c:GetPoint(1)
+			if point == "RIGHT" and rel == right then return c end
+		end
+	end
+	return nil
+end
+
+local function FitTitle(f)
+	local title = f.TitleContainer and f.TitleContainer.TitleText
+	if Kind(title) ~= "FontString" or not Usable(f.CloseButton) or InCombatLockdown() then return end
+	local room = Kit.TITLE_RIGHT
+	local fr = f:GetRight()
+	if fr then
+		-- (In screen pixels, each in its own scale: plain numbers, never secret.)
+		local fs = f:GetEffectiveScale()
+		local left, at = nil, f.CloseButton
+		for _ = 1, 6 do
+			at = BesideClose(f, at)
+			if not at then break end
+			local l = at:GetLeft()
+			if l then left = l * at:GetEffectiveScale() end
+		end
+		if left and fs and fs > 0 then
+			room = math.max(room, (fr * fs - left) / fs + TITLE_GAP)
+		end
+	else
+		room = Kit.TITLE_RIGHT + SWAP_ROOM
+	end
+	title:SetPoint("TOPRIGHT", f, "TOPRIGHT", -room, -Kit.TITLE_TOP)
+end
+
+local function FitTitleSoon(f)
+	FitTitle(f)
+	-- (Daylight Recipes places its button a frame after the window opens, and again at 0.3 s.)
+	C_Timer.After(0, function() Guard(FitTitle, f) end)
+	C_Timer.After(0.35, function() Guard(FitTitle, f) end)
+end
 
 local function TabPicked(tab)
 	local s = tab.SelectedTexture
@@ -973,6 +1019,7 @@ local function Pass(f)
 	if Usable(f.BookPage) and f.BookPage:IsShown() then BookUpdate(f.BookPage, f) end
 	for row in pairs(rows) do PaintRow(row) end
 	ns.SideTilesPaintSoon()
+	FitTitleSoon(f)
 end
 
 local function Dress(f)
@@ -983,10 +1030,7 @@ local function Dress(f)
 	done[f] = true
 	B.ShellWindow(Kit, f)
 	Kit.Close(f.CloseButton)
-	local title = f.TitleContainer and f.TitleContainer.TitleText
-	if Kind(title) == "FontString" then
-		title:SetPoint("TOPRIGHT", f, "TOPRIGHT", -(Kit.TITLE_RIGHT + SWAP_ROOM), -Kit.TITLE_TOP)
-	end
+	FitTitle(f)
 	Crafting(f.CraftingPage, f)
 	Book(f.BookPage, f)
 	if Controls() then

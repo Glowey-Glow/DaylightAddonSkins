@@ -310,10 +310,9 @@ local function Bluish(r, g, b)
 	return d >= 0.015 and d <= 0.14 and g >= r - 0.005 and g <= b + 0.005
 end
 
-local BACKGROUND = { 0.078, 0.078, 0.090 }
+-- (DaylightUI's window color: from 1.8.4 the player's Background color pick. StyleChanged relights.)
 local function Background()
-	local Style = _G.DaylightUI and _G.DaylightUI.Style
-	local c = type(Style) == "table" and type(Style.BACKGROUND) == "table" and Style.BACKGROUND or BACKGROUND
+	local c = ns.BackColor()
 	return c[1], c[2], c[3]
 end
 
@@ -324,6 +323,7 @@ local function Gray(r, g, b)
 	if l < 0.07 then return Background() end
 	return l, l, l + 0.01
 end
+local function IsBackDark(r, g, b) return (r + g + b) / 3 < 0.07 end
 
 local function Inks() return ns.Look(KEY, "daylightColors") ~= false end
 
@@ -347,6 +347,7 @@ local lit = setmetatable({}, { __mode = "k" })      -- texture or string -> { k 
 local litBg = setmetatable({}, { __mode = "k" })    -- frame -> { a = its accent ground's alpha, up = lifted }
 local litEdge = setmetatable({}, { __mode = "k" })  -- frame -> its accent edge's alpha
 local grounds = setmetatable({}, { __mode = "k" })  -- frame -> { fill, lift } (textures of ours)
+local darks = setmetatable({}, { __mode = "k" })    -- its pieces put in DaylightUI's window color -> { m = method, a = alpha }
 local roots = setmetatable({}, { __mode = "k" })    -- its windows (their box under DaylightUI's shell)
 local hosts = setmetatable({}, { __mode = "k" })    -- what a walk is queued for: windows and pieces
 
@@ -354,6 +355,14 @@ local function Call(obj, method, ...)
 	busy = true
 	pcall(obj[method], obj, ...)
 	busy = false
+end
+
+-- One of its darks to DaylightUI's: its window dark becomes the window color (kept, to follow the
+-- player's Background color when it changes), the others the same lightness without the blue.
+local function Dark(obj, method, r, g, b, a)
+	local x, y, z = Gray(r, g, b)
+	darks[obj] = IsBackDark(r, g, b) and { m = method, a = a } or nil
+	Call(obj, method, x, y, z, a)
 end
 
 local function Lit(tbl, obj, k, a, o)
@@ -397,9 +406,9 @@ local function OnFill(tex, r, g, b, a)
 	end
 	local was = lit[tex]
 	lit[tex] = nil
+	darks[tex] = nil
 	if Bluish(r, g, b) or Warm(r, g, b) then
-		local x, y, z = Gray(r, g, b)
-		Call(tex, "SetColorTexture", x, y, z, a)
+		Dark(tex, "SetColorTexture", r, g, b, a)
 	elseif IsWarmWash(r, g, b) then
 		Call(tex, "SetColorTexture", 1, 1, 1, a)
 	end
@@ -416,10 +425,14 @@ local function OnTint(tex, r, g, b, a)
 		return
 	end
 	lit[tex] = nil
+	darks[tex] = nil
 	if not Bluish(r, g, b) then return end
-	local x, y, z
-	if (r + g + b) / 3 >= 0.45 and Inks() then x, y, z = InkFor(r, g, b) else x, y, z = Gray(r, g, b) end
-	Call(tex, "SetVertexColor", x, y, z, a)
+	if (r + g + b) / 3 >= 0.45 and Inks() then
+		local x, y, z = InkFor(r, g, b)
+		Call(tex, "SetVertexColor", x, y, z, a)
+	else
+		Dark(tex, "SetVertexColor", r, g, b, a)
+	end
 end
 
 -- A word (a string or a text box).
@@ -493,14 +506,15 @@ local function OnBack(f, r, g, b, a)
 		litBg[f] = { a = a * 0.3, up = false }
 		Ground(f, a * 0.3, false)
 		local x, y, z = Background()
+		darks[f] = { m = "SetBackdropColor", a = a }
 		Call(f, "SetBackdropColor", x, y, z, a)
 		return
 	end
 	litBg[f] = nil
+	darks[f] = nil
 	NoGround(f)
 	if Bluish(r, g, b) or Warm(r, g, b) then
-		local x, y, z = Gray(r, g, b)
-		Call(f, "SetBackdropColor", x, y, z, a)
+		Dark(f, "SetBackdropColor", r, g, b, a)
 	end
 end
 
@@ -538,6 +552,11 @@ local function Relight()
 			local x, y, z = ns.AccentOf(KEY)
 			Call(f, "SetBackdropBorderColor", x, y, z, a)
 		end
+	end
+	-- (DaylightUI's window color, after the player's Background color changed.)
+	local x, y, z = Background()
+	for obj, e in pairs(darks) do
+		if Usable(obj) then Call(obj, e.m, x, y, z, e.a) end
 	end
 end
 local relightQueued = false

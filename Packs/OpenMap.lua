@@ -283,7 +283,7 @@ local function Region(r, view)
 	-- in its place, or the world map's own quest log underneath shows through.
 	if atlas == "questlog-main-background" then
 		done[r] = true
-		r:SetColorTexture(0.05, 0.05, 0.06, 0.97)
+		ns.PaintBack(r, 0.97)
 		r:SetAlpha(1)
 		return
 	end
@@ -898,7 +898,7 @@ local function Grounds(view)
 			for _, r in ipairs({ f:GetRegions() }) do
 				if r:GetObjectType() == "Texture" and r:GetDrawLayer() == "BACKGROUND" and Plain(r) then
 					done[r] = true
-					r:SetColorTexture(0.05, 0.05, 0.06, f == view.hint and 0.85 or 0.96)
+					ns.PaintBack(r, f == view.hint and 0.85 or 0.96)
 				end
 			end
 		end
@@ -1027,7 +1027,7 @@ local function View(view, quiet)
 			if not side.dasGround then
 				side.dasGround = side:CreateTexture(nil, "BACKGROUND", nil, -8)
 				side.dasGround:SetAllPoints(side)
-				side.dasGround:SetColorTexture(0.05, 0.05, 0.06, 0.97)
+				ns.PaintBack(side.dasGround, 0.97)
 			end
 			-- Its tabs refill it, and its list grows as it's filled: dressed in the same frame.
 			for _, b in ipairs(side.tabs or {}) do
