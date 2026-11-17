@@ -96,6 +96,23 @@ function ns.Colors()
 	return c
 end
 
+-- DaylightUI's tooltip background opacity: its own (Tooltip bgAlpha) while "Separate tooltip
+-- background opacity" is on, else the shared window opacity (General windowAlpha), as its Tooltip
+-- module reads it (Style.BackAlpha, since 1.9.1). nil when neither can be read.
+function ns.TipAlpha()
+	local okOwn, own = pcall(API.GetSetting, "Tooltip", "bgAlphaOwn")
+	local scope, path = "Tooltip", "bgAlpha"
+	if okOwn and own == false then scope, path = "general", "windowAlpha" end
+	local ok, alpha = pcall(API.GetSetting, scope, path)
+	return ok and type(alpha) == "number" and alpha or nil
+end
+
+-- Whether a DaylightUI setting change (SettingChanged's scope, path) moves ns.TipAlpha.
+function ns.TipAlphaChanged(scope, path)
+	return (scope == "Tooltip" and (path == "bgAlpha" or path == "bgAlphaOwn"))
+		or (scope == "general" and path == "windowAlpha")
+end
+
 function ns.Enabled(key)
 	local on = skinsOn
 	if on == nil then

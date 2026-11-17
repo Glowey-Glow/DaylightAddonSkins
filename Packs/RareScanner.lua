@@ -243,8 +243,7 @@ end
 -- DaylightUI's tooltip look (as its Tooltip module draws the game's), at the opacity set there.
 local function TipLook()
 	local look = { borderPx = 3, flat = true, noBevel = true }
-	local ok, alpha = pcall(API.GetSetting, "Tooltip", "bgAlpha")
-	if ok and type(alpha) == "number" then look.bgAlpha = alpha end
+	look.bgAlpha = ns.TipAlpha()
 	return look
 end
 
@@ -1413,7 +1412,7 @@ ns.Pack(KEY, nil, function(Kit)
 
 	-- DaylightUI's tooltip opacity changed: the shells made here follow.
 	ns.me.On("SettingChanged", function(scope, path)
-		if scope == "Tooltip" and path == "bgAlpha" and ns.Enabled(KEY) then Reopacity() end
+		if ns.TipAlphaChanged(scope, path) and ns.Enabled(KEY) then Reopacity() end
 	end)
 
 	-- The addon compartment's tooltip, made on its first hover. (The compartment looks its hover

@@ -9,8 +9,9 @@
 -- scroll bars (it repaints them itself), list rows, talent trees, maps, pins and every icon.
 -- Its buff reminder, loot feed, info bar and minimap collector bar keep their own card art.
 --
--- "Hand over to DaylightUI" (off until turned on on its page): its own copies of what DaylightUI
--- already does are switched off through OneForAll.QoL.Set, while DaylightUI's copy is on.
+-- Hand-over: its own copies of what DaylightUI already does go to DaylightUI by default (asked
+-- once, on first load), switched off through OneForAll.QoL.Set while DaylightUI's copy is on, and
+-- given back from its page.
 local _, ns = ...
 if not ns.ok then return end
 local L = ns.L
@@ -264,6 +265,13 @@ ns.Watch(KEY, "OneForAllFrame", function(frame)
 	Watched(frame)
 end)
 
+-- The "target it" button of its nearby alerts (secure: its plate only recolored, never moved).
+ns.Watch(KEY, "OneForAllAlertTargetButton", function(button)
+	if not ns.Once(button) then return end
+	PlatesIn(button)
+	button:HookScript("OnShow", PlatesIn)
+end)
+
 -- The quest share popup is the game's plain template window (only its title bar tinted).
 ns.Watch(KEY, "OneForAllQuestSharePopup", function(frame, Kit)
 	if not ns.Once(frame) then return end
@@ -290,13 +298,22 @@ local function C(key, label, daylight, ours, extra)
 end
 local RELOAD = { reload = true }
 
--- (From an audit of OneForAll 6.2.5 against every DaylightUI module. Left out: its NPC tooltip
+-- (From an audit of OneForAll 6.2.10 against every DaylightUI module. Left out: its NPC tooltip
 -- quests, which turn themselves off while Questie is loaded; its chat font size, which has no
 -- off to give back.)
 ns.Handover(KEY, {
 	ready = function() return type(_G.OneForAllDB) == "table" end,
 	get = function(key) return QoL.Get(key) end,
-	set = function(key, value) QoL.Set(key, value) end,
+	set = function(key, value)
+		-- (Since 6.2.10 switching its sparkles off resets the game's outline settings and asks for a
+		-- restart, while DaylightUI's own sparkles turn them straight back on: handed over quietly.)
+		if key == "questSparkles" and value == false and type(_G.OneForAllDB) == "table" then
+			_G.OneForAllDB.qol = _G.OneForAllDB.qol or {}
+			_G.OneForAllDB.qol.questSparkles = false
+			return
+		end
+		QoL.Set(key, value)
+	end,
 	list = {
 		-- Chat: DaylightUI_Chat draws its own panel over the game's chat windows.
 		C("chatHide", L["Chat hide button (the speech bubble on the chat)"],
@@ -354,6 +371,9 @@ ns.Handover(KEY, {
 		-- Tooltip, nameplates, info
 		C("unitTarget", L["\"Target:\" line in unit tooltips"], ns.In(L["the target line"], "Tooltip"),
 			function() return has("Tooltip", "showTarget") end),
+		-- (6.2.7: it moves the tooltip to the mouse every frame, over DaylightUI's own anchor.)
+		C("tipMouse", L["Tooltip at the mouse"], ns.In(L["the tooltip's anchor (the game's spot or the mouse)"], "Tooltip"),
+			moduleOn("Tooltip")),
 		C("questMarks", L["Quest marks on nameplates"], ns.In(L["quest marks on its nameplates"], "Nameplates"),
 			function() return has("Nameplates", "quest") end),
 		C("infoBar", L["OneForAll's info bar"], ns.In(L["the data texts"], "Info Panel"),

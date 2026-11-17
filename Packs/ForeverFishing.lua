@@ -1,10 +1,15 @@
--- Forever Fishing: the shells of its windows (Journal, Settings, Session Goals, the report
--- window, the catch recap) and its text in the player's font.
+-- Forever Fishing: the shells of its windows (Journal, Settings, Session Goals, the Session Tracker,
+-- the trace / report windows, the bug report, the camera developer window, the Scan Diagnostics
+-- card, the catch recap) and its text in the player's font. The session windows' title in the title
+-- ink, their header mark and the Tracker's picked heading in the accent (the other heading in the
+-- label ink), the Tracker's options button an icon button.
 -- Left alone: the Journal's parchment page and everything on it (dark ink on paper, rebuilt on
 -- every render), the inside of the Settings window (every control is its own drawing with its own
--- state colors), the fishing bar, tool bar, flyouts, cast bar and key capture (secure / HUD).
--- The Journal, Settings and Session Goals roots are protected frames: they are dressed out of
--- combat only, and never moved, sized, shown or hidden from here.
+-- state colors), the Tracker's cards and its options menu (its own drawing), the report windows'
+-- own buttons, the Scan Diagnostics step colors (done, active, waiting), the fishing bar, tool bar,
+-- flyouts, cast bar and key capture (secure / HUD).
+-- The Journal, Settings, Session Goals and Session Tracker roots are protected frames: they are
+-- dressed out of combat only, and never moved, sized, shown or hidden from here.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -90,6 +95,63 @@ local function Journal(panel, Kit)
 	end)
 end
 
+local function SetInk(fs, name)
+	local c = ns.Colors()[name]
+	if c then fs:SetTextColor(c[1], c[2], c[3]) end
+end
+
+-- A session window's title (set gold once, when it's made) and the short bar beside it.
+local function SessionTitle(panel)
+	local title = panel.title
+	if not ns.Usable(title) or title:GetObjectType() ~= "FontString" then return end
+	SetInk(title, "VALUE")
+	local header = title:GetParent()
+	if not ns.Usable(header) then return end
+	for _, region in ipairs({ header:GetRegions() }) do
+		if ns.Usable(region) and region:GetObjectType() == "Texture" and region:GetDrawLayer() == "ARTWORK"
+			and region:GetWidth() <= 3 then
+			ns.FillAccent(region, 1, nil, KEY)
+		end
+	end
+end
+
+-- The Tracker's two headings (Stats, Catches): the addon colors the picked one gold and the other
+-- tan, lighter under the mouse, on every pick, hover and layout, and shows a bar by the picked one.
+local painting = false
+local function InkHeading(button)
+	painting = true
+	if button.accent:IsShown() then
+		button.label:SetTextColor(ns.AccentOf(KEY))
+	else
+		SetInk(button.label, button:IsMouseOver() and "TEXT" or "LABEL")
+	end
+	painting = false
+end
+
+local function Heading(button)
+	if not ns.Usable(button) or not ns.Usable(button.label) or not ns.Usable(button.accent) then return end
+	if not ns.Once(button) then return end
+	ns.FillAccent(button.accent, 1, nil, KEY)
+	hooksecurefunc(button.label, "SetTextColor", function()
+		if not painting then InkHeading(button) end
+	end)
+	InkHeading(button)
+end
+
+-- The Tracker's options button: the game's red close plate with its own lines drawn on a strip of
+-- that plate. The plate and strip off, the lines an icon in DaylightUI's control box.
+local function OptionsButton(Kit, button)
+	if not ns.Usable(button) or not ns.Usable(button.icon) or not ns.Once(button) then return end
+	for _, region in ipairs({ button:GetRegions() }) do
+		if ns.Usable(region) and region ~= button.icon and region:GetObjectType() == "Texture"
+			and region:GetDrawLayer() == "ARTWORK" then
+			region:SetAlpha(0)
+		end
+	end
+	ns.Guard(Kit.IconButton, button, 4)
+end
+
+-- Session Goals and the Session Tracker (one maker for both).
 local function Goals(panel, Kit)
 	ns.OutOfCombat(function()
 		if not ns.Once(panel) then return end
@@ -97,6 +159,12 @@ local function Goals(panel, Kit)
 		Fade(panel.border)
 		ns.Shell(panel, { window = true }, KEY)
 		Close(Kit, panel.close)
+		SessionTitle(panel)
+		if ns.Controls(KEY) then
+			Heading(panel.statsHeading)
+			Heading(panel.catchesHeading)
+			OptionsButton(Kit, panel.settings)
+		end
 		ns.DressOnShow(panel, { checks = false }, nil, KEY)
 	end)
 end
@@ -133,6 +201,21 @@ local function Report(panel, Kit)
 	ns.DressOnShow(panel, { checks = false }, function() Fade(panel.topEdge) end, KEY)
 end
 
+-- The Scan Diagnostics card: a soft "bubble" drawn in nine pieces three times over (glow and fill
+-- under, edge over). It takes no mouse itself (clicks pass through to the world) and changes height
+-- when the run is done.
+local function Diagnostics(panel)
+	if not ns.Once(panel) then return end
+	for _, region in ipairs({ panel:GetRegions() }) do
+		if ns.Usable(region) and region:GetObjectType() == "Texture" then
+			local layer = region:GetDrawLayer()
+			if layer == "BACKGROUND" or layer == "BORDER" then region:SetAlpha(0) end
+		end
+	end
+	ns.Shell(panel, nil, KEY)
+	ns.DressOnShow(panel, { checks = false }, nil, KEY)
+end
+
 local function Recap(panel)
 	if not ns.Once(panel) then return end
 	KillGround(panel)
@@ -142,8 +225,17 @@ end
 
 ns.Watch(KEY, "ForeverFishingJournal", Journal)
 ns.Watch(KEY, "ForeverFishingSessionGoals", Goals)
+ns.Watch(KEY, "ForeverFishingSessionTracker", Goals)
 ns.Watch(KEY, "ForeverFishingSettings", Settings)
 ns.Watch(KEY, "ForeverFishingTracePanel", Report)
+ns.Watch(KEY, "ForeverFishingBugReport", Report)
+ns.Watch(KEY, "ForeverFishingScanDeveloper", Report)
+ns.Watch(KEY, "ForeverFishingScanDiagnostics", Diagnostics)
 ns.Watch(KEY, function() return ns.Usable(FF.catchRecapPanel) and FF.catchRecapPanel or nil end, Recap)
+
+-- The fast path: the calls that make (and open) these windows dress them before they're drawn.
+for _, name in ipairs({ "ShowFishingBugReport", "ShowTraceWindow", "EnsureScanDiagnosticsUI", "ShowCameraDeveloper" }) do
+	if type(FF[name]) == "function" then hooksecurefunc(FF, name, ns.WatchNow) end
+end
 
 ns.Pack("ForeverFishing")

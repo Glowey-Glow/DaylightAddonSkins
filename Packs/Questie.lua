@@ -708,8 +708,7 @@ local API = ns.API
 
 local function TipLook()
 	local look = { borderPx = 3, flat = true, noBevel = true }
-	local ok, alpha = pcall(API.GetSetting, "Tooltip", "bgAlpha")
-	if ok and type(alpha) == "number" then look.bgAlpha = alpha end
+	look.bgAlpha = ns.TipAlpha()
 	return look
 end
 
@@ -754,7 +753,7 @@ end
 
 -- DaylightUI's tooltip opacity changed: the shells made here follow.
 ns.me.On("SettingChanged", function(scope, path)
-	if scope ~= "Tooltip" or path ~= "bgAlpha" or not ns.Enabled(KEY) or next(ownTips) == nil then return end
+	if not ns.TipAlphaChanged(scope, path) or not ns.Enabled(KEY) or next(ownTips) == nil then return end
 	local look = TipLook()
 	for tip in pairs(ownTips) do
 		if ns.Usable(tip) then ns.Guard(API.Skin, tip, look) end

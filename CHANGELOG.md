@@ -1,5 +1,22 @@
 # DaylightUI Addon Skins
 
+## 1.14.0
+- Checked against today's addon updates, including the addons you may not have installed.
+- Forever Leveling BiS 1.3.2: its windows have the DaylightUI look again (1.3.2 changed its window color, so they weren't found). My gear on DaylightUI's character window and the new Wish list dock are dressed too.
+- Polestar 0.4.0: its new skins (Vellum, Beacon, Aurora and the rest) are left as Polestar draws them; only its house look takes the DaylightUI look. The new settings search list is dressed, and the house look's new edge lines no longer show around the shell.
+- Polestar: its sell junk, repair, faster looting, single-option gossip, hide errors and open-the-flight-map switches join the DaylightUI overlaps (asked once, DaylightUI picked; switch any back on its page).
+- OneForAll 6.2.10: its new "Tooltip at the mouse" joins the overlaps (DaylightUI's tooltip has its own mouse anchor). Handing over its quest loot sparkles no longer asks you to restart the game. Its nearby-alert target button is dressed.
+- Shortest Path Forever 1.41: the Journey stops, Farming tour and Forever profile windows, the right-click menu, the nearby services list, the tracker's scroll bars and the "Journey" button under the minimap are dressed. ForeverCore's quest list joins the overlaps. Its column background is set clear while docked (given back when undocked). Fixed a check for the retired Forever Leaderboards window that kept running all session.
+- Trueshot Lodge: the 3D model's zoom, turn and reset buttons are dressed, and stat values keep your text look when the list refills.
+- Forever Fishing: the Session Tracker, bug report window and scan diagnostics card are dressed.
+- Dungeon Journal 2.0.9: the "Show all dungeons anyway" button is dressed, and the summon warning on Gahz'rilla's quest stays red.
+- LFG Forever 2.1.0: its tabs keep their wider room around the names, and opening it with its new Search key dresses it at once.
+- Does It Die: its tabs, sliders, dropdown list and titles are dressed.
+- Dialogue UI: its settings dropdown is dark like the rest of the window, and red gossip options are readable.
+- Journey Guides: your custom link colors now reach every step's text, and the Hardcore progress bar stays red. Its guide-quest auto accept and turn in joins the overlaps.
+- Spoken: the Places panel beside the world map and its side tab, the Small Window menu, and the Listen, Contribute and book Play buttons are dressed.
+- DaylightUI 1.9.1: tooltips dressed here for Questie and RareScanner follow its new "Separate tooltip background opacity" switch.
+
 ## 1.13.0
 - New: tells you when a newer version is out. Your copy and those of players in your guild and group trade version numbers in the background, and one chat line says when there is a newer one to get through CurseForge or WowUp (once a session). Turn it off with "Tell me when a newer version is out" on the plugin's first options page; then nothing is sent either.
 - New layout for the switches: the All windows page now has two grids of switches, Addons and Blizzard, sorted A to Z. Each grid has Turn all on, Turn all off and Reload interface buttons, and fits as many columns as the window allows without cutting off a name.

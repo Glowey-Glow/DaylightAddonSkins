@@ -104,7 +104,8 @@ local function Kind(f)
 	local w, h = f:GetSize()
 	if not w or w < 80 or not h or h < 40 then return nil end   -- tags and chips, not windows
 	local r, g, b = f:GetBackdropColor()
-	if Near(r, g, b, 0.06, 0.06, 0.08) then return "window" end
+	-- (Its window color since 1.3.2; the older one before.)
+	if Near(r, g, b, 0.059, 0.067, 0.082) or Near(r, g, b, 0.06, 0.06, 0.08) then return "window" end
 	if Near(r, g, b, 0.05, 0.05, 0.05) then return "list" end
 	return nil
 end
@@ -120,6 +121,13 @@ local function FadeBand(f)
 			if point == "TOPLEFT" and rel == f and relPoint == "TOPLEFT" and x == 1 and y == -1
 				and h and abs(h - 30) < 1 then
 				region:SetAlpha(0)
+				-- (Since 1.3.2 a faint rule runs under the band: it goes too.)
+				for _, rule in ipairs({ f:GetRegions() }) do
+					if ns.Usable(rule) and rule:GetObjectType() == "Texture" and rule:GetNumPoints() >= 1
+						and select(2, rule:GetPoint(1)) == region then
+						rule:SetAlpha(0)
+					end
+				end
 			end
 		end
 	end
@@ -235,9 +243,9 @@ local function Main(frame)
 	if frame:IsShown() and not ticker then ticker = C_Timer.NewTicker(0.5, Guarded(Look)) end
 end
 
--- My gear beside the Character frame: on a holder of its own in the Character frame.
-local function Sheet()
-	local cf = _G.CharacterFrame
+-- My gear beside the character window: on a holder of its own in the window in sight, the game's
+-- Character frame or (since 1.3.2) DaylightUI's, which parks the game's frame where it never shows.
+local function SheetOn(cf)
 	if not ns.Usable(cf) or not cf.HookScript then return end
 	local function Clicked()
 		if On() then ns.Guard(Scan, cf, 2) end
@@ -254,16 +262,25 @@ local function Sheet()
 			end
 		end
 	end
-	-- The panel is made and shown by its own hook on the Character frame's showing, which runs
-	-- before this one (it's put on when it loads): looked for right away, so it's dressed before
-	-- it's drawn, and again a frame and half a second on, in case it comes up late.
-	cf:HookScript("OnShow", function()
+	-- The panel is made and shown by its own hook on the window's showing, which runs before
+	-- this one (it's put on when it loads): looked for right away, so it's dressed before it's
+	-- drawn, and again a frame and half a second on, in case it comes up late.
+	local function Shown()
 		ns.Guard(Look)
 		C_Timer.After(0, Guarded(Look))
 		C_Timer.After(0.5, Guarded(Look))
-	end)
+	end
+	cf:HookScript("OnShow", Shown)
+	-- (Its holder moves over when DaylightUI's window is resized or its pages change.)
+	cf:HookScript("OnSizeChanged", function() C_Timer.After(0, Guarded(Look)) end)
 	if cf:IsShown() then C_Timer.After(0, Guarded(Look)) end
 end
+
+local function Sheet()
+	SheetOn(_G.CharacterFrame)
+end
+-- (DaylightUI's character window is made as DaylightUI starts, at login.)
+ns.Watch(KEY, "DaylightUICharacter", SheetOn)
 
 -- Its main window and What's new are made on their first opening, by calls it keeps to itself.
 -- What reaches them from outside is hooked: /bis (and its key binding, which runs /bis), the
@@ -279,6 +296,10 @@ ns.Watch(KEY, "ForeverLevelingBiSWhatsNew", function(frame)
 	Scan(frame, 0)
 	-- Its buttons (Open, and each change's "Try it now") may open the main window.
 	HookClicks(frame, 3, Opened)
+end)
+-- The Wish list dock on the main window (1.3.2): by name, since folded it's too short for the scan.
+ns.Watch(KEY, "ForeverLevelingBiSWishDock", function(frame)
+	if On() then Dress(frame, "window") end
 end)
 -- (The button is made at login.)
 ns.Watch(KEY, "ForeverLevelingBiSMinimapButton", function(button)

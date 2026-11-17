@@ -316,3 +316,10 @@ L["A newer version is out (%s): update through CurseForge or WowUp."] = "Выш�
 L["Tell me when a newer version is out"] = "Сообщать о новой версии"
 L["Updates"] = "Обновления"
 L["Your copy tells others in your guild and group which version it is, and you hear about a newer one (once a session). Off: nothing is sent or heard."] = "Ваша копия сообщает другим в гильдии и группе свою версию, а вы узнаёте о более новой (раз за сеанс). Выкл.: ничего не отправляется и не принимается."
+
+-- 1.14.0: OneForAll tooltip, Journey quests, Shortest Path Forever quest list
+L["Tooltip at the mouse"] = "Подсказка у курсора"
+L["the tooltip's anchor (the game's spot or the mouse)"] = "привязка подсказки (место игры или курсор)"
+L["Accept and turn in the guide's quests"] = "Принимать и сдавать задания гайда"
+L["Forever quest list"] = "Список заданий Forever"
+L["your quest list"] = "ваш список заданий"

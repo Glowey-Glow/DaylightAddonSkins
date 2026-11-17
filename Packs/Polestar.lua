@@ -1,8 +1,10 @@
 -- Polestar: it paints everything from one theme (Polestar.Theme) and repaints on Theme.Refresh(),
 -- so the theme is fed rather than its frames touched: DaylightUI's shell as its window paint, the
 -- player's font, accent and text colors in its palette. Only its house look ("polestar") is
--- changed; pick another look in Polestar's own options and it is left as Polestar draws it.
--- Nothing is written to Polestar's saved settings.
+-- changed; pick another look or skin in Polestar's own options (its added skins too, which are
+-- built on the house look) and it is left as Polestar draws it.
+-- Nothing is written to Polestar's saved settings but the hand-over at the end (its QoL switches
+-- DaylightUI also has, asked once, given back from its page).
 -- Through the palette: DaylightUI's window ground for Polestar's navy (bg, scrim, shade: the
 -- header fades of its nav alerts, rare toasts, Guide End, Route Choice, Welcome and What's New,
 -- the zone-art fades, the world map's info bar), picked rows in the accent (selected).
@@ -16,22 +18,30 @@
 local _, ns = ...
 if not ns.ok then return end
 
-ns.Target("Polestar", "Polestar", { window = true, text = true, colors = true, font = "daylight" })
+local L = ns.L
+
+ns.Target("Polestar", "Polestar", { window = true, text = true, colors = true, font = "daylight",
+	extraTab = "DaylightUI", extra = function() return { ns.HandoverGroup("Polestar") } end })
 
 local P = _G.Polestar
 local T = type(P) == "table" and P.Theme
 if type(T) ~= "table" or type(T.Palette) ~= "function" or type(T.Refresh) ~= "function"
-	or type(T.SkinKey) ~= "function" or type(T.SKIN_PAINT) ~= "table"
+	or type(T.SkinKey) ~= "function" or type(T.SkinId) ~= "function" or type(T.SKIN_PAINT) ~= "table"
 	or type(T.Paint) ~= "table" or type(T.Paint.house) ~= "table" or type(T.Paint.house.window) ~= "function" then
 	return
 end
 
 local KEY = "Polestar"
 
+-- Its house look itself, not a skin built on it (since 0.4.0 its added skins, Vellum, Beacon and
+-- the rest, all extend the house look, so SkinKey says "polestar" for them too).
+local function House()
+	local ok, id = pcall(T.SkinId)
+	return ok and id == "polestar"
+end
+
 local function On()
-	if not ns.Enabled(KEY) then return false end
-	local ok, key = pcall(T.SkinKey)
-	return ok and key == "polestar"
+	return ns.Enabled(KEY) and House()
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -113,7 +123,7 @@ T.Palette = function()
 	local p = origPalette()
 	if p ~= lastPalette then
 		lastPalette = p
-		if type(p) == "table" and p.skin == "polestar" and ns.Enabled(KEY) then pcall(Overlay, p) end
+		if type(p) == "table" and p.skinId == "polestar" and ns.Enabled(KEY) then pcall(Overlay, p) end
 	end
 	return p
 end
@@ -149,14 +159,33 @@ local BARE = { noBorder = true, noBackground = true, noBevel = true }
 local function HideHouse(f)
 	local d = f.psSkin
 	if type(d) == "table" and d.bg then d.bg:Hide() end
+	-- (Since 0.4.0 the house look also draws a top light and contact lines round a window.)
+	if type(d) == "table" and type(d.edge) == "table" then
+		for i = 1, #d.edge do
+			if ns.Usable(d.edge[i]) then d.edge[i]:Hide() end
+		end
+	end
 	if type(T.Paint.hideBorder) == "function" then pcall(T.Paint.hideBorder, f) end
 	if f.psShadow then f.psShadow:Hide() end
 end
 
 local house = T.Paint.house.window
 
+-- A skin built on the house look (Theme.SkinKey "polestar", another skin id): Polestar's own
+-- paint, and our shell off where it was on.
+local function Unshell(f)
+	if shelled[f] == "on" then
+		shelled[f] = "bare"
+		ns.Shell(f, BARE, KEY)
+	end
+end
+
 local function Window(f)
 	if not ns.Enabled(KEY) then return house(f) end
+	if not House() then
+		Unshell(f)
+		return house(f)
+	end
 	-- The transparent guide window: no ground at all.
 	if f.psBare then
 		house(f)
@@ -189,6 +218,8 @@ local housePanel = T.Paint.house.panel
 local POPUPS = { PolestarMenu = true, PolestarLootNeeds = true }
 
 local function Popup(f)
+	-- (Its menus and dropdown lists, wherever they sit: the settings window's search results too.)
+	if f.psMenu then return true end
 	local name = f.GetName and f:GetName()
 	if name and POPUPS[name] then return true end
 	local parent = f.GetParent and f:GetParent()
@@ -198,7 +229,12 @@ end
 local POPUP_SHELL = { window = true, bgAlpha = 0.98 }
 
 local function Panel(f)
-	if not ns.Enabled(KEY) or not Popup(f) then return housePanel(f) end
+	if not ns.Enabled(KEY) then return housePanel(f) end
+	if not House() then
+		Unshell(f)
+		return housePanel(f)
+	end
+	if not Popup(f) then return housePanel(f) end
 	if f.psBare then
 		housePanel(f)
 		if shelled[f] == "on" then
@@ -251,8 +287,7 @@ end
 -- Another Polestar look picked: take the shell back off the windows it was on.
 if type(T.OnChanged) == "function" then
 	T.OnChanged(function()
-		local ok, key = pcall(T.SkinKey)
-		if ok and key == "polestar" then return end
+		if House() then return end
 		for f, state in pairs(shelled) do
 			if state == "on" and ns.Usable(f) then
 				shelled[f] = "bare"
@@ -406,3 +441,40 @@ ns.me.On("SettingChanged", function(scope, path)
 	if scope ~= "DaylightAddonSkins" or type(path) ~= "string" then return end
 	if path == KEY or path == "followDaylight" or string.sub(path, 1, 14) == "look.Polestar." then Refresh() end
 end)
+
+-- ---------------------------------------------------------------------------------------------
+-- Hand-over: its quality-of-life switches DaylightUI also has (Polestar 0.4.0.1, QoL/QoL.lua).
+-- Left out: its guide-only work (auto accept and turn in of the guide's own quests, the step's
+-- gossip, target list, route vendors, Restock), which DaylightUI has no copy of. Its settings
+-- are per Polestar profile, so a handed-over value follows the profile in use.
+-- ---------------------------------------------------------------------------------------------
+
+if type(P.Get) == "function" and type(P.Set) == "function" then
+	local has = ns.DaylightHas
+	local PATH = {
+		sellJunk = "qol.sellJunk", autoRepair = "qol.autoRepair", fastLoot = "qol.fastLoot",
+		skipGossip = "qol.skipGossip", hideErrors = "qol.hideErrors", flightAutoOpen = "qol.flightAutoOpen",
+	}
+	ns.Handover(KEY, {
+		ready = function() return type(_G.PolestarDB) == "table" end,
+		get = function(key) return P.Get(PATH[key]) end,
+		set = function(key, value) P.Set(PATH[key], value) end,
+		list = {
+			{ key = "sellJunk", label = L["Sell junk at vendors"], daylight = ns.In(L["sell junk"], "Bags"),
+			  ours = function() return has("Bags", "sellJunk") end },
+			{ key = "autoRepair", label = L["Repair at vendors"], daylight = ns.In(L["auto repair"], "Bags"),
+			  ours = function() return has("Bags", "autoRepair") end },
+			{ key = "fastLoot", label = L["Faster looting"], daylight = ns.In(L["fast loot"], "Quality of Life"),
+			  ours = function() return has("QoL", "fastLoot") end },
+			{ key = "skipGossip", label = L["Pick an NPC's only gossip option"],
+			  daylight = ns.In(L["skip gossip"], "Quality of Life"),
+			  ours = function() return has("QoL", "skipGossip") end },
+			{ key = "hideErrors", label = L["Hide error messages"],
+			  daylight = ns.In(L["quiet errors and its own error text"], "Quality of Life"),
+			  ours = function() return has("QoL", "quietErrors") or has("QoL", "errorText") end },
+			{ key = "flightAutoOpen", label = L["Open the flight map at once"],
+			  daylight = ns.In(L["its NPC window and skip-gossip"], "Quality of Life"),
+			  ours = function() return has("NPC", "enabled") or has("QoL", "skipGossip") end },
+		},
+	})
+end

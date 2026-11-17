@@ -278,6 +278,9 @@ local function FitTabs(fp)
 		if Kind(label) == "FontString" and tab.UpdateTabWidth then
 			label:SetWidth(0)
 			pcall(tab.UpdateTabWidth, tab)
+			-- (Since 2.1.0 it gives each label 13 px a side, more than the game's 5: kept.)
+			local need = (label:GetStringWidth() or 0) + 26
+			if (tab:GetWidth() or 0) < need and tab.SetTabWidth then pcall(tab.SetTabWidth, tab, need) end
 		end
 	end
 	if tabs.Layout then pcall(tabs.Layout, tabs) elseif tabs.MarkDirty then pcall(tabs.MarkDirty, tabs) end
@@ -357,6 +360,9 @@ ns.Pack(KEY, "LFG Forever", function()
 	end
 	local mini = _G.LFGForeverMinimapButton
 	if Usable(mini) then mini:HookScript("OnClick", Now) end
+	-- Its Search key (2.1.0, a key binding that clicks this button) opens the window too.
+	local key = _G.LFGForeverSearchKeyButton
+	if Usable(key) and key.HookScript then key:HookScript("OnClick", Now) end
 	ns.Watch(KEY, function()
 		local f = _G.LFGForeverFrame
 		return Usable(f) and Usable(f.Content) and Usable(f.Content.FilterPanel) and f or nil

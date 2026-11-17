@@ -324,10 +324,17 @@ end
 
 -- A row of the Stable tab's and the pet profile's facts: its gold hover a white wash; its label
 -- (put back in the game's gold each time the row is filled) in DaylightUI's label ink.
+-- Its value is set back to the game's font on every fill (then shrunk to fit): the player's text
+-- look goes back on first, so TrueshotLodge shrinks our face.
+local function ValueFont(fs)
+	if ns.Enabled(KEY) and not ns.PlainText(KEY) then ns.FollowFont(fs, KEY) end
+end
+
 local function StatRow(row)
 	if not rowDone[row] then
 		rowDone[row] = true
 		WashHighlight(row, row:GetRegions())
+		if Usable(row.Value) then hooksecurefunc(row.Value, "SetFontObject", ValueFont) end
 	end
 	Kit.InkGameText(row)
 end
@@ -469,10 +476,27 @@ end
 
 -- The 3D model's box (the Looks tab, the pet profile): its bronze edge and dark ground off, a
 -- DaylightUI inset instead. The model stays.
+-- The model's zoom/turn/reset buttons (shown while the mouse is over the box): the game's brown
+-- squares off, each a DaylightUI icon button with its glow as a white hover wash. Skipped by the
+-- walk: TrueshotLodge shows and hides them on every hover, which would queue a full pass each time.
+local function ModelControls(controls)
+	skip[controls] = true
+	if not ns.Controls(KEY) then return end
+	for i = 1, controls:GetNumChildren() do
+		local b = select(i, controls:GetChildren())
+		if Usable(b) and IsTexture(b.square) and IsTexture(b.icon) then
+			b.square:SetAlpha(0) -- (TrueshotLodge only swaps its tex coords on press: the alpha holds)
+			WashHighlight(b, b:GetRegions())
+			ns.Guard(Kit.IconButton, b, 1)
+		end
+	end
+end
+
 local function ModelBox(box)
 	if panels[box] then return end
 	panels[box] = true
 	ns.Guard(Kit.Inset, box)
+	if Usable(box.controls) then ModelControls(box.controls) end
 end
 
 -- The Learnable By row: its line (the inset border's bronze top edge) a faint hairline.

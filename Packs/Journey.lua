@@ -15,7 +15,11 @@
 --   every string: the player's font, size, outline and shadow, and DaylightUI's text colors
 --   the colors of quests, NPCs, items, places, flights and levels in the step text (optional)
 -- Journey's sliders and its header arrows and gear are left as it draws them.
--- Nothing is written to Journey's saved settings, and none of its files are touched.
+-- The hardcore progress bar keeps Journey's red. The link colors also reach what Journey copied
+-- out as it loaded ("do" and "start" steps, and the items, places, flights and red words of the
+-- text steps).
+-- Nothing is written to Journey's saved settings but the one conflict below (accepting and turning
+-- in the guide's quests), and none of its files are touched.
 local _, ns = ...
 if not ns.ok then return end
 local L = ns.L
@@ -33,7 +37,7 @@ end
 
 -- setting = { label, Journey's color names it stands for, its default }
 local LINKS = {
-	{ "linkQuest", L["Quests to do"], { "QUEST", "QUEST_DO" }, Hex("0084EB") },
+	{ "linkQuest", L["Quests to do"], { "QUEST", "QUEST_DO", "QUEST_STARTWORK" }, Hex("0084EB") },
 	{ "linkAccept", L["Quests to accept"], { "QUEST_ACCEPT" }, Hex("FFFF00") },
 	{ "linkTurnin", L["Quests to turn in"], { "QUEST_TURNIN" }, Hex("FFA500") },
 	{ "linkFriendly", L["Friendly NPCs"], { "NPC_FRIENDLY" }, Hex("9DFF9D") },
@@ -110,11 +114,35 @@ local function Extra(at, following, hint)
 			  desc = L["Off: the HUD arrow's distance stays gold."], disabled = off },
 		} },
 		{ label = L["Link colors"], items = linkItems },
+		ns.HandoverGroup(KEY),
 	}
 end
 
 ns.Target(KEY, "Journey Guides", { window = true, controls = true, text = true, shadow = true, colors = true,
 	font = "daylight", defaults = DEFAULTS, extra = Extra, extraTab = L["Guide"] })
+
+-- ---------------------------------------------------------------------------------------------
+-- Conflicts (Core.lua): what it does that DaylightUI already does. Its account-wide settings
+-- (Journey_Account), read each time they're used. One switch accepts and turns in the guide's own
+-- quests: handed over only while DaylightUI does both. Its screen arrow (the way to the step) has
+-- a different purpose from DaylightUI's and isn't offered.
+-- ---------------------------------------------------------------------------------------------
+
+ns.Handover(KEY, {
+	ready = function() return type(_G.Journey_Account) == "table" end,
+	-- (It reads a setting it never saved as on.)
+	get = function(key)
+		local v = _G.Journey_Account[key]
+		if v == nil then return true end
+		return v
+	end,
+	set = function(key, value) _G.Journey_Account[key] = value end,
+	list = {
+		{ key = "autoquests", label = L["Accept and turn in the guide's quests"],
+		  daylight = ns.In(string.format(L["%s, %s"], L["auto accept"], L["auto turn in"]), "Quality of Life"),
+		  ours = function() return ns.DaylightHas("QoL", "questAccept") and ns.DaylightHas("QoL", "questTurnIn") end },
+	},
+})
 
 -- ---------------------------------------------------------------------------------------------
 -- Journey's environment
@@ -364,12 +392,20 @@ local function PaintProgress()
 	for tex, j in pairs(bars) do
 		busyBar = true
 		local mode = On() and Look("progress") or "journey"
+		-- (Red in hardcore mode, a warning: kept whatever the color picked.)
+		local hardcore = j[1] == 1 and j[2] == 0 and j[3] == 0
 		if mode == "journey" then
 			tex:SetColorTexture(j[1], j[2], j[3])
 			tex:SetAlpha(0.5)
 		else
 			local r, g, b
-			if mode == "own" then r, g, b = RGB(Look("progressColor")) else r, g, b = Accent() end
+			if hardcore then
+				r, g, b = 1, 0, 0
+			elseif mode == "own" then
+				r, g, b = RGB(Look("progressColor"))
+			else
+				r, g, b = Accent()
+			end
 			tex:SetColorTexture(r, g, b)
 			tex:SetAlpha(j.complete and 0.9 or 0.25)
 		end
@@ -545,6 +581,72 @@ local function TakeOriginals()
 	original.MODE_HIGHLIGHT = Color.MODE_HIGHLIGHT
 end
 
+-- A kind of step, found the way Journey finds it (by the step's key), or nil.
+local function TaskType(kind)
+	local get = rawget(env, "GetTaskType")
+	if type(get) ~= "function" then return nil end
+	local ok, t = pcall(get, { [kind] = true })
+	if ok and type(t) == "table" and t.type == kind then return t end
+end
+
+-- Some colors were copied out of Color as Journey loaded, so a change there never reaches them:
+-- "do" and "start" steps keep theirs on the step type (set again here), and the text steps'
+-- items, objects, spells, places, flights and red words are written in the loaded hexes (each
+-- mapped to the player's pick after they render, an NPC's link left to its own color).
+local TASK_COLORS = { complete = "QUEST_DO", startwork = "QUEST_STARTWORK" }
+local baked = {}   -- Journey's loaded hex (upper case) -> the setting it stands for
+
+local function Baked()
+	baked = {}
+	local function add(name, setting)
+		local hex = original[name]
+		if type(hex) == "string" then baked[hex:upper()] = setting end
+	end
+	add("ITEM", "linkObject")
+	add("AREA", "linkPlace")
+	add("TAXI", "linkTravel")
+	add("RED_TEXT", "linkWarn")
+end
+
+local function LinkDefault(setting)
+	for _, l in ipairs(LINKS) do
+		if l[1] == setting then return l[4] end
+	end
+end
+
+local function Remark(fs)
+	if not ns.Usable(fs) or not fs.GetText then return end
+	local text = fs:GetText()
+	if type(text) ~= "string" or not text:find("|[cC]") then return end
+	local changed = false
+	local out = text:gsub("|[cC](%x%x%x%x%x%x%x%x)()", function(hex, at)
+		local setting = baked[hex:upper()]
+		if not setting or text:sub(at, at + 5) == "|Hnpc:" then return nil end
+		changed = true
+		return "|c" .. HexOf(RGB(Look(setting), LinkDefault(setting)))
+	end)
+	if changed then fs:SetText(out) end
+end
+
+local textHooked = false
+local function HookText()
+	if textHooked then return end
+	local t = TaskType("text")
+	if not t or type(t.RenderFunc) ~= "function" then return end
+	textHooked = true
+	hooksecurefunc(t, "RenderFunc", function(_, _, container)
+		if not (On() and Look("ownLinks") == true) or type(container) ~= "table" then return end
+		ns.Guard(function()
+			Remark(container.text)
+			if type(container.taskDetailContainers) == "table" then
+				for _, detail in ipairs(container.taskDetailContainers) do
+					if type(detail) == "table" then Remark(detail.text) end
+				end
+			end
+		end)
+	end)
+end
+
 local function ApplyColors()
 	local Color = rawget(env, "Color")
 	if type(Color) ~= "table" then return end
@@ -559,6 +661,12 @@ local function ApplyColors()
 	if original.MODE_HIGHLIGHT then
 		Color.MODE_HIGHLIGHT = (On() and Look("accentHighlight") ~= false) and HexOf(Accent()) or original.MODE_HIGHLIGHT
 	end
+	for kind, name in pairs(TASK_COLORS) do
+		local t = TaskType(kind)
+		if t and Color[name] then t.taskColor = Color[name] end
+	end
+	Baked()
+	HookText()
 	local npc = rawget(env, "NPCColor")
 	if type(npc) == "table" then
 		npc[1], npc[2], npc[3], npc[4] = Color.NPC, Color.NPC_HOSTILE, Color.NPC_FRIENDLY, Color.NPC_NEUTRAL

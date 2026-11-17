@@ -9,9 +9,12 @@
 -- of its art copied. Its internals are private, so it is followed from outside: its global
 -- mixins and the two windows' own methods (after each theme load, page and tab), and its global
 -- font objects (DUIFont_*), which get DaylightUI's font and colors each time it sets them.
+-- The settings' dropdown menu gets the Dark art too, its rows DaylightUI's text color; red words
+-- its Brown theme turns brick red (gossip options, warnings) are DaylightUI's red instead.
 -- Left as it draws them: the portrait model, each quest's background picture, its own tooltip,
--- the book window (paper or metal on purpose), the camera and its hide-the-UI mode.
--- Nothing is written to its saved settings.
+-- the book window (paper or metal on purpose), the camera and its hide-the-UI mode, and the quest
+-- item display (its pop-up for a quest-starting item: off by default, private, never named).
+-- Nothing is written to its saved settings but the conflicts below.
 --
 -- With Dialogue UI on, it takes the game's gossip and quest windows before DaylightUI's own
 -- NPC window can open them (DaylightUI's vendor and trainer windows are unaffected).
@@ -125,6 +128,26 @@ After(_G.DUIDialogItemButtonMixin, "LoadTheme", Tree)
 After(_G.DUIDialogSmallItemButtonMixin, "SetBackgroundTexture", Tree)
 After(_G.DUIDialogOptionButtonLockMixin, "LoadTheme", Tree)
 After(_G.DUIDialogInputBoxMixin, "SetBackgroundTexture", Tree)
+
+-- Red words: its Brown theme rewrites red in gossip options and warnings to a deep brick red
+-- (drawn for paper), unreadable on the dark shell: DaylightUI's red for "bad" in its place.
+local BRICK = "|cff9B2020"
+
+local function RedHex()
+	local c = ns.Colors().BAD
+	local r, g, b = 0.93, 0.36, 0.30
+	if type(c) == "table" then r, g, b = c[1], c[2], c[3] end
+	return string.format("|cff%02X%02X%02X", math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5))
+end
+
+local function Unbrick(fs)
+	if not ns.Usable(fs) or fs:GetObjectType() ~= "FontString" then return end
+	local text = fs:GetText()
+	if type(text) ~= "string" or not find(text, BRICK, 1, true) then return end
+	fs:SetText((text:gsub(BRICK, RedHex())))
+end
+
+After(_G.DUIDialogOptionButtonMixin, "SetGossip", function(self) Unbrick(self.Name) end)
 
 -- ---------------------------------------------------------------------------------------------
 -- Colors: its font objects (it sets their color on each theme load) and the item names it
@@ -285,6 +308,12 @@ for _, method in ipairs({ "HandleGossip", "HandleQuestDetail", "HandleQuestProgr
 	"ShowUI" }) do
 	After(talk, method, Tree)
 end
+-- A gossip warning's paragraphs (its Brown theme's red rewritten, as in the options).
+After(talk, "HandleGossipConfirm", function(self)
+	local content = self.ContentFrame
+	if not ns.Usable(content) then return end
+	for _, region in ipairs({ content:GetRegions() }) do Unbrick(region) end
+end)
 local focus = talk.GamePadFocusIndicator
 After(focus, "LoadTheme", Tree)
 After(focus, "SetTheme", Tree)
@@ -330,6 +359,43 @@ local function Settings()
 	DarkenTree(settings, 0)
 end
 
+-- Its dropdown menu: made on the first open, then lent to the settings window each time one opens
+-- (its parent), in its Brown theme's art like the rest. Its rows' text in VALUE ink: the font
+-- picker's rows set theirs to dark brown, each in its own font.
+local menu
+
+local function MenuRows()
+	if not ns.Usable(menu) or not On() then return end
+	local r, g, b = RoleColor("VALUE")
+	if not r then return end
+	for _, child in ipairs({ menu:GetChildren() }) do
+		if ns.Usable(child.ButtonText) then child.ButtonText:SetTextColor(r, g, b) end
+	end
+end
+
+local function Menu()
+	if not ns.Usable(menu) or not On() then return end
+	DarkenTree(menu, 0)
+	MenuRows()
+end
+
+local function FindMenu()
+	if menu or not ns.Usable(settings) then return end
+	for _, child in ipairs({ settings:GetChildren() }) do
+		if type(child) == "table" and child.Border and child.PageNav and type(child.SetPage) == "function" then
+			menu = child
+			After(menu, "LoadTheme", Menu)
+			After(menu, "SetPage", MenuRows)
+			return
+		end
+	end
+end
+
+After(_G.DUIDialogSettingsDropdownButtonMixin, "ShowMenu", function()
+	FindMenu()
+	Menu()
+end)
+
 if ns.Usable(settings) then
 	After(settings, "LoadTheme", Settings)
 	After(settings, "SelectTabByID", Tree)
@@ -353,6 +419,7 @@ local function Again()
 		RecolorAll()
 		ns.Guard(Talk)
 		ns.Guard(Settings)
+		ns.Guard(Menu)
 	end)
 end
 

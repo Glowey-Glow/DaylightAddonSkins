@@ -1,7 +1,9 @@
 -- Shortest Path Forever: its Nearby services panel in the world map's quest log (its paper ground
--- and border gone, DaylightUI's look on its search box, scroll bar and side tab), and the windows
--- ForeverCore opens for it (report, issue, leaderboards, thanks, the Forever addons link) and
--- ForeverCore's right-click menu (the tracker's header and lines).
+-- and border gone, DaylightUI's look on its search box, scroll bar, rows, section heads, map
+-- switches and side tab), its Journey stops and Farming tour windows, the windows ForeverCore
+-- opens for it (report, issue, thanks, the Forever addons link, your Forever profile),
+-- ForeverCore's right-click menu (the tracker's header and lines) and its "Journey" button under
+-- the minimap (off unless turned on in its settings).
 -- Left alone: everything it draws on the world map and minimap (route lines, pins, docks,
 -- portals), the direction arrow and compass (on-screen guides with settings of their own), its
 -- settings (the game's Settings window). Its tracker sections: docked under DaylightUI's quest
@@ -12,7 +14,8 @@
 -- DaylightUI's marker. While DaylightUI's marker is on, both are kept at nothing again after it.
 --
 -- "Hand over to DaylightUI" (off until turned on on its page): its flight master, boat and
--- zeppelin pins on the world map step aside while DaylightUI's map pins show the same.
+-- zeppelin pins on the world map step aside while DaylightUI's map pins show the same, and
+-- ForeverCore's own quest list in the Forever column while DaylightUI's quest tracker is on.
 local _, ns = ...
 if not ns.ok then return end
 local L = ns.L
@@ -41,6 +44,89 @@ if type(_G.ShortestPathForever) ~= "table" then return end
 -- Nearby services panel (made when the world map loads)
 -- ---------------------------------------------------------------------------------------------
 
+-- A section head's fold button: its own plus or minus (an Icon texture) kept, in DaylightUI's text
+-- ink. Not Kit's collapse button: that adds show and hide scripts, which under the world map run
+-- inside the map's close (the #158 taint below). Its hover (the same picture again, put back with
+-- each fold) hidden.
+local function ServiceFold(btn, Kit)
+	if not ns.Usable(btn) or not ns.Usable(btn.Icon) then return end
+	btn.Icon:SetDesaturated(true)
+	btn.Icon:SetVertexColor(Kit.TEXT[1], Kit.TEXT[2], Kit.TEXT[3])
+	Kit.Hide(btn:GetHighlightTexture())
+end
+
+-- Its section heads (a band of the game's list art, a fold button, the name and count in gold):
+-- line rows with DaylightUI's hover, the name in DaylightUI's value ink and the count in its label
+-- ink. Its rows (the game's Who-list row art, its hover in the art too): DaylightUI's rows, their
+-- icon and upgrade mark kept; gold names in DaylightUI's ink (a better trip's goods keep their
+-- quality's color). Its dividers (the quest log's gold separator) gone. Its search box and scroll
+-- bar: the walk below (its map switches are left as the game draws them).
+local function ServiceHead(head, Kit, controls, value)
+	if controls then
+		if ns.Once(head) then ns.Guard(Kit.Row, head, nil, nil, false) end
+		ServiceFold(head.CollapseButton, Kit)
+	end
+	if ns.Usable(head.Name) then Kit.Light(head.Name, value) end
+	if ns.Usable(head.Count) then Kit.Light(head.Count, Kit.DIM) end
+end
+
+local function ServiceRow(row, Kit, controls)
+	if controls and ns.Once(row) then
+		local keep = { [row.Icon] = true }
+		if ns.Usable(row.Badge) then keep[row.Badge] = true end
+		ns.Guard(Kit.Row, row, keep)
+	end
+	Kit.InkGameText(row)
+end
+
+local DIVIDER = "questlog-frame-devider"
+local function ServiceDivider(frame, Kit)
+	if frame:GetObjectType() ~= "Frame" or frame:GetNumRegions() ~= 1 then return false end
+	local tex = frame:GetRegions()
+	if not ns.Usable(tex) or tex:GetObjectType() ~= "Texture" then return false end
+	local ok, atlas = pcall(tex.GetAtlas, tex)
+	if not ok or type(atlas) ~= "string" or string.lower(atlas) ~= DIVIDER then return false end
+	Kit.Hide(tex)
+	return true
+end
+
+-- panel: the whole panel; list: its scroll child (the head with the title and your zone, and the
+-- list under it).
+local function DressServices(panel, list, Kit)
+	-- (Its map switches keep the game's checkbox: DaylightUI's switch adds a show/hide script, which
+	-- under the world map runs inside the map's close: the #158 taint below.)
+	ns.Dress(panel, { fonts = true, checks = false }, 0, KEY)
+	if not ns.Usable(list) then return end
+	local controls = ns.Controls(KEY)
+	local value = ns.Colors().VALUE
+	local big = _G.GameFontNormalLarge2
+	for _, content in ipairs({ list:GetChildren() }) do
+		for _, part in ipairs({ content:GetChildren() }) do
+			if ns.Usable(part) then
+				-- The title ("Nearby services") in the value ink; the rest of the game's gold in
+				-- DaylightUI's label ink, its gray (nothing to show yet) in its dimmed ink.
+				for _, region in ipairs({ part:GetRegions() }) do
+					if region:GetObjectType() == "FontString" and big and region:GetFontObject() == big then
+						Kit.Light(region, value)
+					end
+				end
+				Kit.InkGameText(part)
+				for _, child in ipairs({ part:GetChildren() }) do
+					if ns.Usable(child) and child:IsShown() then
+						if child.CollapseButton then
+							ServiceHead(child, Kit, controls, value)
+						elseif child.Icon and child.Label then
+							ServiceRow(child, Kit, controls)
+						else
+							ServiceDivider(child, Kit)
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
 ns.Watch(KEY, "ShortestPathForeverServicesPanel", function(panel, Kit)
 	if not ns.Once(panel) then return end
 	-- Its ground: the quest log's paper, a BACKGROUND texture of its own. DaylightUI's map window
@@ -59,80 +145,176 @@ ns.Watch(KEY, "ShortestPathForeverServicesPanel", function(panel, Kit)
 			if ns.Usable(child) and child:GetObjectType() == "Frame" then strip(child, depth + 1) end
 		end
 	end
+	local list
 	for _, body in ipairs({ panel:GetChildren() }) do
 		if ns.Usable(body) and body:GetObjectType() == "Frame" and body:GetNumChildren() >= 2 then
 			local first, second = body:GetChildren()
 			if ns.Usable(first) and first:GetObjectType() == "Frame" and ns.Usable(second)
 				and select("#", second:GetChildren()) > 0 then
 				local inner = second:GetChildren()
-				if ns.Usable(inner) and inner:GetObjectType() == "ScrollFrame" then strip(first, 0) end
+				if ns.Usable(inner) and inner:GetObjectType() == "ScrollFrame" then
+					strip(first, 0)
+					list = inner:GetScrollChild()
+				end
 			end
 		end
 	end
-	ns.DressOnShow(panel, { fonts = true })
+	-- No show or hide script of ours on it: it lives under the world map, where a script runs
+	-- inside the map's own close and taints the gamepad's interact action (Shortest Path's #158,
+	-- which is why it sets none either). Its list is rebuilt on opening, on a zone change, on a
+	-- search, on a fold and every 10 seconds while open, each time ending in its scroll child's
+	-- SetSize: dressed a moment after that, outside its call.
+	local function dress() ns.Guard(DressServices, panel, list, Kit) end
+	dress()
+	if ns.Usable(list) then
+		local queued = false
+		hooksecurefunc(list, "SetSize", function()
+			if queued then return end
+			queued = true
+			C_Timer.After(0, function() queued = false dress() end)
+		end)
+	end
 end)
 
 ns.Watch(KEY, "ShortestPathForeverServicesTab", function(tab, Kit)
 	if ns.Controls(KEY) and ns.Once(tab) then ns.Guard(Kit.SideTab, tab) end
 end)
 
+-- Its side tab and the quest log's own are checked from code (ForeverCore's QuestLogTabs: picking
+-- a tab, or the quest log asking for its quests back), so the tabs' look is read again after.
+local LogTabs = type(_G.ForeverCore) == "table" and _G.ForeverCore.QuestLogTabs
+if type(LogTabs) == "table" then
+	local function Repaint()
+		local Kit = ns.Kit
+		if Kit and type(Kit.RepaintSoon) == "function" and ns.Enabled(KEY) then ns.Guard(Kit.RepaintSoon) end
+	end
+	for _, method in ipairs({ "ShowQuests", "Select" }) do
+		if type(LogTabs[method]) == "function" then
+			hooksecurefunc(LogTabs, method, function() C_Timer.After(0, Repaint) end)
+		end
+	end
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- ForeverCore's windows (the game's portrait window template) and its menu
 -- ---------------------------------------------------------------------------------------------
+
+-- Journey stops: its stops are buttons of the game's red-button template, the picked one (or the
+-- one the journey is at) shown by locking its hover art. They are DaylightUI's rows here, the
+-- picked one in the accent, their words in white rather than the template's gold (its hover and
+-- disabled fonts follow the same, so a state change doesn't bring the gold back). Each refresh
+-- ends by sizing the list under them, which repaints them right there.
+local function Picked(row) return row.IsHighlightLocked and row:IsHighlightLocked() == true end
+
+-- Shortest Path sets each row's OnEnter and OnLeave anew on every refresh, which drops Kit's hover
+-- hooks: put back whenever its script changed (else a row clicked while hovered keeps its hover).
+local wired = setmetatable({}, { __mode = "k" })
+local function Rewire(row, Kit)
+	local now = row:GetScript("OnEnter")
+	if wired[row] == now or type(Kit.RowOf) ~= "function" then return end
+	local r = Kit.RowOf(row)
+	if not r then return end
+	row:HookScript("OnEnter", function() r.hover = true; Kit.RepaintRow(row) end)
+	row:HookScript("OnLeave", function() r.hover = false; Kit.RepaintRow(row) end)
+	wired[row] = row:GetScript("OnEnter")
+end
+
+local function StopRows(content, Kit)
+	for _, row in ipairs({ content:GetChildren() }) do
+		if ns.Usable(row) and row:GetObjectType() == "Button" then
+			if ns.Once(row) then
+				row:SetNormalFontObject("GameFontHighlight")
+				row:SetHighlightFontObject("GameFontHighlight")
+				row:SetDisabledFontObject("GameFontDisable")
+				ns.Guard(Kit.Row, row, "art", Picked)
+				local fs = row:GetFontString()
+				if ns.Usable(fs) then ns.FollowFont(fs, KEY) end
+			elseif type(Kit.RepaintRow) == "function" then
+				Kit.RepaintRow(row)
+			end
+			Rewire(row, Kit)
+		end
+	end
+end
+
+-- The game's portrait window, from ForeverCore or Shortest Path: DaylightUI's window, the template
+-- controls inside walked (and walked again a moment after it shows, and after its list grows or
+-- shrinks: rows are made while it's open), the inset under its list in DaylightUI's darker shade.
+local STOPS = "ShortestPathForeverJourneyStops"
 
 local function Templated(frame, Kit)
 	if not ns.Usable(frame) or not ns.Once(frame) then return end
 	ns.Guard(Kit.Window, frame)
 	if not ns.Controls(KEY) then return end
-	local function walk()
-		if frame:IsShown() then ns.Guard(Kit.Auto, frame, { rows = false, shownOnly = true }) end
-	end
-	frame:HookScript("OnShow", function() C_Timer.After(0.05, walk) end)
-	walk()
-end
-
-for _, name in ipairs({ "ShortestPathForeverReport", "ShortestPathForeverIssue", "ForeverLeaderboardsFrame",
-	"ForeverCreditsFrame", "ForeverFamilyLink" }) do
-	ns.Watch(KEY, name, Templated)
-end
-
--- Leaderboards: its side tabs (one per board), the inset's marble, and its rows' gold (the picked
--- row's auction-house highlight, the progress bar, the line over your own pinned row) in the accent.
-local function AccentRow(row)
-	if not ns.Usable(row) then return end
-	if ns.Usable(row.highlight) then
-		row.highlight:SetDesaturated(true)
-		ns.PaintAccent(row.highlight, 0.55, nil, KEY)
-	end
-	if ns.Usable(row.bar) then ns.FillAccent(row.bar, 0.55, nil, KEY) end
-end
-
-ns.Watch(KEY, "ForeverLeaderboardsFrame", function(frame, Kit)
-	if not ns.Controls(KEY) then return end
-	for _, child in ipairs({ frame:GetChildren() }) do
-		if ns.Usable(child) and child:GetObjectType() == "Button" and child.Icon and child.key then
-			ns.Guard(Kit.SideTab, child)
-		end
-	end
-	local inset = frame.inset
-	if ns.Usable(inset) then
-		ns.Guard(Kit.Inset, inset)
-		for _, region in ipairs({ inset:GetRegions() }) do
-			if region:GetObjectType() == "Texture" and region:GetDrawLayer() == "ARTWORK" and region ~= frame.pinnedSeparator then
-				-- (Its divider: a strip of the game's frame art under the column heads.)
-				local ok, atlas = pcall(region.GetAtlas, region)
-				if ok and atlas == "_UI-Frame-InnerTopTile" then region:SetAlpha(0) end
+	local stops = frame:GetName() == STOPS
+	-- Its insets (the template's, unnamed) and the scroll children inside them.
+	local lists, skip = {}, {}
+	local function look(parent, depth)
+		for _, child in ipairs({ parent:GetChildren() }) do
+			if ns.Usable(child) then
+				if child.layoutType == "InsetFrameTemplate" then ns.Guard(Kit.Inset, child) end
+				if child:GetObjectType() == "ScrollFrame" then
+					local inner = child:GetScrollChild()
+					if ns.Usable(inner) then lists[#lists + 1] = inner end
+				elseif depth < 2 then
+					look(child, depth + 1)
+				end
 			end
 		end
 	end
-	AccentRow(frame.pinned)
-	if ns.Usable(frame.pinnedSeparator) then
-		ns.FillAccent(frame.pinnedSeparator, 0.35, nil, KEY)
+	look(frame, 0)
+	-- (The stops' list is left to StopRows: the walk would make each stop a plain button.)
+	if stops then for _, inner in ipairs(lists) do skip[inner] = true end end
+	local function walk()
+		if frame:IsShown() then ns.Guard(Kit.Auto, frame, { rows = false, shownOnly = true, skip = skip }) end
 	end
-	if ns.Usable(frame.scroll) then
-		ns.Guard(Kit.EachRow, frame.scroll, AccentRow, "DaylightAddonSkins")
+	local queued = false
+	local function soon()
+		if queued then return end
+		queued = true
+		C_Timer.After(0.05, function() queued = false walk() end)
 	end
-end)
+	for _, inner in ipairs(lists) do
+		if stops then
+			local function rows() ns.Guard(StopRows, inner, Kit) end
+			hooksecurefunc(inner, "SetHeight", rows)
+			rows()
+		end
+		hooksecurefunc(inner, "SetHeight", soon)
+		hooksecurefunc(inner, "SetSize", soon)
+	end
+	frame:HookScript("OnShow", soon)
+	walk()
+end
+
+for _, name in ipairs({ "ShortestPathForeverReport", "ShortestPathForeverIssue", "ForeverCreditsFrame",
+	"ForeverFamilyLink", STOPS, "ShortestPathForeverFarming", "ForeverCoreProfile" }) do
+	ns.Watch(KEY, name, Templated)
+end
+
+-- ForeverCore's menu: the game's dropdown look (its yellow ticks and radios, gold titles, the next
+-- arrow) drawn in frames of its own. Drawn again for each submenu while it stays open, and that
+-- ends in its SetSize: repainted there, ticks in the accent, the game's gold and gray in
+-- DaylightUI's inks, new rows in the player's font.
+local function MenuRows(menu, Kit)
+	local rows = menu.rows
+	if type(rows) ~= "table" then return end
+	local ink = Kit.DIM
+	for _, row in ipairs(rows) do
+		if ns.Usable(row) and row:IsShown() then
+			if ns.Usable(row.tick) then
+				row.tick:SetDesaturated(true)
+				ns.PaintAccent(row.tick, 1, nil, KEY)
+			end
+			if ns.Usable(row.arrow) then
+				row.arrow:SetDesaturated(true)
+				row.arrow:SetVertexColor(ink[1], ink[2], ink[3])
+			end
+			Kit.InkGameText(row)
+		end
+	end
+	ns.Dress(menu, { scrollBars = false, fonts = true }, 0, KEY)
+end
 
 ns.Watch(KEY, "ForeverCoreContextMenu", function(menu, Kit)
 	if not ns.Once(menu) then return end
@@ -145,6 +327,45 @@ ns.Watch(KEY, "ForeverCoreContextMenu", function(menu, Kit)
 	local scroll = menu.scroll
 	if ns.Controls(KEY) and type(scroll) == "table" and ns.Usable(scroll.ScrollBar) then ns.Guard(Kit.ScrollBar, scroll.ScrollBar) end
 	ns.DressOnShow(menu, { scrollBars = false, fonts = true })
+	hooksecurefunc(menu, "SetSize", function() ns.Guard(MenuRows, menu, Kit) end)
+	-- (Its first opening made it and drew it in one call: drawn already.)
+	ns.Guard(MenuRows, menu, Kit)
+end)
+
+-- The menu is made on its first opening, and the windows on theirs: looked for right after the
+-- calls that open them from outside (Shortest Path's map pins, flight pins and tracker lines open
+-- the menu through ForeverCore.ContextMenu; /path stops, /path farm and /forever profile open the
+-- windows), so they're dressed before they're drawn. The rest (ForeverCore's own tracker menu,
+-- Shortest Path's map menu) are found by the watches, a frame late at most.
+local function Opened() ns.WatchNow() end
+if type(_G.ForeverCore) == "table" and type(_G.ForeverCore.ContextMenu) == "function" then
+	hooksecurefunc(_G.ForeverCore, "ContextMenu", Opened)
+end
+ns.me.On("Login", function()
+	local slash = _G.SlashCmdList
+	if type(slash) ~= "table" then return end
+	for _, name in ipairs({ "SHORTESTPATHFOREVER", "FOREVERCORE" }) do
+		if type(slash[name]) == "function" then hooksecurefunc(slash, name, Opened) end
+	end
+end)
+
+-- Its "Journey" button under the minimap (Settings: "Show options button on minimap", off by
+-- default): a text button of the game's red-button template, DaylightUI's button look here. Where
+-- it sits is Shortest Path's. It's made when its setting is on as the game starts, or later, when
+-- the player turns it on: looked for then, never watched for all session.
+local function OptionsButton(Kit)
+	local btn = _G.ShortestPathForeverOptionsButton
+	if not ns.Usable(btn) or not ns.Enabled(KEY) or not ns.Controls(KEY) or not ns.Once(btn) then return end
+	ns.Guard(Kit.Button, btn)
+end
+ns.me.On("Login", function()
+	ns.WithKit(OptionsButton)
+	if type(Settings) == "table" and type(Settings.SetOnValueChangedCallback) == "function" then
+		pcall(Settings.SetOnValueChangedCallback, "ShortestPathForever_minimapButton", function()
+			-- (After Shortest Path's own answer to the change, which makes the button.)
+			C_Timer.After(0, function() ns.WithKit(OptionsButton) end)
+		end)
+	end
 end)
 
 -- ---------------------------------------------------------------------------------------------
@@ -384,6 +605,10 @@ local function StyleSection(module, Kit)
 			ns.Guard(Kit.CollapseButton, head.MinimizeButton)
 		end
 	end
+	-- A section taller than its room scrolls, with the game's minimal scroll bar (made the first
+	-- time it's needed).
+	local bar = module.scrollBar
+	if Kit and ns.Usable(bar) and ns.Controls(KEY) and ns.Once(bar) then ns.Guard(Kit.ScrollBar, bar) end
 	local tr, tg, tb = QColor("title", "VALUE")
 	local orr, og, ob = QColor("objective", "TEXT")
 	Entries(module, 0, head, function(item)
@@ -515,7 +740,10 @@ local function Column()
 			pcall(api.SetAttached, true)
 			if type(api.SetScale) == "function" and type(db.foreverScale) == "number" then pcall(api.SetScale, db.foreverScale) end
 			if type(api.SetLocked) == "function" and db.foreverLocked ~= nil then pcall(api.SetLocked, db.foreverLocked) end
-			db.foreverScale, db.foreverLocked = nil, nil
+			if type(api.SetBackdropOpacity) == "function" and type(db.foreverBackdrop) == "number" then
+				pcall(api.SetBackdropOpacity, db.foreverBackdrop)
+			end
+			db.foreverScale, db.foreverLocked, db.foreverBackdrop = nil, nil, nil
 			zoom = 1
 			PaintFonts()
 			GripLabel(host, 1)
@@ -561,6 +789,16 @@ local function Column()
 			if type(api.IsLocked) == "function" and type(api.SetLocked) == "function" and not api.IsLocked() then
 				if db.foreverLocked == nil then db.foreverLocked = false end
 				pcall(api.SetLocked, true)
+			end
+			-- ForeverCore's own background behind the column (its menu's "Tracker background", the
+			-- tooltip's color at an opacity of the player's) would show through DaylightUI's box:
+			-- none while docked, the player's opacity kept and put back after.
+			if type(api.GetBackdropOpacity) == "function" and type(api.SetBackdropOpacity) == "function" then
+				local ok, opacity = pcall(api.GetBackdropOpacity)
+				if ok and type(opacity) == "number" and opacity > 0 then
+					if db.foreverBackdrop == nil then db.foreverBackdrop = opacity end
+					pcall(api.SetBackdropOpacity, 0)
+				end
 			end
 			GripLabel(host, 0)
 		end
@@ -687,12 +925,36 @@ end)
 -- Hand-over: map pins
 -- ---------------------------------------------------------------------------------------------
 
+-- ForeverCore's own quest list ("Forever quest list", ForeverCoreDB.questList): its quests drawn
+-- in the Forever column, the same quests DaylightUI's tracker lists right above it. Read and set
+-- through ForeverCore's own calls, which redraw the column.
+local QUEST_LIST = "questList"
+local function ForeverQuests()
+	local core = _G.ForeverCore
+	local q = type(core) == "table" and core.TrackerQuests
+	if type(q) == "table" and type(q.Enabled) == "function" and type(q.SetEnabled) == "function" then return q end
+end
+
 ns.Handover(KEY, {
 	ready = function() return type(_G.ShortestPathForeverDB) == "table" end,
-	get = function(key) return _G.ShortestPathForeverDB[key] end,
+	get = function(key)
+		if key == QUEST_LIST then
+			local q = ForeverQuests()
+			if not q then return nil end
+			local ok, on = pcall(q.Enabled)
+			if ok then return on end
+			return nil
+		end
+		return _G.ShortestPathForeverDB[key]
+	end,
 	-- Through the game's Settings, where it registered each of them: its own refresh runs and the
 	-- change shows at once. (Its saved table straight, when that isn't there.)
 	set = function(key, value)
+		if key == QUEST_LIST then
+			local q = ForeverQuests()
+			if q then pcall(q.SetEnabled, value) end
+			return
+		end
 		local setting = type(Settings) == "table" and type(Settings.GetSetting) == "function"
 			and Settings.GetSetting("ShortestPathForever_" .. key)
 		if setting and type(setting.SetValue) == "function" and pcall(setting.SetValue, setting, value) then return end
@@ -712,5 +974,8 @@ ns.Handover(KEY, {
 		  daylight = string.format(L["the quest arrow (%s); with Shortest Path's off, routes no longer steer the marker"],
 			string.format(L["%s, %s"], ns.Module("Quests"), ns.Module("Navigation"))),
 		  ours = function() return ns.DaylightHas("Quests", "nav.arrow") end },
+		{ key = QUEST_LIST, label = L["Forever quest list"],
+		  daylight = ns.In(L["your quest list"], "Quests"),
+		  ours = function() return ns.ModuleOn("Quests") end },
 	},
 })

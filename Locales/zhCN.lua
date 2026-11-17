@@ -316,3 +316,10 @@ L["A newer version is out (%s): update through CurseForge or WowUp."] = "新版�
 L["Tell me when a newer version is out"] = "有新版本时通知我"
 L["Updates"] = "更新"
 L["Your copy tells others in your guild and group which version it is, and you hear about a newer one (once a session). Off: nothing is sent or heard."] = "你安装的这个插件会向公会和队伍中的其他人告知其版本，有更新版本时也会通知你（每次登录一次）。关闭：不发送也不接收任何内容。"
+
+-- 1.14.0: OneForAll tooltip, Journey quests, Shortest Path Forever quest list
+L["Tooltip at the mouse"] = "鼠标提示"
+L["the tooltip's anchor (the game's spot or the mouse)"] = "鼠标提示的锚点（游戏默认位置或鼠标）"
+L["Accept and turn in the guide's quests"] = "接受并交付指南任务"
+L["Forever quest list"] = "Forever 任务列表"
+L["your quest list"] = "你的任务列表"

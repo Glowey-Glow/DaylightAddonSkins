@@ -452,6 +452,8 @@ local function JournalPopups(frame)
 	end
 	local intro = _G.ForeverDungeonJournalRPGIntro
 	if ns.Usable(intro) and ns.Usable(intro.note) and First(intro.note) then Popup(intro.note) end
+	-- "Show all dungeons anyway" under an empty level range (2.0.9): its gold hover a white wash.
+	WhiteGlow(frame.homeShowAllButton)
 end
 
 -- The "Hide quests" box on its dungeon maps, as the boss icon size control under it.
@@ -615,6 +617,17 @@ ns.Pack(KEY, nil, function(Kit)
 		hooksecurefunc(FDJ, "ToggleRunLog", function()
 			local win = _G.ForeverDungeonJournalRunLog
 			if ns.Enabled(KEY) and ns.Usable(win) then ns.Guard(RunLog, win, Kit) end
+		end)
+	end
+	-- A summoned boss's quest (2.0.9, Gahz'rilla): its red "must be summoned" line, which
+	-- DaylightUI's quest page pass makes plain white, back in the warning ink after that pass.
+	if type(FDJ.PlaceSummonHelp) == "function" then
+		hooksecurefunc(FDJ, "PlaceSummonHelp", function()
+			C_Timer.After(0, function()
+				local f = _G.ForeverDungeonJournalFrame
+				local note = ns.Enabled(KEY) and ns.Usable(f) and f.questSummonNote
+				if note and note:IsShown() then Ink(note, "BAD") end
+			end)
 		end)
 	end
 	-- The boss icon size control on its dungeon maps (the journal's, and the world map's in a

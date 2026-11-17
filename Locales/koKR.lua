@@ -316,3 +316,10 @@ L["A newer version is out (%s): update through CurseForge or WowUp."] = "새 버
 L["Tell me when a newer version is out"] = "새 버전이 나오면 알림"
 L["Updates"] = "업데이트"
 L["Your copy tells others in your guild and group which version it is, and you hear about a newer one (once a session). Off: nothing is sent or heard."] = "설치된 애드온이 길드원과 파티원에게 자신의 버전을 알리고, 더 새로운 버전이 나오면 알려 줍니다(세션당 한 번). 끄면 아무것도 보내거나 받지 않습니다."
+
+-- 1.14.0: OneForAll tooltip, Journey quests, Shortest Path Forever quest list
+L["Tooltip at the mouse"] = "마우스 위치에 툴팁"
+L["the tooltip's anchor (the game's spot or the mouse)"] = "툴팁 고정 위치 (게임 기본 위치 또는 마우스)"
+L["Accept and turn in the guide's quests"] = "가이드 퀘스트 수락 및 완료"
+L["Forever quest list"] = "Forever 퀘스트 목록"
+L["your quest list"] = "퀘스트 목록"
