@@ -7,7 +7,7 @@
 ## X-Curse-Project-ID: 1799579
 ## Version: @project-version@
 ## Dependencies: DaylightUI
-## OptionalDeps: DaylightUI_Skins, CampingKit, DoesItDie, KeepOrToss, LootTriage, OpenMap, Spoken, ForeverFishing, Polestar, ForeverLevelingBiS, Journey, OneForAll, Questie, DialogueUI, ShortestPathForever, ForeverCore, ForeverDungeonJournal, totalRP3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFGForever, Guildy
+## OptionalDeps: DaylightUI_Skins, DaylightUI_Bags, CampingKit, DoesItDie, KeepOrToss, LootTriage, OpenMap, Spoken, ForeverFishing, Polestar, ForeverLevelingBiS, Journey, OneForAll, Questie, DialogueUI, ShortestPathForever, ForeverCore, ForeverDungeonJournal, totalRP3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFGForever, Guildy
 ## SavedVariables: DaylightAddonSkinsDB
 # Mastercraft stays out of OptionalDeps: its pack sets Mastercraft's style before Mastercraft loads.
 
@@ -23,6 +23,7 @@ Core.lua
 Windows.lua
 MenuFonts.lua
 ButtonFonts.lua
+BagMarks.lua
 Packs\KeepOrToss.lua
 Packs\DoesItDie.lua
 Packs\CampingKit.lua
