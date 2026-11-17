@@ -309,7 +309,8 @@ L["Daylight gradient"] = "Daylight 그라데이션"
 L["Gradient window borders"] = "그라데이션 창 테두리"
 L["Mastercraft stays on its Classic style while Addon Skins dresses it. The style you picked (%s) comes back when its skin is off."] = "Addon Skins가 Mastercraft를 꾸미는 동안 Mastercraft는 클래식 스타일을 유지합니다. 고른 스타일(%s)은 스킨을 끄면 돌아옵니다."
 L["This addon's accent: DaylightUI's own (a gradient one included), or one for this addon alone."] = "이 애드온의 강조색: DaylightUI의 강조색(그라데이션 포함) 또는 이 애드온만의 색."
-L["When this addon's accent is a gradient (Daylight's or your class's), its window borders run along it."] = "이 애드온의 강조색이 그라데이션(Daylight 또는 직업)이면 창 테두리가 그 색을 따릅니다."
+L["When this addon's accent is a gradient (Daylight's, your class's or your own), its window borders run along it."] = "이 애드온의 강조색이 그라데이션(Daylight, 직업 또는 사용자)이면 창 테두리가 그 색을 따릅니다."
+L["Custom gradient"] = "사용자 그라데이션"
 
 -- 2026-11-16 additions
 L["A newer version is out (%s): update through CurseForge or WowUp."] = "새 버전이 나왔습니다(%s). CurseForge 또는 WowUp으로 업데이트하세요."

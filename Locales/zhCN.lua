@@ -309,7 +309,8 @@ L["Daylight gradient"] = "Daylight渐变"
 L["Gradient window borders"] = "渐变窗口边框"
 L["Mastercraft stays on its Classic style while Addon Skins dresses it. The style you picked (%s) comes back when its skin is off."] = "Addon Skins为Mastercraft换肤期间，它保持经典风格。你选择的风格（%s）会在关闭其皮肤后恢复。"
 L["This addon's accent: DaylightUI's own (a gradient one included), or one for this addon alone."] = "此插件的强调色：DaylightUI的强调色（包括渐变），或此插件单独的颜色。"
-L["When this addon's accent is a gradient (Daylight's or your class's), its window borders run along it."] = "此插件的强调色为渐变（Daylight或职业）时，其窗口边框沿用该渐变。"
+L["When this addon's accent is a gradient (Daylight's, your class's or your own), its window borders run along it."] = "此插件的强调色为渐变（Daylight、职业或自定义）时，其窗口边框沿用该渐变。"
+L["Custom gradient"] = "自定义渐变"
 
 -- 2026-11-16 additions
 L["A newer version is out (%s): update through CurseForge or WowUp."] = "新版本已发布（%s）：请通过CurseForge或WowUp更新。"

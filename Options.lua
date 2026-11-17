@@ -38,8 +38,16 @@ late:SetScript("OnEvent", gatherFonts)
 
 -- The accents an addon's page can pick: DaylightUI's own Accent choices, its gradients included.
 local ACCENTS = { daylight = L["DaylightUI accent"], gradient = L["Daylight gradient"], class = L["Class color"],
-	classGradient = L["Class gradient"], custom = L["Custom color"] }
-local ACCENT_ORDER = { "daylight", "gradient", "class", "classGradient", "custom" }
+	classGradient = L["Class gradient"], custom = L["Custom color"], customGradient = L["Custom gradient"] }
+local ACCENT_ORDER = { "daylight", "gradient", "class", "classGradient", "custom", "customGradient" }
+-- (DaylightUI's custom gradient, its colors set on General: only on a DaylightUI that has it.)
+do
+	local Style = type(_G.DaylightUI) == "table" and _G.DaylightUI.Style
+	if not (type(Style) == "table" and type(Style.CustomAccentStops) == "function") then
+		ACCENTS.customGradient = nil
+		ACCENT_ORDER[#ACCENT_ORDER] = nil
+	end
+end
 
 local OUTLINES = { keep = L["As the addon has it"], none = L["None"], thin = L["Thin"], thick = L["Thick"] }
 
@@ -112,7 +120,7 @@ local function lookGroups(addon, caps, tab, lead)
 			  desc = L["How thick the border is."],
 			  disabled = function(get) return following(get) or get(at .. "border") == false or get(at .. "ownBorder") ~= true end },
 			{ type = "toggle", key = at .. "gradientBorder", label = L["Gradient window borders"],
-			  desc = L["When this addon's accent is a gradient (Daylight's or your class's), its window borders run along it."],
+			  desc = L["When this addon's accent is a gradient (Daylight's, your class's or your own), its window borders run along it."],
 			  disabled = function(get) return following(get) or get(at .. "border") == false end },
 			{ type = "toggle", key = at .. "bevel", label = L["Bevel"],
 			  desc = L["The soft light along the top of this addon's windows."], disabled = following },

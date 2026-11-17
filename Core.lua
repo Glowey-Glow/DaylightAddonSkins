@@ -196,8 +196,10 @@ local current
 
 -- The accent an addon's page can pick, the same choices as DaylightUI's own Accent setting:
 -- "daylight" (DaylightUI's accent as the player set it, a gradient one included), the Daylight
--- gradient, the class color, the class gradient, or a custom color.
-ns.ACCENT_MODES = { daylight = true, gradient = true, class = true, classGradient = true, custom = true }
+-- gradient, the class color, the class gradient, a custom color, or DaylightUI's custom gradient
+-- (its General > Appearance colors, DaylightUI 1.9.2 on).
+ns.ACCENT_MODES = { daylight = true, gradient = true, class = true, classGradient = true, custom = true,
+	customGradient = true }
 
 local function DStyle()
 	local Style = type(DUI) == "table" and DUI.Style
@@ -232,6 +234,37 @@ local function ClassPair()
 	return nil
 end
 
+-- DaylightUI's custom gradient: its colors, left to right (two to five; shared tables), or nil
+-- (a DaylightUI before 1.9.2).
+local function CustomStops()
+	local Style = DStyle()
+	if not Style or type(Style.CustomAccentStops) ~= "function" then return nil end
+	local ok, stops = pcall(Style.CustomAccentStops)
+	if ok and type(stops) == "table" and #stops >= 2 then return stops end
+	return nil
+end
+
+-- The stops `key`'s gradient text runs through when its accent is one with more than two colors
+-- (its own custom gradient pick, or DaylightUI's accent while that is the custom gradient).
+local function TextStops(key)
+	local mode = AccentMode(key)
+	if mode == "customGradient" then return CustomStops() end
+	local Style = DStyle()
+	if mode == "daylight" and Style and type(Style.AccentStops) == "function" then
+		local ok, stops = pcall(Style.AccentStops)
+		if ok and type(stops) == "table" then return stops end
+	end
+	return nil
+end
+
+-- The spot t (0 to 1) along a list of { r, g, b } stops, evenly spaced (DaylightUI's StopsAt).
+local function StopsAt(stops, t)
+	t = math.max(0, math.min(1, t)) * (#stops - 1)
+	local i = math.min(#stops - 1, floor(t) + 1)
+	local f, a, b = t - (i - 1), stops[i], stops[i + 1]
+	return a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f
+end
+
 -- The two ends of `key`'s accent when it's a gradient ({ r, g, b } each, left to right; shared
 -- tables, not to be changed), or nil for a single-color accent.
 function ns.AccentPairOf(key)
@@ -251,6 +284,10 @@ function ns.AccentPairOf(key)
 		return nil
 	end
 	if mode == "classGradient" then return ClassPair() end
+	if mode == "customGradient" then
+		local stops = CustomStops()
+		if stops then return stops[1], stops[#stops] end
+	end
 	return nil
 end
 
@@ -268,6 +305,10 @@ function ns.AccentOf(key)
 	elseif mode == "classGradient" then
 		local lo, hi = ClassPair()
 		if lo then return (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2, (lo[3] + hi[3]) / 2 end
+	elseif mode == "customGradient" then
+		-- (Its middle, as DaylightUI's accent gives it, Gradients off or not.)
+		local stops = CustomStops()
+		if stops then return StopsAt(stops, 0.5) end
 	end
 	if mode == "class" or mode == "classGradient" then
 		local _, token = UnitClass("player")
@@ -327,13 +368,14 @@ function ns.AccentText(fs, text, key)
 			and type(DUI.GradientText) == "function" then
 			colored = DUI.GradientText(text)
 		else
+			-- (Every color of a custom gradient, not only its two ends.)
+			local stops = TextStops(key) or { lo, hi }
 			local chars, out = {}, {}
 			for ch in text:gmatch("[%z\1-\127\194-\244][\128-\191]*") do chars[#chars + 1] = ch end
 			local n = #chars
 			for i, ch in ipairs(chars) do
-				local t = n > 1 and (i - 1) / (n - 1) or 0.5
-				out[i] = string.format("|cff%02x%02x%02x%s", floor((lo[1] + (hi[1] - lo[1]) * t) * 255 + 0.5),
-					floor((lo[2] + (hi[2] - lo[2]) * t) * 255 + 0.5), floor((lo[3] + (hi[3] - lo[3]) * t) * 255 + 0.5), ch)
+				local r, g, b = StopsAt(stops, n > 1 and (i - 1) / (n - 1) or 0.5)
+				out[i] = string.format("|cff%02x%02x%02x%s", floor(r * 255 + 0.5), floor(g * 255 + 0.5), floor(b * 255 + 0.5), ch)
 			end
 			colored = table.concat(out) .. "|r"
 		end

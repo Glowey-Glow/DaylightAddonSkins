@@ -309,7 +309,8 @@ L["Daylight gradient"] = "Градиент Daylight"
 L["Gradient window borders"] = "Градиентная кайма окон"
 L["Mastercraft stays on its Classic style while Addon Skins dresses it. The style you picked (%s) comes back when its skin is off."] = "Mastercraft остаётся в стиле «Классический», пока его оформляет Addon Skins. Выбранный стиль (%s) вернётся, когда скин выключен."
 L["This addon's accent: DaylightUI's own (a gradient one included), or one for this addon alone."] = "Акцент этого аддона: акцент DaylightUI (в том числе градиент) или свой только для него."
-L["When this addon's accent is a gradient (Daylight's or your class's), its window borders run along it."] = "Если акцент этого аддона — градиент (Daylight или класса), кайма его окон идёт по нему."
+L["When this addon's accent is a gradient (Daylight's, your class's or your own), its window borders run along it."] = "Если акцент этого аддона — градиент (Daylight, класса или свой), кайма его окон следует за ним."
+L["Custom gradient"] = "Свой градиент"
 
 -- 2026-11-16 additions
 L["A newer version is out (%s): update through CurseForge or WowUp."] = "Вышла новая версия (%s): обновите через CurseForge или WowUp."

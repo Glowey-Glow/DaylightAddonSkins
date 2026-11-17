@@ -1,5 +1,10 @@
 # DaylightUI Addon Skins
 
+## 1.14.3
+- DaylightUI 1.9.2: its new Custom gradient accent reaches skinned windows. Gradient text runs through every one of its colors, not only the two ends, and an addon's own Accent can pick Custom gradient too.
+- Look and Feel > General shows DaylightUI's custom gradient colors with its other accent settings.
+- Checked against OpenMap 0.8.10: nothing needed changing.
+
 ## 1.14.2
 - Kerzo Classic Quest Log: the ∞ mark Kerzo Quest Expansion puts before WoW Forever quests showed as an empty box in DaylightUI's font (and 16 other fonts without that letter). It now gets a font that has it, at the same size.
 - Polestar: a note on its card and Window settings: the DaylightUI look goes on Polestar's own "Polestar" skin only; its other looks (Vellum, Beacon and the rest) are yours to use and stay as Polestar draws them.

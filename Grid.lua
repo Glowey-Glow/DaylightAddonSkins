@@ -417,7 +417,9 @@ end
 
 local LOOK_ROWS = {
 	{ "DaylightUI font", { "font", "textOutline", "textShadow" } },
-	{ "DaylightUI accent", { "accent", "accentColor", "gradientBorder" } },
+	-- (The custom gradient's count and colors since DaylightUI 1.9.2.)
+	{ "DaylightUI accent", { "accent", "accentColor", "accentGradient.count", "accentGradient.c1", "accentGradient.c2",
+		"accentGradient.c3", "accentGradient.c4", "accentGradient.c5", "gradientBorder" } },
 	{ "DaylightUI windows", { "windowAlpha", "windowTint", "windowTintColor", "borderPx", "borderAlpha" } },
 }
 

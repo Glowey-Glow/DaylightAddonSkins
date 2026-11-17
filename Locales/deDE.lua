@@ -309,7 +309,8 @@ L["Daylight gradient"] = "Daylight-Verlauf"
 L["Gradient window borders"] = "Verlaufs-Fensterränder"
 L["Mastercraft stays on its Classic style while Addon Skins dresses it. The style you picked (%s) comes back when its skin is off."] = "Mastercraft bleibt beim Stil „Klassisch“, solange Addon Skins es einkleidet. Dein gewählter Stil (%s) kehrt zurück, wenn sein Skin aus ist."
 L["This addon's accent: DaylightUI's own (a gradient one included), or one for this addon alone."] = "Akzent dieses Addons: der von DaylightUI (auch ein Verlauf) oder einer nur für dieses Addon."
-L["When this addon's accent is a gradient (Daylight's or your class's), its window borders run along it."] = "Ist der Akzent dieses Addons ein Verlauf (Daylight oder Klasse), folgen ihm die Fensterränder."
+L["When this addon's accent is a gradient (Daylight's, your class's or your own), its window borders run along it."] = "Ist der Akzent dieses Addons ein Verlauf (Daylight, Klasse oder eigener), folgen ihm die Fensterränder."
+L["Custom gradient"] = "Benutzerdefinierter Verlauf"
 
 -- 2026-11-16 additions
 L["A newer version is out (%s): update through CurseForge or WowUp."] = "Eine neuere Version ist da (%s): Aktualisieren über CurseForge oder WowUp."
