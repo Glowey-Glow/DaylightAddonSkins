@@ -57,6 +57,7 @@ Packs\LFGForever.lua
 Packs\Guildy.lua
 Packs\Mastercraft.lua
 Packs\HighFidelityWorldMap.lua
+Auto.lua
 Grid.lua
 Options.lua
 Choices.lua

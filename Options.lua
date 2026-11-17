@@ -177,6 +177,11 @@ local pages = {
 		{ label = L["Blizzard"], wide = true,
 		  desc = L["The game's own windows, each with a switch of its own."],
 		  items = { ns.SkinGrid("blizzard") } },
+		-- Addons with no pack, found on their own (Auto.lua): off until turned on.
+		{ label = L["Other addons (basic)"], wide = true,
+		  desc = L["Addons without a skin of their own: a basic DaylightUI look, off until you turn one on."],
+		  hidden = function() return not (ns.AutoAddons and #ns.AutoAddons() > 0) end,
+		  items = { ns.SkinGrid("auto") } },
 		{ label = L["DaylightUI Override"],
 		  desc = L["When your addons do something DaylightUI already does, DaylightUI handles it unless you picked the addon. On Look and Feel, each addon's settings have a switch per feature and a button to give everything back."],
 		  items = {

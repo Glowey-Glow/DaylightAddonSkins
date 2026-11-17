@@ -15,6 +15,8 @@ local MAX_COLS = 4
 
 local function Get(key)
 	local ok, v = pcall(API.GetSetting, ADDON, key)
+	-- (Other addons' switches, "auto.<folder>", are off until turned on.)
+	if type(key) == "string" and key:sub(1, 5) == "auto." then return ok and v == true end
 	return ok and v ~= false
 end
 
@@ -139,6 +141,16 @@ local function AddonList()
 	return list
 end
 
+-- Addons without a pack whose windows Auto.lua found (ns.AutoAddons).
+local function AutoList()
+	local list = {}
+	for _, a in ipairs(ns.AutoAddons and ns.AutoAddons() or {}) do
+		list[#list + 1] = { key = ns.AutoKey(a.folder), label = a.label,
+			tip = string.format(L["A basic DaylightUI look on %s's windows, found on their own. Its own art and colors stay as they are."], a.label) }
+	end
+	return list
+end
+
 local function BlizzardList()
 	local list = {}
 	for _, w in ipairs(ns.BLIZZ) do
@@ -257,7 +269,7 @@ end
 -- kind: "addons" or "blizzard". The options item: one row holding the whole grid.
 function ns.SkinGrid(kind)
 	local function build(row)
-		local list = kind == "addons" and AddonList() or BlizzardList()
+		local list = (kind == "addons" and AddonList()) or (kind == "auto" and AutoList()) or BlizzardList()
 		local cells = {}
 		row.skinCells = cells
 		for i, item in ipairs(list) do cells[i] = MakeCell(row, item) end
@@ -295,7 +307,8 @@ function ns.SkinGrid(kind)
 		if not cells then return end
 		for _, c in ipairs(cells) do PaintCell(c) end
 	end
-	return { type = "custom", label = kind == "addons" and L["Addons"] or L["Blizzard"],
+	local labels = { addons = L["Addons"], auto = L["Other addons (basic)"], blizzard = L["Blizzard"] }
+	return { type = "custom", label = labels[kind] or L["Blizzard"],
 		build = build, height = height, update = update }
 end
 
