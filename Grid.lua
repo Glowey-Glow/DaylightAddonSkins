@@ -127,8 +127,12 @@ local function AddonList()
 	for _, addon in ipairs(ns.order) do
 		if not game[addon] then
 			local have = Installed(addon)
+			local tip = string.format(L["Dress %s's windows."], ns.targets[addon])
+			-- (A pack's own note on what it covers, Polestar's: its house skin only.)
+			local note = ns.caps[addon] and ns.caps[addon].note
+			if type(note) == "string" then tip = tip .. " " .. note end
 			list[#list + 1] = { key = addon, label = ns.targets[addon], url = not have and ns.LINKS[addon] or nil,
-				missing = not have, tip = string.format(L["Dress %s's windows."], ns.targets[addon]) }
+				missing = not have, tip = tip }
 		end
 	end
 	table.sort(list, ByLabel)

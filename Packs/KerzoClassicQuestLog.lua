@@ -344,6 +344,31 @@ end
 
 local rowWash = setmetatable({}, { __mode = "k" })
 
+-- Kerzo Quest Expansion marks a WoW Forever quest with "∞" before its level, drawn in the
+-- title's font (ours). DaylightUI's fonts without that letter (it would show as an empty box):
+-- the mark's string gets Kerzo's own Nowar Sans, which has it, at the same size.
+local INFINITY = "\226\136\158"
+local NO_INFINITY = {
+	["audiowide.ttf"] = true, ["bangers.ttf"] = true, ["chewy.ttf"] = true, ["delius.ttf"] = true,
+	["expresswayfree.ttf"] = true, ["fredoka-semibold.ttf"] = true, ["grandstander-black.ttf"] = true,
+	["lilitaone.ttf"] = true, ["luckiestguy.ttf"] = true, ["mplusrounded-extrabold.ttf"] = true,
+	["orbitron-black.ttf"] = true, ["permanentmarker.ttf"] = true, ["pirataone.ttf"] = true,
+	["russoone-regular.ttf"] = true, ["sniglet-extrabold.ttf"] = true, ["squadaone.ttf"] = true,
+	["titanone.ttf"] = true,
+}
+local MARK_FACE = "Interface\\AddOns\\Kerzo Classic Quest Log\\fonts\\NowarSans-Regular.ttf"
+local function ForeverMark(row)
+	local fs = row.TextoPrefijo
+	if Kind(fs) ~= "FontString" or not fs:IsShown() or not On() then return end
+	local text = fs:GetText()
+	if type(text) ~= "string" or (issecretvalue and issecretvalue(text)) or not text:find(INFINITY, 1, true) then return end
+	local path, size, flags = fs:GetFont()
+	local file = type(path) == "string" and path:match("([^\\/]+)$")
+	if file and NO_INFINITY[file:lower()] and type(size) == "number" and size > 0 then
+		fs:SetFont(MARK_FACE, size, flags or "")
+	end
+end
+
 local function ListRow(row)
 	if not rowWash[row] then
 		local w = row:CreateTexture(nil, "HIGHLIGHT")
@@ -351,7 +376,11 @@ local function ListRow(row)
 		w:SetColorTexture(1, 1, 1, 0.05)
 		rowWash[row] = w
 		Erase(row.BrilloExpandir)
+		-- (It draws a row again on its own, outside the list's refresh, and sets the mark's font
+		-- each time.)
+		if type(row.DibujarQuest) == "function" then hooksecurefunc(row, "DibujarQuest", ForeverMark) end
 	end
+	ForeverMark(row)
 	local info = row.info
 	if type(info) ~= "table" then return end
 	if info.isHeader then

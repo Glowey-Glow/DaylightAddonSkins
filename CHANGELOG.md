@@ -1,5 +1,9 @@
 # DaylightUI Addon Skins
 
+## 1.14.2
+- Kerzo Classic Quest Log: the ∞ mark Kerzo Quest Expansion puts before WoW Forever quests showed as an empty box in DaylightUI's font (and 16 other fonts without that letter). It now gets a font that has it, at the same size.
+- Polestar: a note on its card and Window settings: the DaylightUI look goes on Polestar's own "Polestar" skin only; its other looks (Vellum, Beacon and the rest) are yours to use and stay as Polestar draws them.
+
 ## 1.14.1
 - Polestar: its auto accept and auto turn in of the guide's quests join the DaylightUI overlaps too, the same as Journey Guides' (asked once, DaylightUI picked; switch either back on its page).
 

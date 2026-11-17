@@ -21,6 +21,7 @@ if not ns.ok then return end
 local L = ns.L
 
 ns.Target("Polestar", "Polestar", { window = true, text = true, colors = true, font = "daylight",
+	note = L["The DaylightUI look goes on Polestar's own \"Polestar\" skin only. Its other looks (Vellum, Beacon and the rest) are yours to use and stay as Polestar draws them."],
 	extraTab = "DaylightUI", extra = function() return { ns.HandoverGroup("Polestar") } end })
 
 local P = _G.Polestar

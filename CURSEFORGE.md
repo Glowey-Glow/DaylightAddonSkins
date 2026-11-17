@@ -12,6 +12,8 @@ BugSack · Camping Kit · Dialogue UI · DoesItDie · Dungeon Journal · Forever
 
 Only the ones you have installed are skinned; the rest are skipped. Nothing to set up: each takes the DaylightUI look the next time you open its windows.
 
+**Polestar:** the DaylightUI look goes on Polestar's own "Polestar" skin only. Its other looks (Vellum, Beacon and the rest) are yours to use and stay as Polestar draws them.
+
 ## The game's own windows
 
 The game windows DaylightUI's Window Skins leave bare get the same look: the ready and role checks, queue, invite and PvP popups, the color picker, the "Return to graveyard" button and death recap, the stopwatch and Quick Keybind, chat settings and the channels window, the zone map (Shift-M), alert and level-up toasts, help, report and friend windows, icon pickers, help tips and more. Also the **Options window** (Esc > Options), every setting in it and the addon pages inside it, and the **dungeon-ready dialog**. New in 1.12.0: the **profession window**, the **character window** (and currency transfer), Collections tabs, the Calendar panels, Click Casting, the Cooldown Manager settings, guild bank tabs, confirm boxes' gold and item lines, the map pin button, and the game's own gossip, quest, vendor, trainer, mail, social, bag and bank windows whenever DaylightUI's own version is switched off. With DaylightUI 1.8.4, which dresses the gossip, quest, vendor, trainer, mail, social, character and spellbook windows itself when you pick them, those are left to DaylightUI so nothing is dressed twice. New in 1.12.2: new-player tutorials, battleground status bars, voice chat toasts, GM chat, the subscription offer, the game's damage meter and more. Edit Mode stays the game's.
@@ -19,6 +21,10 @@ The game windows DaylightUI's Window Skins leave bare get the same look: the rea
 All pop-up menus (right-click menus and dropdowns, any addon's) and every addon's AceConfig settings lose the game's gold.
 
 ---
+
+## New in 1.14.2
+- **Kerzo Classic Quest Log:** the ∞ mark before WoW Forever quests no longer shows as an empty box in DaylightUI's font.
+- **Polestar:** a note on its settings that only its house "Polestar" skin takes the DaylightUI look; its other looks are free to use.
 
 ## New in 1.14.0
 - **Ready for today's addon updates:** Forever Leveling BiS 1.3.2 (its windows, My gear on DaylightUI's character window, the new Wish list), Polestar 0.4.0 (its new skins are left as Polestar draws them), OneForAll 6.2.10, Shortest Path Forever 1.41 (Journey stops, Farming tour, Forever profile, the right-click menu, nearby services), Trueshot Lodge, Forever Fishing, Dungeon Journal 2.0.9, LFG Forever 2.1.0, Does It Die, Dialogue UI, Journey Guides and Spoken.

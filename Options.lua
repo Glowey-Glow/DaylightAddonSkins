@@ -99,7 +99,9 @@ local function lookGroups(addon, caps, tab, lead)
 		items[#items + 1] = { type = "slider", key = at .. "opacity", label = L["Background opacity"], min = 0, max = 1, step = 0.05, unit = "%",
 			desc = L["How solid the background of this addon's windows is."],
 			disabled = function(get) return following(get) or get(at .. "ownOpacity") ~= true end }
-		groups[#groups + 1] = { label = L["Window background"], tab = tab, items = items }
+		-- (A pack's own note on what it covers, Polestar's: its house skin only.)
+		groups[#groups + 1] = { label = L["Window background"], tab = tab, items = items,
+			desc = type(caps.note) == "string" and caps.note or nil }
 		groups[#groups + 1] = { label = L["Window border"], tab = tab, items = {
 			{ type = "toggle", key = at .. "border", label = L["Border"],
 			  desc = L["The border round this addon's windows."], disabled = following },

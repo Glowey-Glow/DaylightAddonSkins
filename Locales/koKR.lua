@@ -327,3 +327,4 @@ L["your quest list"] = "퀘스트 목록"
 -- 1.14.1: Polestar's guide quests
 L["Accept the guide's quests automatically"] = "가이드 퀘스트 자동 수락"
 L["Turn in the guide's quests automatically"] = "가이드 퀘스트 자동 완료"
+L["The DaylightUI look goes on Polestar's own \"Polestar\" skin only. Its other looks (Vellum, Beacon and the rest) are yours to use and stay as Polestar draws them."] = "DaylightUI 외형은 Polestar의 기본 \"Polestar\" 스킨에만 적용됩니다. 다른 외형(Vellum, Beacon 등)도 자유롭게 사용할 수 있으며 Polestar가 그리는 그대로 유지됩니다."
