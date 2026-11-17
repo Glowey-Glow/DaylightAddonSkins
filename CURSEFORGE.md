@@ -22,7 +22,7 @@ All pop-up menus (right-click menus and dropdowns, any addon's) and every addon'
 
 ## New in 1.14.0
 - **Ready for today's addon updates:** Forever Leveling BiS 1.3.2 (its windows, My gear on DaylightUI's character window, the new Wish list), Polestar 0.4.0 (its new skins are left as Polestar draws them), OneForAll 6.2.10, Shortest Path Forever 1.41 (Journey stops, Farming tour, Forever profile, the right-click menu, nearby services), Trueshot Lodge, Forever Fishing, Dungeon Journal 2.0.9, LFG Forever 2.1.0, Does It Die, Dialogue UI, Journey Guides and Spoken.
-- **More overlaps handed to DaylightUI** (asked once, switch any back): Polestar's vendor, loot, gossip, error and flight-map switches, OneForAll's tooltip at the mouse, Journey's guide-quest auto accept and turn in, and ForeverCore's quest list.
+- **More overlaps handed to DaylightUI** (asked once, switch any back): Polestar's vendor, loot, gossip, error, flight-map and guide-quest switches, OneForAll's tooltip at the mouse, Journey's guide-quest auto accept and turn in, and ForeverCore's quest list.
 - **DaylightUI 1.9.1:** tooltips dressed for Questie and RareScanner follow its separate tooltip opacity.
 
 ## New in 1.13.0

@@ -324,3 +324,7 @@ L["the tooltip's anchor (the game's spot or the mouse)"] = "el anclaje de la des
 L["Accept and turn in the guide's quests"] = "Aceptar y entregar las misiones de la guía"
 L["Forever quest list"] = "Lista de misiones de Forever"
 L["your quest list"] = "tu lista de misiones"
+
+-- 1.14.1: Polestar's guide quests
+L["Accept the guide's quests automatically"] = "Aceptar automáticamente las misiones de la guía"
+L["Turn in the guide's quests automatically"] = "Entregar automáticamente las misiones de la guía"

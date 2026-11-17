@@ -323,3 +323,7 @@ L["the tooltip's anchor (the game's spot or the mouse)"] = "привязка п�
 L["Accept and turn in the guide's quests"] = "Принимать и сдавать задания гайда"
 L["Forever quest list"] = "Список заданий Forever"
 L["your quest list"] = "ваш список заданий"
+
+-- 1.14.1: Polestar's guide quests
+L["Accept the guide's quests automatically"] = "Автоматически принимать задания гайда"
+L["Turn in the guide's quests automatically"] = "Автоматически сдавать задания гайда"

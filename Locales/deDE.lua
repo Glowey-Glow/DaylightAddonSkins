@@ -323,3 +323,7 @@ L["the tooltip's anchor (the game's spot or the mouse)"] = "der Tooltip-Anker (d
 L["Accept and turn in the guide's quests"] = "Quests des Guides annehmen und abgeben"
 L["Forever quest list"] = "Forever-Questliste"
 L["your quest list"] = "Eure Questliste"
+
+-- 1.14.1: Polestar's guide quests
+L["Accept the guide's quests automatically"] = "Quests des Guides automatisch annehmen"
+L["Turn in the guide's quests automatically"] = "Quests des Guides automatisch abgeben"

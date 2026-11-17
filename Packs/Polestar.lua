@@ -444,8 +444,9 @@ end)
 
 -- ---------------------------------------------------------------------------------------------
 -- Hand-over: its quality-of-life switches DaylightUI also has (Polestar 0.4.0.1, QoL/QoL.lua).
--- Left out: its guide-only work (auto accept and turn in of the guide's own quests, the step's
--- gossip, target list, route vendors, Restock), which DaylightUI has no copy of. Its settings
+-- Its auto accept and turn in of the guide's quests too (DaylightUI's take every quest, the
+-- guide's among them). Left out: its other guide-only work (the step's gossip, target list, route
+-- vendors, Restock), which DaylightUI has no copy of. Its settings
 -- are per Polestar profile, so a handed-over value follows the profile in use.
 -- ---------------------------------------------------------------------------------------------
 
@@ -454,6 +455,7 @@ if type(P.Get) == "function" and type(P.Set) == "function" then
 	local PATH = {
 		sellJunk = "qol.sellJunk", autoRepair = "qol.autoRepair", fastLoot = "qol.fastLoot",
 		skipGossip = "qol.skipGossip", hideErrors = "qol.hideErrors", flightAutoOpen = "qol.flightAutoOpen",
+		autoAccept = "behavior.autoAccept", autoTurnin = "behavior.autoTurnin",
 	}
 	ns.Handover(KEY, {
 		ready = function() return type(_G.PolestarDB) == "table" end,
@@ -472,6 +474,12 @@ if type(P.Get) == "function" and type(P.Set) == "function" then
 			{ key = "hideErrors", label = L["Hide error messages"],
 			  daylight = ns.In(L["quiet errors and its own error text"], "Quality of Life"),
 			  ours = function() return has("QoL", "quietErrors") or has("QoL", "errorText") end },
+			{ key = "autoAccept", label = L["Accept the guide's quests automatically"],
+			  daylight = ns.In(L["auto accept"], "Quality of Life"),
+			  ours = function() return has("QoL", "questAccept") end },
+			{ key = "autoTurnin", label = L["Turn in the guide's quests automatically"],
+			  daylight = ns.In(L["auto turn in"], "Quality of Life"),
+			  ours = function() return has("QoL", "questTurnIn") end },
 			{ key = "flightAutoOpen", label = L["Open the flight map at once"],
 			  daylight = ns.In(L["its NPC window and skip-gossip"], "Quality of Life"),
 			  ours = function() return has("NPC", "enabled") or has("QoL", "skipGossip") end },

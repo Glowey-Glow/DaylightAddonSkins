@@ -323,3 +323,7 @@ L["the tooltip's anchor (the game's spot or the mouse)"] = "툴팁 고정 위치
 L["Accept and turn in the guide's quests"] = "가이드 퀘스트 수락 및 완료"
 L["Forever quest list"] = "Forever 퀘스트 목록"
 L["your quest list"] = "퀘스트 목록"
+
+-- 1.14.1: Polestar's guide quests
+L["Accept the guide's quests automatically"] = "가이드 퀘스트 자동 수락"
+L["Turn in the guide's quests automatically"] = "가이드 퀘스트 자동 완료"

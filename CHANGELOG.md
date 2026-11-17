@@ -1,5 +1,8 @@
 # DaylightUI Addon Skins
 
+## 1.14.1
+- Polestar: its auto accept and auto turn in of the guide's quests join the DaylightUI overlaps too, the same as Journey Guides' (asked once, DaylightUI picked; switch either back on its page).
+
 ## 1.14.0
 - Checked against today's addon updates, including the addons you may not have installed.
 - Forever Leveling BiS 1.3.2: its windows have the DaylightUI look again (1.3.2 changed its window color, so they weren't found). My gear on DaylightUI's character window and the new Wish list dock are dressed too.
