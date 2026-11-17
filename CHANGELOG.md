@@ -1,7 +1,7 @@
 # DaylightUI Addon Skins
 
 ## 1.14.4
-- **Other addons (basic):** a new section on All windows lists your addons that have no skin of their own and have windows (found on their own). Turn one on for a basic DaylightUI look on its windows: the window frame, title and close button, the game's standard buttons, boxes and scroll bars, your font, and DaylightUI's heading color in place of the game's gold. The addon's own art stays. Every one starts off. /skinsauto lists what was found.
+- **Other addons (basic):** a new section on All windows lists your addons that have no skin of their own and have windows (found on their own). Turn one on for a basic DaylightUI look on its windows: the window frame, title and close button, the game's standard buttons, boxes and scroll bars, your font, and DaylightUI's heading color in place of the game's gold. Copies of the game's old dropdown menus get DaylightUI's menu look too, ticks in your accent (BtWQuests' options menu). The addon's own art stays. Every one starts off. /skinsauto lists what was found.
 - Questie: its settings' text buttons no longer raise a Lua error each time they're drawn (this client's text has no word-wrap check; a label on more than one line now counts as wrapped).
 
 ## 1.14.3

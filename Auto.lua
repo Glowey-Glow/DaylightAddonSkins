@@ -133,6 +133,17 @@ local function IsWindow(frame)
 	return Call(frame, "GetBackdrop") ~= nil
 end
 
+-- An addon's copy of the game's old dropdown list (UIDropDownListTemplate's parts by key: a dark
+-- dialog Backdrop and a tooltip-bordered MenuBackdrop, rows with Check / UnCheck marks), as
+-- BtWQuests' options menu is. Small, so no size rule; dressed as the Blizzard pack dresses the
+-- game's own lists.
+local function IsMenu(frame)
+	local kind = Call(frame, "GetObjectType")
+	if kind ~= "Frame" and kind ~= "Button" then return false end
+	if Call(frame, "IsProtected") then return false end
+	return type(rawget(frame, "Backdrop")) == "table" and type(rawget(frame, "MenuBackdrop")) == "table"
+end
+
 local function Templated(frame)
 	for _, part in ipairs(TEMPLATE_PARTS) do
 		if rawget(frame, part) ~= nil then return true end
@@ -189,6 +200,52 @@ local function PutBack(title, was)
 	if was.justify then title:SetJustifyH(was.justify) end
 end
 
+local MENU_SHELL = { quiet = true }
+local UNCHECKED, HOVER_WASH = 0.55, 0.08
+local washed = setmetatable({}, { __mode = "k" })
+
+-- Its rows' marks, after the addon has set them up for this opening: ticked in the accent,
+-- unticked gray.
+local function MenuMarks(list)
+	if not Call(list, "IsShown") then return end
+	local r, g, b = ns.AccentOf()
+	for _, row in ipairs({ list:GetChildren() }) do
+		local check, uncheck = rawget(row, "Check"), rawget(row, "UnCheck")
+		if Call(check, "GetObjectType") == "Texture" and Call(check, "IsShown") then
+			check:SetDesaturated(true)
+			check:SetVertexColor(r, g, b)
+		end
+		if Call(uncheck, "GetObjectType") == "Texture" and Call(uncheck, "IsShown") then
+			uncheck:SetDesaturated(true)
+			uncheck:SetVertexColor(UNCHECKED, UNCHECKED, UNCHECKED)
+		end
+	end
+end
+
+local function DressMenu(list, Kit)
+	if not dressed[list] then
+		dressed[list] = true
+		for _, key in ipairs({ "Backdrop", "MenuBackdrop" }) do
+			local part = rawget(list, key)
+			if ns.Usable(part) then part:SetAlpha(0) end
+		end
+		ns.Guard(Kit.Shell, list, "window", MENU_SHELL)
+	end
+	-- (Opened again at another frame level: the shell back under its rows.)
+	local shell = Kit.ShellOf and Kit.ShellOf(list)
+	if shell and shell.SetFrameLevel then shell:SetFrameLevel(math.max(0, list:GetFrameLevel() - 1)) end
+	for _, row in ipairs({ list:GetChildren() }) do
+		local hl = rawget(row, "Highlight")
+		if not washed[row] and Call(hl, "GetObjectType") == "Texture" then
+			washed[row] = true
+			hl:SetColorTexture(1, 1, 1, HOVER_WASH)
+			hl:SetBlendMode("BLEND")
+		end
+	end
+	ns.Dress(list, DRESS)
+	C_Timer.After(0, function() ns.Guard(MenuMarks, list) end)
+end
+
 local function Dress(frame)
 	local folder = frameFolder[frame]
 	if not folder or not On(folder) or not ns.Usable(frame) then return end
@@ -197,6 +254,14 @@ local function Dress(frame)
 		return
 	end
 	if Call(frame, "IsProtected") then return end
+	if IsMenu(frame) then
+		ns.WithKit(function(Kit)
+			DressMenu(frame, Kit)
+			local label = ns.Colors().LABEL
+			if type(label) == "table" then ns.Guard(Ink, frame, label, 0) end
+		end)
+		return
+	end
 	local w, h = Call(frame, "GetWidth"), Call(frame, "GetHeight")
 	if type(w) ~= "number" or type(h) ~= "number" or w < MIN_W or h < MIN_H then return end
 	local screen = UIParent:GetWidth() or 0
@@ -224,6 +289,8 @@ end
 -- a list it fills): dressed again once its click has run, on the next frame. The game's
 -- GLOBAL_MOUSE_UP, as DaylightUI's own NeedRoll skin listens for it: nothing runs between clicks.
 local again = false
+local caughtUp = false   -- (the first look over the whole interface done: below)
+local Check              -- (a look at frames made since: below)
 local function DressShown()
 	again = false
 	for frame in pairs(dressed) do
@@ -232,7 +299,15 @@ local function DressShown()
 end
 local clicks = CreateFrame("Frame")
 clicks:RegisterEvent("GLOBAL_MOUSE_UP")
+local newSoon = false
 clicks:SetScript("OnEvent", function()
+	if caughtUp and not newSoon then
+		newSoon = true
+		C_Timer.After(0, function()
+			newSoon = false
+			Check()
+		end)
+	end
 	if again or not next(dressed) then return end
 	for frame in pairs(dressed) do
 		if Call(frame, "IsVisible") and Call(frame, "IsMouseOver") then
@@ -257,27 +332,42 @@ local function Take(frame, folder)
 	if Call(frame, "IsShown") then Dress(frame) end
 end
 
-local function Look()
-	if not ns.Enabled() then return end
-	local kids = { UIParent:GetChildren() }
-	for _, frame in ipairs(kids) do
-		if not seen[frame] then
-			seen[frame] = true
-			local folder = FolderOf(frame)
-			if folder and Eligible(folder) and IsWindow(frame) then Take(frame, folder) end
-		end
-	end
+-- A frame at the top (UIParent's child, or one made with no parent at all: BtWQuests' options
+-- list) from an addon that may be dressed.
+local function Consider(frame)
+	if seen[frame] then return end
+	seen[frame] = true
+	if Call(frame, "IsForbidden") then return end
+	local parent = Call(frame, "GetParent")
+	if parent ~= nil and parent ~= UIParent then return end
+	local folder = FolderOf(frame)
+	if folder and Eligible(folder) and (IsMenu(frame) or IsWindow(frame)) then Take(frame, folder) end
 end
 
--- Once the world is up (the addons' windows made as they load are there), then whenever the
--- screen gets new top-level frames.
-local count = 0
-local function Check()
-	local n = UIParent:GetNumChildren()
-	if n ~= count then
-		count = n
-		ns.Guard(Look)
+-- Every frame the game has made, in the order it made them (EnumerateFrames), from where the last
+-- look stopped: each look sees only frames made since. budget = at most this many now (the first
+-- look, over the whole interface, is spread over a few frames); true once caught up.
+local cursor
+local function Step(budget)
+	if not ns.Enabled() then return true end
+	local frame
+	if cursor then frame = EnumerateFrames(cursor) else frame = EnumerateFrames() end
+	local n = 0
+	while frame do
+		Consider(frame)
+		cursor = frame
+		n = n + 1
+		if budget and n >= budget then return false end
+		frame = EnumerateFrames(frame)
 	end
+	return true
+end
+
+-- Once the world is up: the whole interface, 2,000 frames a frame (about 28,000 here). Then a
+-- look at what's new every 2 seconds, and right after any click (a menu or window a click made:
+-- found the next frame).
+function Check()
+	if caughtUp then ns.Guard(Step) end
 end
 
 local events = CreateFrame("Frame")
@@ -287,8 +377,15 @@ events:SetScript("OnEvent", function(self, event)
 	if event == "PLAYER_ENTERING_WORLD" then
 		self:UnregisterEvent("PLAYER_ENTERING_WORLD")
 		C_Timer.After(1, function()
-			Check()
-			C_Timer.NewTicker(2, Check)
+			local first
+			first = C_Timer.NewTicker(0, function()
+				local ok, done = xpcall(Step, geterrorhandler(), 2000)
+				if not ok or done then
+					first:Cancel()
+					caughtUp = true
+					C_Timer.NewTicker(2, Check)
+				end
+			end)
 		end)
 	else
 		for frame in pairs(waiting) do
@@ -320,7 +417,8 @@ SlashCmdList.DAYLIGHTSKINSAUTO = function()
 		local names = {}
 		for frame in pairs(found[a.folder].windows) do
 			local name = Call(frame, "GetName")
-			names[#names + 1] = (type(name) == "string" and name or "?") .. (Templated(frame) and "" or " (backdrop)")
+			local how = (IsMenu(frame) and " (menu)") or (Templated(frame) and "") or " (backdrop)"
+			names[#names + 1] = (type(name) == "string" and name or "?") .. how
 		end
 		table.sort(names)
 		print(string.format("  %s (%s): %s", a.label, On(a.folder) and L["On"] or L["Off"], table.concat(names, ", ")))
