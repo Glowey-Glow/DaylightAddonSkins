@@ -22,6 +22,10 @@ All pop-up menus (right-click menus and dropdowns, any addon's) and every addon'
 
 ---
 
+## New in 1.14.4
+- **Auto Skinner (BETA):** on All windows, your addons that have no skin of their own and have windows are listed on their own. Turn one on for a basic DaylightUI look: the window frame, title and close button, the game's standard buttons, boxes and scroll bars, your font, DaylightUI's heading color, and its menu look on copies of the game's dropdown menus. The addon's own art stays, and every one starts off. Auto Skinning is in beta and may not skin an addon that isn't supported yet properly. These are not bugs, it's a beta test.
+- **Questie:** its settings no longer raise a Lua error as their buttons are drawn.
+
 ## New in 1.14.3
 - **DaylightUI 1.9.2's Custom gradient accent** reaches skinned windows, every one of its colors in gradient text. An addon's own Accent can pick it too, and its colors are on Look and Feel > General.
 - **Dungeon maps:** with OpenMap 0.8.10 and Dungeon Journal, Dungeon Journal's map shows inside dungeons again (OpenMap's stays everywhere else).

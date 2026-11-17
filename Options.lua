@@ -178,8 +178,9 @@ local pages = {
 		  desc = L["The game's own windows, each with a switch of its own."],
 		  items = { ns.SkinGrid("blizzard") } },
 		-- Addons with no pack, found on their own (Auto.lua): off until turned on.
-		{ label = L["Other addons (basic)"], wide = true,
-		  desc = L["Addons without a skin of their own: a basic DaylightUI look, off until you turn one on."],
+		{ label = ns.AutoTitle(), wide = true,
+		  desc = L["Addons without a skin of their own: a basic DaylightUI look, off until you turn one on."] .. " "
+			.. L["Auto Skinning is in beta and may not skin your addon that is not yet supported properly. These are not bugs, it's a beta test."],
 		  hidden = function() return not (ns.AutoAddons and #ns.AutoAddons() > 0) end,
 		  items = { ns.SkinGrid("auto") } },
 		{ label = L["DaylightUI Override"],

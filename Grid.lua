@@ -307,7 +307,7 @@ function ns.SkinGrid(kind)
 		if not cells then return end
 		for _, c in ipairs(cells) do PaintCell(c) end
 	end
-	local labels = { addons = L["Addons"], auto = L["Other addons (basic)"], blizzard = L["Blizzard"] }
+	local labels = { addons = L["Addons"], auto = ns.AutoTitle and ns.AutoTitle() or "", blizzard = L["Blizzard"] }
 	return { type = "custom", label = labels[kind] or L["Blizzard"],
 		build = build, height = height, update = update }
 end

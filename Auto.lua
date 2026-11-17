@@ -1,4 +1,4 @@
--- Other addons (basic): a plain DaylightUI look on the windows of addons this plugin has no pack
+-- Auto Skinner (BETA): a plain DaylightUI look on the windows of addons this plugin has no pack
 -- for, found on their own. Each such addon gets a switch of its own on All windows, off until the
 -- player turns it on (an automatic look can't reach the standard of a pack: see the notes below).
 --
@@ -122,6 +122,10 @@ end
 local function Key(folder) return "auto." .. folder end
 local function On(folder) return ns.Enabled() and ns.Setting(Key(folder)) == true end
 ns.AutoKey = Key
+
+-- The section's name, its "BETA" bright (the word stays English in every language).
+local BETA = "|cffffb000BETA|r"
+function ns.AutoTitle() return string.format(L["Auto Skinner (%s)"], BETA) end
 
 local function IsWindow(frame)
 	if Call(frame, "GetObjectType") ~= "Frame" then return false end
