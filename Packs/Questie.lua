@@ -150,7 +150,12 @@ local function FitButton(button)
 	local fs = button.GetFontString and button:GetFontString()
 	if not ns.Usable(fs) then return end
 	ns.FollowFont(fs, KEY)
-	if fs:GetWordWrap() then return end
+	-- (This client's strings have no GetWordWrap: a label on more than one line is one it wraps.)
+	if fs.GetWordWrap then
+		if fs:GetWordWrap() then return end
+	elseif fs.GetNumLines and (fs:GetNumLines() or 1) > 1 then
+		return
+	end
 	local need = (fs:GetStringWidth() or 0) + BUTTON_PADDING
 	local row = button:GetParent()
 	local most = ns.Usable(row) and row:GetWidth() or need

@@ -1,5 +1,8 @@
 # DaylightUI Addon Skins
 
+## 1.14.4
+- Questie: its settings' text buttons no longer raise a Lua error each time they're drawn (this client's text has no word-wrap check; a label on more than one line now counts as wrapped).
+
 ## 1.14.3
 - DaylightUI 1.9.2: its new Custom gradient accent reaches skinned windows. Gradient text runs through every one of its colors, not only the two ends, and an addon's own Accent can pick Custom gradient too.
 - Look and Feel > General shows DaylightUI's custom gradient colors with its other accent settings.
