@@ -22,6 +22,10 @@ All pop-up menus (right-click menus and dropdowns, any addon's) and every addon'
 
 ---
 
+## New in 1.14.3
+- **DaylightUI 1.9.2's Custom gradient accent** reaches skinned windows, every one of its colors in gradient text. An addon's own Accent can pick it too, and its colors are on Look and Feel > General.
+- **Dungeon maps:** with OpenMap 0.8.10 and Dungeon Journal, Dungeon Journal's map shows inside dungeons again (OpenMap's stays everywhere else).
+
 ## New in 1.14.2
 - **Kerzo Classic Quest Log:** the ∞ mark before WoW Forever quests no longer shows as an empty box in DaylightUI's font.
 - **Polestar:** a note on its settings that only its house "Polestar" skin takes the DaylightUI look; its other looks are free to use.
