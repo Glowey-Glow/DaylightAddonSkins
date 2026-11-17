@@ -673,6 +673,9 @@ ns.Pack(KEY, nil, function(Kit)
 	-- DetachWorldMapOverlay, so its map panel goes home to the journal), and its toggle and Scarlet
 	-- Monastery wing buttons are hidden. Its own setting is left as it is: without OpenMap its
 	-- overlay works as before.
+	-- Since OpenMap 0.8.10 OpenMap steps aside inside a dungeon Dungeon Journal knows (its #302), so
+	-- in a dungeon the journal's overlay stays (else there'd be no dungeon map at all); OpenMap's
+	-- map of a dungeon opened there (its view up) still wins.
 	if type(FDJ.RefreshWorldMapOverlay) == "function" and type(FDJ.DetachWorldMapOverlay) == "function" then
 		-- (Whether OpenMap is loaded is asked until it is, then kept: an addon loaded stays loaded.)
 		local openMap = false
@@ -687,6 +690,11 @@ ns.Pack(KEY, nil, function(Kit)
 			if not openMap then
 				openMap = (C_AddOns and C_AddOns.IsAddOnLoaded and C_AddOns.IsAddOnLoaded("OpenMap")) and true or false
 				if not openMap then return end
+			end
+			local inDungeon = IsInInstance and select(2, IsInInstance())
+			if (inDungeon == "party" or inDungeon == "raid") then
+				local view = _G.OpenMapDungeonView
+				if not (ns.Usable(view) and view:IsShown()) then return end
 			end
 			pcall(FDJ.DetachWorldMapOverlay)
 			local toggle = _G.ForeverDungeonJournalWorldMapToggle
