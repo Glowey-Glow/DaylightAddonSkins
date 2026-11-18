@@ -71,16 +71,13 @@ local function Accent(region, how, alpha)
 	PaintAccent(region)
 end
 
-local repaintQueued = false
 local function Repaint()
-	repaintQueued = false
 	if not ns.Enabled(KEY) then return end
 	for region in pairs(accented) do PaintAccent(region) end
 end
 local function QueueRepaint()
-	if repaintQueued or not next(accented) then return end
-	repaintQueued = true
-	C_Timer.After(0, Repaint)
+	if not next(accented) then return end
+	ns.Queue("CampingKit:accents", Repaint, KEY)
 end
 ns.me.On("StyleChanged", QueueRepaint)
 ns.me.On("SettingChanged", function(scope, path)
@@ -136,7 +133,7 @@ local function InkOnShow(frame, Kit, extra)
 		ns.Guard(Kit.InkGameText, frame)
 		if extra then ns.Guard(extra, frame) end
 	end
-	frame:HookScript("OnShow", ink)
+	ns.ScriptOnce(frame, "OnShow", ink, KEY)
 	ink()
 end
 
@@ -164,11 +161,11 @@ local function NavButton(b)
 			accented[fs] = nil
 		end
 	end
-	hooksecurefunc(fs, "SetFontObject", function(self, obj)
+	ns.HookOnce(fs, "SetFontObject", function(self, obj)
 		if not ns.Enabled(KEY) then return end
 		Pick(IsPickedFont(obj))
 		ns.Refont(self, KEY)
-	end)
+	end, KEY)
 	Pick(ns.Usable(b.bar) and b.bar:IsShown())
 end
 
@@ -192,7 +189,7 @@ local function ScrollTrack(track, Kit)
 		self:SetColorTexture(c[1], c[2], c[3], c[4] or 1)
 		busy = false
 	end
-	hooksecurefunc(bar, "SetColorTexture", Tint)
+	ns.HookOnce(bar, "SetColorTexture", Tint, KEY)
 	Tint(bar, nil, nil, nil, 0)
 end
 
@@ -285,10 +282,8 @@ local function OptionsWindow(f, Kit)
 	local pages = Options(f, Kit)
 	ns.PlainWindow(f)
 	ns.Guard(Kit.InkGameText, f)
-	local queued = false
 	local counted = -1   -- pages at the last look (they're only ever added)
 	local function Pass()
-		queued = false
 		if not ns.Enabled(KEY) or not ns.Usable(pages) then return end
 		-- (A dynamic page's relayout sets the height again on every change: nothing new then.)
 		local n = pages:GetNumChildren()
@@ -306,12 +301,10 @@ local function OptionsWindow(f, Kit)
 		if fresh then ns.Dress(f, nil, 0, KEY) end
 	end
 	local function Queue()
-		if queued then return end
-		queued = true
-		C_Timer.After(0, Pass)
+		ns.Queue("CampingKit:pages", Pass, KEY)
 	end
 	-- Every page shown (built the first time) sets the scroll child's height to the page's.
-	if ns.Usable(pages) then hooksecurefunc(pages, "SetHeight", Queue) end
+	if ns.Usable(pages) then ns.HookOnce(pages, "SetHeight", Queue, KEY) end
 	Pass()
 end
 
@@ -335,8 +328,8 @@ local function InputWell(well, box, Kit)
 		end
 	end
 	Edge(box:HasFocus())
-	box:HookScript("OnEditFocusGained", function() if ns.Enabled(KEY) then Edge(true) end end)
-	box:HookScript("OnEditFocusLost", function() if ns.Enabled(KEY) then Edge(false) end end)
+	ns.ScriptOnce(box, "OnEditFocusGained", function() if ns.Enabled(KEY) then Edge(true) end end, KEY)
+	ns.ScriptOnce(box, "OnEditFocusLost", function() if ns.Enabled(KEY) then Edge(false) end end, KEY)
 end
 
 -- The {word} buttons are sized from their words in the game's font: wide enough again in ours.
@@ -360,7 +353,7 @@ local function Editor(editor, Kit)
 	local box = editor.box
 	if ns.Usable(box) then InputWell(box:GetParent(), box, Kit) end
 	InkOnShow(editor, Kit, FitTokens)
-	C_Timer.After(0, function() if ns.Enabled(KEY) then ns.Guard(FitTokens, editor) end end)
+	ns.Queue("CampingKit:editorTokens", function() if ns.Enabled(KEY) then ns.Guard(FitTokens, editor) end end, KEY)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -387,15 +380,17 @@ local function HookOpeners()
 	hooked = true
 	local core = _G.KitCore
 	if type(core) == "table" then
-		if type(core.SetPanelUnlocked) == "function" then hooksecurefunc(core, "SetPanelUnlocked", Now) end
+		if type(core.SetPanelUnlocked) == "function" then ns.HookOnce(core, "SetPanelUnlocked", Now, KEY) end
 		local proto = core.proto
 		if type(proto) == "table" and type(proto.OpenOptions) == "function" then
-			hooksecurefunc(proto, "OpenOptions", Now)
+			ns.HookOnce(proto, "OpenOptions", Now, KEY)
 		end
 	end
 	-- (The buttons are made at login, the minimap button only once a second kit shares it.)
 	for name, script in pairs(OPENERS) do
 		ns.Watch(KEY, name, function(b)
+			-- (Hooked directly: the tent's buttons are part of its secure HUD, and ns.ScriptOnce
+			-- refuses a protected frame.)
 			if ns.Usable(b) and b.HookScript then b:HookScript(script, Now) end
 		end)
 	end
@@ -414,7 +409,7 @@ ns.Pack(KEY, "Camping Kit", function()
 				local busy = false
 				-- (Told apart by the kit's two tints: the accent painted here, and again on a style
 				-- change, comes through this hook too and is left as it is.)
-				hooksecurefunc(ring, "SetVertexColor", function(self, r, g)
+				ns.HookOnce(ring, "SetVertexColor", function(self, r, g)
 					if busy or not ns.Enabled(KEY) or type(r) ~= "number" or type(g) ~= "number" then return end
 					if r == 1 and math.abs(g - 0.82) < 0.01 then
 						accented[self] = "vertex"
@@ -424,7 +419,7 @@ ns.Pack(KEY, "Camping Kit", function()
 					elseif math.abs(r - 0.55) < 0.01 and math.abs(g - 0.55) < 0.01 then
 						accented[self] = nil
 					end
-				end)
+				end, KEY)
 			end
 		end
 	end)
@@ -449,6 +444,7 @@ ns.Pack(KEY, "Camping Kit", function()
 			self:SetTextColor(c[1], c[2], c[3])
 			busy = false
 		end
+		-- (Hooked directly: the label is one of the tent's buttons, which may be protected.)
 		hooksecurefunc(fs, "SetTextColor", ink)
 		ink(fs)
 	end)

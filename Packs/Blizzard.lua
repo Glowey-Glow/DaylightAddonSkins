@@ -60,7 +60,7 @@ if not ns.ok then return end
 local L = ns.L
 
 local KEY = "Blizzard"
-ns.Target(KEY, L["Game windows"], { controls = true })
+ns.Target(KEY, L["Game Windows"], { controls = true })
 
 local Usable, Guard = ns.Usable, ns.Guard
 local ipairs, pairs, type, select = ipairs, pairs, type, select
@@ -358,10 +358,9 @@ local function Walk(Kit, f, opts, after, each, key)
 		if each then each(frame) end
 	end
 	first.each, again.each = visit, visit
-	local queued, waiting = false, false
+	local waiting = false
 	local queue
 	local function run()
-		queued = false
 		if not Usable(f) or not f:IsShown() or not on() then return end
 		if InCombatLockdown() then
 			if not waiting then
@@ -377,11 +376,8 @@ local function Walk(Kit, f, opts, after, each, key)
 		Kit.Auto(f, again)
 		if after then Guard(after, f, Kit) end
 	end
-	queue = function()
-		if queued then return end
-		queued = true
-		C_Timer.After(0, run)
-	end
+	-- (One run next frame however often it's asked: `again` is this walk's own id.)
+	queue = function() ns.Queue(again, run, key or KEY) end
 	first.onPage, again.onPage = queue, queue
 	Kit.Auto(f, first)
 	if after then Guard(after, f, Kit) end
@@ -769,10 +765,10 @@ local function DressToast(f)
 end
 
 if type(_G.AlertFrame_ShowNewAlert) == "function" then
-	hooksecurefunc("AlertFrame_ShowNewAlert", DressToast)
+	ns.HookOnce(nil, "AlertFrame_ShowNewAlert", DressToast, KEY)
 end
 if type(_G.AlertFrame) == "table" and type(_G.AlertFrame.AddAlertFrame) == "function" then
-	hooksecurefunc(_G.AlertFrame, "AddAlertFrame", function(_, f) DressToast(f) end)
+	ns.HookOnce(_G.AlertFrame, "AddAlertFrame", function(_, f) DressToast(f) end, KEY)
 end
 
 -- Zone map (Shift-M) ----------------------------------------------------------------------------
@@ -911,7 +907,7 @@ Entry("ChatConfigFrame", function(f, Kit)
 		end
 	end
 	categories()
-	f:HookScript("OnShow", function() if On() then categories() end end)
+	ns.ScriptOnce(f, "OnShow", function() if On() then categories() end end, KEY)
 	if not Controls() then return end
 	local manager = f.ChatTabManager
 	local skip = {}
@@ -929,19 +925,19 @@ Entry("ChatConfigFrame", function(f, Kit)
 		end
 	end)
 	for _, fn in ipairs({ "ChatConfig_CreateCheckboxes", "ChatConfig_CreateColorSwatches", "ChatConfig_CreateTieredCheckboxes" }) do
-		if type(_G[fn]) == "function" then hooksecurefunc(fn, function() if On() then queue() end end) end
+		if type(_G[fn]) == "function" then ns.HookOnce(nil, fn, function() if On() then queue() end end, KEY) end
 	end
 	-- The picked tab changed: the combat log's (its panel shown) and a chat window's.
 	if type(_G.ChatConfig_UpdateCombatTabs) == "function" then
-		hooksecurefunc("ChatConfig_UpdateCombatTabs", function()
+		ns.HookOnce(nil, "ChatConfig_UpdateCombatTabs", function()
 			if On() then Guard(PaintTabs, Kit, combatTabs, CombatTabPicked) end
-		end)
+		end, KEY)
 	end
 	if type(_G.FCFTab_UpdateColors) == "function" then
-		hooksecurefunc("FCFTab_UpdateColors", function(tab)
+		ns.HookOnce(nil, "FCFTab_UpdateColors", function(tab)
 			-- (Called for every chat tab, often: the cheap test first.)
 			if windowTabSet[tab] and On() then Guard(PaintTabs, Kit, windowTabs, WindowTabPicked) end
-		end)
+		end, KEY)
 	end
 end)
 
@@ -969,10 +965,7 @@ local function ChannelRow(Kit, row)
 		if IsTexture(row.Rank) then keep[row.Rank] = true end
 		rowKeep[row] = keep
 	end
-	if not dressed[row] then
-		dressed[row] = true
-		if row.HookScript then row:HookScript("OnClick", Kit.RepaintSoon) end
-	end
+	ns.ScriptOnce(row, "OnClick", Kit.RepaintSoon, KEY)
 	Kit.Row(row, keep, ChannelPicked, false)
 	FontOf(Kit, row.Text or row.Name)
 end
@@ -1012,9 +1005,9 @@ Entry("ChannelFrame", function(f, Kit)
 	-- New rows as channels are joined while the window is open.
 	if Usable(list) and type(list.Update) == "function" then
 		-- (Hidden: its rows are looked over by the walk on its next show.)
-		hooksecurefunc(list, "Update", function()
+		ns.HookOnce(list, "Update", function()
 			if On() and f:IsShown() then Guard(ChannelRows, Kit, f) end
-		end)
+		end, KEY)
 	end
 end)
 
@@ -1174,32 +1167,32 @@ Entry("DropDownList1", function(_, Kit)
 	-- every row it adds: only a change in how many there are is looked over).
 	if type(_G.UIDropDownMenu_CreateFrames) == "function" then
 		local levels, buttons
-		hooksecurefunc("UIDropDownMenu_CreateFrames", function()
+		ns.HookOnce(nil, "UIDropDownMenu_CreateFrames", function()
 			if not On() or not ns.Kit then return end
 			local l, b = _G.UIDROPDOWNMENU_MAXLEVELS, _G.UIDROPDOWNMENU_MAXBUTTONS
 			if l ~= nil and l == levels and b == buttons then return end
 			levels, buttons = l, b
 			EachList(function(list) Guard(MenuList, ns.Kit, list) end)
-		end)
+		end, KEY)
 	end
 	-- After the game has opened (and filled) a level: post-hooks, nothing runs inside the game's
 	-- own menu code.
 	if type(_G.ToggleDropDownMenu) == "function" then
-		hooksecurefunc("ToggleDropDownMenu", function(level)
+		ns.HookOnce(nil, "ToggleDropDownMenu", function(level)
 			if not On() then return end
 			local list = _G["DropDownList" .. (tonumber(level) or 1)]
 			if Usable(list) and lists[list] and list:IsShown() then Guard(Opened, list) end
-		end)
+		end, KEY)
 	end
 	-- A tick changed while the menu stays open.
 	for _, fn in ipairs({ "UIDropDownMenu_Refresh", "UIDropDownMenu_RefreshAll" }) do
 		if type(_G[fn]) == "function" then
 			-- (Only the lists already dressed can have marks of ours: those, not a name lookup per level.)
-			hooksecurefunc(fn, function()
+			ns.HookOnce(nil, fn, function()
 				if On() and Controls() then
 					for list in pairs(lists) do ShownMarks(list) end
 				end
-			end)
+			end, KEY)
 		end
 	end
 end)
@@ -1235,11 +1228,11 @@ Entry("QueueStatusFrame", function(f, Kit)
 	TipPanel(Kit, f)
 	-- After the game fills it (a post-hook: nothing of ours runs inside its Show).
 	if type(f.Update) == "function" then
-		hooksecurefunc(f, "Update", function()
+		ns.HookOnce(f, "Update", function()
 			if not On() or inkQueued then return end
 			inkQueued = true
 			C_Timer.After(0, InkQueue)
-		end)
+		end, KEY)
 	end
 end)
 
@@ -1564,10 +1557,10 @@ end)
 -- tutorial's font, or GameFontNormal), after which Kit.Font (done once) doesn't put the player's
 -- back: Kit.Refont after each.
 if type(_G.TutorialFrame_Update) == "function" then
-	hooksecurefunc("TutorialFrame_Update", function()
+	ns.HookOnce(nil, "TutorialFrame_Update", function()
 		local Kit = ns.Kit
 		if Kit and On() and Kind(_G.TutorialFrameText) == "FontString" then Kit.Refont(_G.TutorialFrameText) end
-	end)
+	end, KEY)
 end
 
 -- The nameplate tutorial (ButtonFrameTemplate: its picture cards and their frames kept).
@@ -1688,9 +1681,9 @@ end
 
 Entry("EventToastManagerFrame", function(m, Kit)
 	if type(m.DisplayToast) ~= "function" then return end
-	hooksecurefunc(m, "DisplayToast", function(self)
+	ns.HookOnce(m, "DisplayToast", function(self)
 		if On() and ns.Kit then Guard(EventToast, ns.Kit, self) end
-	end)
+	end, KEY)
 	if m:IsShown() then EventToast(Kit, m) end
 end)
 

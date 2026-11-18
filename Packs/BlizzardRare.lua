@@ -198,21 +198,21 @@ Entry("TutorialMainFrame_Frame", function()
 	local P = _G.TutorialPointerFrame
 	if type(P) ~= "table" or type(P.Show) ~= "function" then return end
 	if type(P._GetFrame) == "function" then
-		hooksecurefunc(P, "_GetFrame", function(_, parent)
+		ns.HookOnce(P, "_GetFrame", function(_, parent)
 			local Kit = ns.Kit
 			local f = Kit and On() and type(parent) == "table" and parent.currentNPEPointer
 			local box = Usable(f) and f.Content
 			if Usable(box) then FontOf(Kit, box.Text) end
-		end)
+		end, KEY)
 	end
-	hooksecurefunc(P, "Show", function()
+	ns.HookOnce(P, "Show", function()
 		if not On() then return end
 		if InCombatLockdown() then
 			AfterCombat(waits, "pointers", Pointers)
 		else
 			Guard(Pointers)
 		end
-	end)
+	end, KEY)
 	Pointers()
 end)
 
@@ -305,7 +305,7 @@ end
 for _, name in ipairs(CONTAINERS) do
 	Entry(name, function(c)
 		if type(c.ProcessWidget) ~= "function" then return end
-		hooksecurefunc(c, "ProcessWidget", function(self, id)
+		ns.HookOnce(c, "ProcessWidget", function(self, id)
 			if not On() or not ns.Kit then return end
 			if InCombatLockdown() then
 				AfterCombat(waits, "widgets", WidgetPass)
@@ -314,7 +314,7 @@ for _, name in ipairs(CONTAINERS) do
 			local frames = self.widgetFrames
 			local w = type(frames) == "table" and frames[id]
 			if w then Guard(Widget, ns.Kit, w) end
-		end)
+		end, KEY)
 		WidgetPass()
 	end)
 end
@@ -446,19 +446,19 @@ end
 Entry("BehavioralMessagingTray", function(tray)
 	local mixin = _G.BehavioralMessagingNotificationMixin
 	if type(mixin) == "table" and type(mixin.Init) == "function" then
-		hooksecurefunc(mixin, "Init", function(n) Guard(NoticeWords, n) end)
+		ns.HookOnce(mixin, "Init", function(n) Guard(NoticeWords, n) end, KEY)
 	end
 	-- (Notices made before this: their words now.)
 	for _, n in ipairs({ tray:GetChildren() }) do NoticeWords(n) end
 	if type(tray.EvaluateLayout) == "function" then
-		hooksecurefunc(tray, "EvaluateLayout", function()
+		ns.HookOnce(tray, "EvaluateLayout", function()
 			if not On() then return end
 			if InCombatLockdown() then
 				AfterCombat(waits, "notices", Notices)
 			else
 				Guard(Notices)
 			end
-		end)
+		end, KEY)
 	end
 	Notices()
 end)
@@ -514,7 +514,7 @@ local function MeterWindow(Kit, w)
 	dressed[w] = strip
 	MeterStrip(w)
 	if type(w.SetMinimized) == "function" then
-		hooksecurefunc(w, "SetMinimized", function(self) Guard(MeterStrip, self) end)
+		ns.HookOnce(w, "SetMinimized", function(self) Guard(MeterStrip, self) end, KEY)
 	end
 	B.Words(Kit, w, 0)
 	-- (The session dropdown is 18 or 32 px wide: its SessionName keeps the game's narrower font.)
@@ -540,14 +540,14 @@ Entry("DamageMeter", function(f)
 	if ns.DaylightHas("InfoPanel", "meter.enabled") then return end
 	-- (New windows: from the meter's settings, a click.)
 	if type(f.SetupSessionWindow) == "function" then
-		hooksecurefunc(f, "SetupSessionWindow", function()
+		ns.HookOnce(f, "SetupSessionWindow", function()
 			if not On() then return end
 			if InCombatLockdown() then
 				AfterCombat(waits, "meters", Meters)
 			else
 				Guard(Meters)
 			end
-		end)
+		end, KEY)
 	end
 	Meters()
 end)

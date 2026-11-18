@@ -21,7 +21,7 @@ if not ns.ok then return end
 local L = ns.L
 
 ns.Target("Polestar", "Polestar", { window = true, text = true, colors = true, font = "daylight",
-	note = L["The DaylightUI look goes on Polestar's own \"Polestar\" skin only. Its other looks (Vellum, Beacon and the rest) are yours to use and stay as Polestar draws them."],
+	note = L["The Daylight UI look goes on Polestar's own \"Polestar\" skin only. Its other looks (Vellum, Beacon and the rest) are yours to use and stay as Polestar draws them."],
 	extraTab = "DaylightUI", extra = function() return { ns.HandoverGroup("Polestar") } end })
 
 local P = _G.Polestar
@@ -274,7 +274,7 @@ end
 
 local LevelTip = type(P.UI) == "table" and P.UI.LevelTip
 if type(LevelTip) == "table" and type(LevelTip.Show) == "function" and type(LevelTip.Frame) == "function" then
-	hooksecurefunc(LevelTip, "Show", function()
+	ns.HookOnce(LevelTip, "Show", function()
 		if not On() then return end
 		local f = LevelTip.Frame()
 		if not ns.Usable(f) then return end
@@ -284,7 +284,7 @@ if type(LevelTip) == "table" and type(LevelTip.Show) == "function" and type(Leve
 			TipLook(true)
 			ns.Shell(f, POPUP_SHELL, KEY)
 		end
-	end)
+	end, KEY)
 end
 
 -- Another Polestar look picked: take the shell back off the windows it was on.
@@ -384,10 +384,8 @@ local function MenuButton()
 end
 
 if type(GameMenu) == "table" and type(GameMenu.Mirror) == "function" and type(GameMenu.Button) == "function" then
-	hooksecurefunc(GameMenu, "Mirror", function()
-		local ok, err = pcall(MenuButton)
-		if not ok then geterrorhandler()(err) end
-	end)
+	-- (An error in it is put down against Polestar's pack by ns.HookOnce.)
+	ns.HookOnce(GameMenu, "Mirror", function() MenuButton() end, KEY)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -412,7 +410,7 @@ ns.Watch(KEY, "PolestarMinimapButton", function(btn)
 		if not ns.Enabled(KEY) then return end
 		back:SetShown(btn:GetParent() == _G.Minimap)
 	end
-	hooksecurefunc(btn, "SetParent", Fit)
+	ns.HookOnce(btn, "SetParent", Fit, KEY)
 	Fit()
 end)
 
@@ -420,7 +418,7 @@ end)
 -- (Maps.RefreshMinimapButton): looked for right after that call, in the frame it is made.
 local Maps = P.Maps
 if type(Maps) == "table" and type(Maps.RefreshMinimapButton) == "function" then
-	hooksecurefunc(Maps, "RefreshMinimapButton", function() ns.WatchNow() end)
+	ns.HookOnce(Maps, "RefreshMinimapButton", function() ns.WatchNow() end, KEY)
 end
 
 -- Windows made before this file ran (the guide window) are repainted at login, and everything
@@ -467,28 +465,28 @@ if type(P.Get) == "function" and type(P.Set) == "function" then
 		get = function(key) return P.Get(PATH[key]) end,
 		set = function(key, value) P.Set(PATH[key], value) end,
 		list = {
-			{ key = "sellJunk", label = L["Sell junk at vendors"], daylight = ns.In(L["sell junk"], "Bags"),
+			{ key = "sellJunk", label = L["Sell Junk at Vendors"], daylight = ns.In(L["sell junk"], "Bags"),
 			  ours = function() return has("Bags", "sellJunk") end },
-			{ key = "autoRepair", label = L["Repair at vendors"], daylight = ns.In(L["auto repair"], "Bags"),
+			{ key = "autoRepair", label = L["Repair at Vendors"], daylight = ns.In(L["auto repair"], "Bags"),
 			  ours = function() return has("Bags", "autoRepair") end },
-			{ key = "fastLoot", label = L["Faster looting"], daylight = ns.In(L["fast loot"], "Quality of Life"),
+			{ key = "fastLoot", label = L["Faster Looting"], daylight = ns.In(L["fast loot"], "Quality of Life"),
 			  ours = function() return has("QoL", "fastLoot") end },
-			{ key = "skipGossip", label = L["Pick an NPC's only gossip option"],
+			{ key = "skipGossip", label = L["Pick an NPC's Only Gossip Option"],
 			  daylight = ns.In(L["skip gossip"], "Quality of Life"),
 			  ours = function() return has("QoL", "skipGossip") end },
-			{ key = "hideErrors", label = L["Hide error messages"],
+			{ key = "hideErrors", label = L["Hide Error Messages"],
 			  daylight = ns.In(L["quiet errors and its own error text"], "Quality of Life"),
 			  ours = function() return has("QoL", "quietErrors") or has("QoL", "errorText") end },
-			{ key = "autoAccept", label = L["Accept the guide's quests automatically"],
+			{ key = "autoAccept", label = L["Accept the Guide's Quests Automatically"],
 			  daylight = ns.In(L["auto accept"], "Quality of Life"),
 			  ours = function() return has("QoL", "questAccept") end },
-			{ key = "autoTurnin", label = L["Turn in the guide's quests automatically"],
+			{ key = "autoTurnin", label = L["Turn in the Guide's Quests Automatically"],
 			  daylight = ns.In(L["auto turn in"], "Quality of Life"),
 			  ours = function() return has("QoL", "questTurnIn") end },
-			{ key = "flightAutoOpen", label = L["Open the flight map at once"],
+			{ key = "flightAutoOpen", label = L["Open the Flight Map at Once"],
 			  daylight = ns.In(L["its NPC window and skip-gossip"], "Quality of Life"),
 			  ours = function() return has("NPC", "enabled") or has("QoL", "skipGossip") end },
-			{ key = "questXPOverlay", label = L["Quest XP on the game's experience bar"],
+			{ key = "questXPOverlay", label = L["Quest XP on the Game's Experience Bar"],
 			  daylight = ns.In(L["its experience bar with banked quest XP"], "Info Panel"),
 			  ours = function() return has("InfoPanel", "xp.enabled") end },
 		},

@@ -36,78 +36,125 @@ local function Width(fs, text)
 end
 
 -- ---------------------------------------------------------------------------------------------
--- Installed or not
+-- Installed or not (Core.lua's ns.TargetState: every folder of a target, enabled for this
+-- character or not)
 -- ---------------------------------------------------------------------------------------------
 
--- Targets whose addon ships under another folder name too.
-local FOLDERS = { ForeverDungeonJournal = { "ForeverDungeonJournal", "ForeverCore" } }
-
-local function Exists(folder)
-	local C = _G.C_AddOns
-	if C and type(C.DoesAddOnExist) == "function" then
-		local ok, yes = pcall(C.DoesAddOnExist, folder)
-		if ok then return yes and true or false end
-	end
-	local info = C and C.GetAddOnInfo or _G.GetAddOnInfo
-	if type(info) ~= "function" then return true end
-	local ok, name, _, _, _, reason = pcall(info, folder)
-	if not ok then return true end
-	return name ~= nil and reason ~= "MISSING"
-end
-
 local function Installed(addon)
-	for _, folder in ipairs(FOLDERS[addon] or { addon }) do
-		if Exists(folder) then return true end
+	for _, folder in ipairs(ns.Folders(addon)) do
+		if ns.AddonExists(folder) then return true end
 	end
 	return false
 end
 
 -- ---------------------------------------------------------------------------------------------
--- The link box
+-- The copy box: a CurseForge link ("Get Addon"), or the status report (Status.lua) in a taller
+-- box whose text scrolls. Ctrl+C copies and closes it.
 -- ---------------------------------------------------------------------------------------------
 
 local box
-function ns.ShowLink(name, url)
-	if not box then
-		box = CreateFrame("Frame", "DaylightAddonSkinsLink", UIParent)
-		box:SetSize(440, 140)
-		box:SetPoint("CENTER", 0, 120)
-		box:SetFrameStrata("FULLSCREEN_DIALOG")
-		box:SetToplevel(true)
-		box:SetClampedToScreen(true)
-		box:EnableMouse(true)
-		box:SetMovable(true)
-		box:RegisterForDrag("LeftButton")
-		box:SetScript("OnDragStart", box.StartMoving)
-		box:SetScript("OnDragStop", box.StopMovingOrSizing)
-		API.Skin(box, { window = true })
-		table.insert(UISpecialFrames, "DaylightAddonSkinsLink")
-		box.title = API.Text(box, "head", "LEFT")
-		box.title:SetPoint("TOPLEFT", PAD, -PAD)
-		box.title:SetPoint("RIGHT", box, "RIGHT", -40, 0)
-		box.sub = API.Text(box, "body", "LEFT")
-		box.sub:SetPoint("TOPLEFT", box.title, "BOTTOMLEFT", 0, -8)
-		box.sub:SetPoint("RIGHT", box, "RIGHT", -PAD, 0)
-		box.sub:SetText(L["Press Ctrl+C to copy the link, then paste it in your browser."])
-		local close = API.Close(box, function() box:Hide() end)
-		close:SetPoint("TOPRIGHT", -10, -10)
-		box.input = API.Input(box, { height = 28 })
-		box.input:SetPoint("BOTTOMLEFT", PAD, PAD)
-		box.input:SetPoint("BOTTOMRIGHT", -PAD, PAD)
-		box.input:HookScript("OnEscapePressed", function() box:Hide() end)
-		box.input:HookScript("OnKeyDown", function(_, key)
-			if key == "C" and IsControlKeyDown() then C_Timer.After(0.1, function() box:Hide() end) end
-		end)
+local REPORT_H = 240
+
+local function CopiedSoon(_, key)
+	if key == "C" and IsControlKeyDown() then C_Timer.After(0.1, function() box:Hide() end) end
+end
+
+local function Box()
+	if box then return box end
+	box = CreateFrame("Frame", "DaylightAddonSkinsLink", UIParent)
+	box:SetSize(440, 140)
+	box:SetPoint("CENTER", 0, 120)
+	box:SetFrameStrata("FULLSCREEN_DIALOG")
+	box:SetToplevel(true)
+	box:SetClampedToScreen(true)
+	box:EnableMouse(true)
+	box:SetMovable(true)
+	box:RegisterForDrag("LeftButton")
+	box:SetScript("OnDragStart", box.StartMoving)
+	box:SetScript("OnDragStop", box.StopMovingOrSizing)
+	API.Skin(box, { window = true })
+	table.insert(UISpecialFrames, "DaylightAddonSkinsLink")
+	box.title = API.Text(box, "head", "LEFT")
+	box.title:SetPoint("TOPLEFT", PAD, -PAD)
+	box.title:SetPoint("RIGHT", box, "RIGHT", -40, 0)
+	box.sub = API.Text(box, "body", "LEFT")
+	box.sub:SetPoint("TOPLEFT", box.title, "BOTTOMLEFT", 0, -8)
+	box.sub:SetPoint("RIGHT", box, "RIGHT", -PAD, 0)
+	local close = API.Close(box, function() box:Hide() end)
+	close:SetPoint("TOPRIGHT", -10, -10)
+	box.input = API.Input(box, { height = 28 })
+	box.input:SetPoint("BOTTOMLEFT", PAD, PAD)
+	box.input:SetPoint("BOTTOMRIGHT", -PAD, PAD)
+	box.input:HookScript("OnEscapePressed", function() box:Hide() end)
+	box.input:HookScript("OnKeyDown", CopiedSoon)
+
+	-- The report: many lines, in a dark well that scrolls.
+	local well = CreateFrame("Frame", nil, box)
+	well:SetPoint("BOTTOMLEFT", PAD, PAD)
+	well:SetPoint("BOTTOMRIGHT", -PAD, PAD)
+	well:SetHeight(REPORT_H)
+	local ground = well:CreateTexture(nil, "BACKGROUND")
+	ground:SetAllPoints()
+	ground:SetColorTexture(0, 0, 0, 0.3)
+	local scroll = CreateFrame("ScrollFrame", nil, well, "ScrollFrameTemplate")
+	scroll:SetPoint("TOPLEFT", 8, -6)
+	scroll:SetPoint("BOTTOMRIGHT", -22, 6)
+	local text = CreateFrame("EditBox", nil, scroll)
+	text:SetMultiLine(true)
+	text:SetAutoFocus(false)
+	text:SetFont(API.Font(), 12, "")
+	text:SetWidth(400)
+	text:SetScript("OnEscapePressed", function() box:Hide() end)
+	text:SetScript("OnKeyDown", CopiedSoon)
+	-- (Read only: whatever is typed, the report comes back, all of it picked.)
+	text:SetScript("OnTextChanged", function(self, user)
+		if user and self.locked and self:GetText() ~= self.locked then
+			self:SetText(self.locked)
+			self:HighlightText()
+		end
+	end)
+	text:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
+	scroll:SetScrollChild(text)
+	scroll:SetScript("OnSizeChanged", function(self, w) text:SetWidth(math.max(40, (w or self:GetWidth()) - 4)) end)
+	-- (Clicking anywhere in the well puts the cursor in the text.)
+	well:EnableMouse(true)
+	well:SetScript("OnMouseDown", function() text:SetFocus() end)
+	if scroll.ScrollBar then ns.WithKit(function(Kit) ns.Guard(Kit.ScrollBar, scroll.ScrollBar) end) end
+	box.well, box.text = well, text
+	return box
+end
+
+-- Opens the box: title, a sentence on what to do, and the text to copy (multi = many lines).
+function ns.ShowCopy(title, sub, value, multi)
+	local b = Box()
+	b.title:SetText(title)
+	b.sub:SetText(sub)
+	Ink(b.title, "VALUE")
+	Ink(b.sub, "TEXT")
+	b:SetWidth(multi and 560 or 440)
+	local top = PAD + (b.title:GetStringHeight() or 18) + 8 + (b.sub:GetStringHeight() or 14) + 14
+	b.input:SetShown(not multi)
+	b.well:SetShown(multi and true or false)
+	if multi then
+		b:SetHeight(math.ceil(top + REPORT_H + PAD))
+		Ink(b.text, "TEXT")
+		b.text.locked = value
+		b.text:SetText(value)
+		b.text:SetCursorPosition(0)
+		b:Show()
+		b.text:SetFocus()
+		b.text:HighlightText()
+		return
 	end
-	box.title:SetText(string.format(L["Get %s"], name))
-	Ink(box.title, "VALUE")
-	Ink(box.sub, "TEXT")
-	local h = PAD + (box.title:GetStringHeight() or 18) + 8 + (box.sub:GetStringHeight() or 14) + 14 + 28 + PAD
-	box:SetHeight(math.ceil(h))
-	box.input.Lock(url)
-	box:Show()
-	box.input:SetFocus()
-	box.input:HighlightText()
+	b:SetHeight(math.ceil(top + 28 + PAD))
+	b.input.Lock(value)
+	b:Show()
+	b.input:SetFocus()
+	b.input:HighlightText()
+end
+
+function ns.ShowLink(name, url)
+	ns.ShowCopy(string.format(L["Get %s"], name), L["Press Ctrl+C to copy the link, then paste it in your browser."], url)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -129,12 +176,22 @@ local function AddonList()
 	for _, addon in ipairs(ns.order) do
 		if not game[addon] then
 			local have = Installed(addon)
+			-- (Installed but not ticked for this character: dimmed, no link.)
+			local here = false
+			if have then
+				for _, folder in ipairs(ns.Folders(addon)) do
+					if ns.AddonExists(folder) and ns.AddonEnabledHere(folder) then
+						here = true
+						break
+					end
+				end
+			end
 			local tip = string.format(L["Dress %s's windows."], ns.targets[addon])
 			-- (A pack's own note on what it covers, Polestar's: its house skin only.)
 			local note = ns.caps[addon] and ns.caps[addon].note
 			if type(note) == "string" then tip = tip .. " " .. note end
 			list[#list + 1] = { key = addon, label = ns.targets[addon], url = not have and ns.LINKS[addon] or nil,
-				missing = not have, tip = tip }
+				missing = not here, notHere = have and not here, tip = tip }
 		end
 	end
 	table.sort(list, ByLabel)
@@ -146,7 +203,7 @@ local function AutoList()
 	local list = {}
 	for _, a in ipairs(ns.AutoAddons and ns.AutoAddons() or {}) do
 		list[#list + 1] = { key = ns.AutoKey(a.folder), label = a.label,
-			tip = string.format(L["A basic DaylightUI look on %s's windows, found on their own. Its own art and colors stay as they are."], a.label) }
+			tip = string.format(L["A basic Daylight UI look on %s's windows, found on their own. Its own art and colors stay as they are."], a.label) }
 	end
 	return list
 end
@@ -158,7 +215,7 @@ local function BlizzardList()
 		-- on every client.)
 		if w.id or ns.targets[w.key] then
 			list[#list + 1] = { key = w.key, label = w.label,
-				tip = L["Dress this game window in the DaylightUI look."] }
+				tip = L["Dress this game window in the Daylight UI look."] }
 		end
 	end
 	table.sort(list, ByLabel)
@@ -169,10 +226,21 @@ end
 -- The grid: an options "custom" row
 -- ---------------------------------------------------------------------------------------------
 
-local function Tip(owner, title, text)
+local function Tip(owner, item)
 	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
-	GameTooltip:SetText(title, 1, 1, 1)
-	if text then GameTooltip:AddLine(text, nil, nil, nil, true) end
+	GameTooltip:SetText(item.label, 1, 1, 1)
+	if item.tip then GameTooltip:AddLine(item.tip, nil, nil, nil, true) end
+	-- A pack off after an error: what it was, and when it's tried again.
+	local rec = ns.Failed(item.key)
+	if rec then
+		local w = ns.Colors().WARN or { 1, 0.6, 0.2 }
+		GameTooltip:AddLine(L["This skin hit an error and is off for now:"], w[1], w[2], w[3], true)
+		GameTooltip:AddLine(rec.err, 1, 1, 1, true)
+		GameTooltip:AddLine(ns.RetryWhen(item.key), nil, nil, nil, true)
+		GameTooltip:AddLine(L["Right-click to try it again after a reload."], 0.6, 0.6, 0.6, true)
+	elseif item.notHere then
+		GameTooltip:AddLine(L["Not enabled on this character."], 0.6, 0.6, 0.6, true)
+	end
 	GameTooltip:AddLine(L["Takes hold after a reload."], 0.6, 0.6, 0.6, true)
 	GameTooltip:Show()
 end
@@ -180,7 +248,11 @@ end
 local function PaintCell(c)
 	local on = Get(c.item.key)
 	c.switch.SetOn(on)
-	Ink(c.name, c.item.missing and "TEXT" or "VALUE", c.item.missing and 0.55 or 1)
+	if ns.Failed(c.item.key) then
+		Ink(c.name, "WARN")
+	else
+		Ink(c.name, c.item.missing and "TEXT" or "VALUE", c.item.missing and 0.55 or 1)
+	end
 	if c.link then
 		local r, g, b = API.Accent()
 		if c.link.hot then
@@ -203,14 +275,26 @@ local function MakeCell(row, item)
 		PaintCell(c)
 	end
 	c.switch:SetScript("OnClick", flip)
-	c:SetScript("OnClick", function() c.switch:Click() end)
+	-- Right-click on a card whose pack is off after an error: tried again (after a reload).
+	c:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	c:SetScript("OnClick", function(self, button)
+		if button == "RightButton" then
+			if ns.Failed(item.key) and ns.Retry(item.key) then
+				print("|cffa335eeAddon Skins|r: " .. string.format(L["%s will be dressed again after a reload."], item.label))
+				PaintCell(c)
+				if self:IsMouseOver() then Tip(self, item) end
+			end
+			return
+		end
+		c.switch:Click()
+	end)
 	c.name = API.Text(c, "body", "LEFT")
 	c.name:SetPoint("LEFT", c.switch, "RIGHT", GAP, 0)
 	c.name:SetWordWrap(false)
 	c.name:SetText(item.label)
-	c:SetScript("OnEnter", function(self) Tip(self, item.label, item.tip) end)
+	c:SetScript("OnEnter", function(self) Tip(self, item) end)
 	c:SetScript("OnLeave", function() GameTooltip:Hide() end)
-	c.switch:HookScript("OnEnter", function() Tip(c, item.label, item.tip) end)
+	c.switch:HookScript("OnEnter", function() Tip(c, item) end)
 	c.switch:HookScript("OnLeave", function() GameTooltip:Hide() end)
 	if item.url then
 		local link = CreateFrame("Button", nil, c)
@@ -266,22 +350,31 @@ local function HeadButton(row, text, func)
 	return b
 end
 
+-- The grids built so far: repainted when a pack fails or is tried again (its card's error look).
+local gridRows = setmetatable({}, { __mode = "k" })
+ns.OnStatusChange(function()
+	for row in pairs(gridRows) do
+		for _, c in ipairs(row.skinCells or {}) do PaintCell(c) end
+	end
+end)
+
 -- kind: "addons" or "blizzard". The options item: one row holding the whole grid.
 function ns.SkinGrid(kind)
 	local function build(row)
 		local list = (kind == "addons" and AddonList()) or (kind == "auto" and AutoList()) or BlizzardList()
 		local cells = {}
 		row.skinCells = cells
+		gridRows[row] = true
 		for i, item in ipairs(list) do cells[i] = MakeCell(row, item) end
 		local function all(on)
 			for _, c in ipairs(cells) do Set(c.item.key, on) end
 			for _, c in ipairs(cells) do PaintCell(c) end
 		end
-		local on = HeadButton(row, L["Turn all on"], function() all(true) end)
+		local on = HeadButton(row, L["Turn All On"], function() all(true) end)
 		on:SetPoint("TOPLEFT", PAD, -6)
-		local off = HeadButton(row, L["Turn all off"], function() all(false) end)
+		local off = HeadButton(row, L["Turn All Off"], function() all(false) end)
 		off:SetPoint("LEFT", on, "RIGHT", GAP, 0)
-		local reload = HeadButton(row, L["Reload interface"], function() ReloadUI() end)
+		local reload = HeadButton(row, L["Reload Interface"], function() ReloadUI() end)
 		reload:SetPoint("TOPRIGHT", -PAD, -6)
 		for _, c in ipairs(cells) do PaintCell(c) end
 	end
@@ -373,7 +466,7 @@ function ns.LookList(addons)
 			c.switch:HookScript("OnEnter", function(self)
 				GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 				GameTooltip:SetText(string.format(L["Custom Settings for %s"], e.label), 1, 1, 1)
-				GameTooltip:AddLine(L["On: this addon uses the settings on this page. Off: it follows DaylightUI."], nil, nil, nil, true)
+				GameTooltip:AddLine(L["On: this addon uses the settings on this page. Off: it follows Daylight UI."], nil, nil, nil, true)
 				GameTooltip:Show()
 			end)
 			c.switch:HookScript("OnLeave", function() GameTooltip:Hide() end)
@@ -418,7 +511,7 @@ function ns.LookList(addons)
 	local function update(row)
 		for _, c in ipairs(row.listCells or {}) do Paint(c) end
 	end
-	return { type = "custom", label = L["Applies to"], build = build, height = height, update = update }
+	return { type = "custom", label = L["Applies To"], build = build, height = height, update = update }
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -429,11 +522,11 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 local LOOK_ROWS = {
-	{ "DaylightUI font", { "font", "textOutline", "textShadow" } },
+	{ "Daylight UI Font", { "font", "textOutline", "textShadow" } },
 	-- (The custom gradient's count and colors since DaylightUI 1.9.2.)
-	{ "DaylightUI accent", { "accent", "accentColor", "accentGradient.count", "accentGradient.c1", "accentGradient.c2",
+	{ "Daylight UI Accent", { "accent", "accentColor", "accentGradient.count", "accentGradient.c1", "accentGradient.c2",
 		"accentGradient.c3", "accentGradient.c4", "accentGradient.c5", "gradientBorder" } },
-	{ "DaylightUI windows", { "windowAlpha", "windowTint", "windowTintColor", "borderPx", "borderAlpha" } },
+	{ "Daylight UI Windows", { "windowAlpha", "windowTint", "windowTintColor", "borderPx", "borderAlpha" } },
 }
 
 local function GeneralGet(key) return DUI:Get("general", key) end
@@ -474,7 +567,7 @@ function ns.DaylightLookGroups(tab)
 		end
 		if #items > 0 then
 			groups[#groups + 1] = { label = L[spec[1]], tab = tab,
-				desc = L["DaylightUI's own settings (General > Appearance): a change here changes them there too."],
+				desc = L["Daylight UI's own settings (General > Appearance): a change here changes them there too."],
 				items = items }
 		end
 	end

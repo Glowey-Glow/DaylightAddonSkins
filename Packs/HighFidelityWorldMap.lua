@@ -739,7 +739,7 @@ local function FastPaths()
 	if type(slash) == "table" then
 		for _, name in ipairs({ "ACECONSOLE_HFWM", "ACECONSOLE_HFWMFOREVER" }) do
 			if type(slash[name]) == "function" then
-				hooksecurefunc(slash, name, function() C_Timer.After(0, Changed) end)
+				ns.HookOnce(slash, name, function() C_Timer.After(0, Changed) end, KEY)
 			end
 		end
 	end
@@ -820,7 +820,7 @@ ns.Handover(KEY, {
 		end
 	end,
 	list = {
-		{ key = "fogOff", label = L["Zone maps without Fog of War"], daylight = ns.In(L["map reveal"], "Window Skins"),
+		{ key = "fogOff", label = L["Zone Maps Without Fog of War"], daylight = ns.In(L["map reveal"], "Window Skins"),
 		  ours = function() return ns.DaylightHas("Skins", "mapReveal") end },
 	},
 })

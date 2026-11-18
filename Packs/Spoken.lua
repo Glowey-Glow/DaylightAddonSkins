@@ -102,10 +102,10 @@ local function PlacesToggle(tab, Kit)
 	if not ns.SideTile(tab, { picked = NeverPicked, key = KEY, pad = 2 }) then return end
 	-- (The game fits its icon again on SetChecked: the tile's crop back after it.)
 	if type(tab.SetChecked) == "function" then
-		hooksecurefunc(tab, "SetChecked", function(self)
+		ns.HookOnce(tab, "SetChecked", function(self)
 			if ns.Usable(self.Icon) then self.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
 			ns.SideTilePaint(self)
-		end)
+		end, KEY)
 	end
 end
 
@@ -133,13 +133,13 @@ ns.Pack("Spoken", "Spoken", function(Kit)
 	if not player then return false end
 
 	if type(player.RefreshConfig) == "function" then
-		hooksecurefunc(player, "RefreshConfig", function() ns.Guard(Large) end)
+		ns.HookOnce(player, "RefreshConfig", function() ns.Guard(Large) end, KEY)
 	end
 	if mini and type(mini.RefreshConfig) == "function" then
-		hooksecurefunc(mini, "RefreshConfig", function() ns.Guard(Small) end)
+		ns.HookOnce(mini, "RefreshConfig", function() ns.Guard(Small) end, KEY)
 	end
 	if mini and type(mini.ToggleMenu) == "function" then
-		hooksecurefunc(mini, "ToggleMenu", function(self) ns.Guard(MenuRows, self) end)
+		ns.HookOnce(mini, "ToggleMenu", function(self) ns.Guard(MenuRows, self) end, KEY)
 	end
 	ns.Watch(KEY, "SpokenPlayerFrame", function() Large() end)
 	ns.Watch(KEY, "SpokenMinimalPlayerFrame", function() Small() end)
@@ -179,10 +179,10 @@ ns.Pack("Spoken", "Spoken", function(Kit)
 			queued = true
 			C_Timer.After(0.05, function() queued = nil if frame:IsShown() then parts() end end)
 		end
-		frame:HookScript("OnShow", later)
+		ns.ScriptOnce(frame, "OnShow", later, KEY)
 		local compendium = _G.SpokenCompendium
 		if type(compendium) == "table" and type(compendium.Select) == "function" then
-			hooksecurefunc(compendium, "Select", later)
+			ns.HookOnce(compendium, "Select", later, KEY)
 		end
 		parts()
 		later()

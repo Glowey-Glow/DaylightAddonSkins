@@ -257,8 +257,8 @@ local function Divider(kql)
 		if IsTexture(d.FlechaFondo) then d.FlechaFondo:SetVertexColor(0, 0, 0, 0.3) end
 		Tint(d.Flecha, over and "VALUE" or "TEXT")
 	end
-	d:HookScript("OnEnter", paint)
-	d:HookScript("OnLeave", paint)
+	ns.ScriptOnce(d, "OnEnter", paint, KEY)
+	ns.ScriptOnce(d, "OnLeave", paint, KEY)
 	paint()
 end
 
@@ -378,7 +378,7 @@ local function ListRow(row)
 		Erase(row.BrilloExpandir)
 		-- (It draws a row again on its own, outside the list's refresh, and sets the mark's font
 		-- each time.)
-		if type(row.DibujarQuest) == "function" then hooksecurefunc(row, "DibujarQuest", ForeverMark) end
+		if type(row.DibujarQuest) == "function" then ns.HookOnce(row, "DibujarQuest", ForeverMark, KEY) end
 	end
 	ForeverMark(row)
 	local info = row.info
@@ -503,8 +503,8 @@ local function AuxBar(v)
 	if Usable(tab) then
 		Tint(tab.Flecha, tab:IsMouseOver() and "VALUE" or "TEXT")
 		if ns.Once(tab) then
-			tab:HookScript("OnEnter", function() if On() then Tint(tab.Flecha, "VALUE") end end)
-			tab:HookScript("OnLeave", function() if On() then Tint(tab.Flecha, "TEXT") end end)
+			ns.ScriptOnce(tab, "OnEnter", function() if On() then Tint(tab.Flecha, "VALUE") end end, KEY)
+			ns.ScriptOnce(tab, "OnLeave", function() if On() then Tint(tab.Flecha, "TEXT") end end, KEY)
 		end
 	end
 end
@@ -605,12 +605,12 @@ local function Casilla(row, Kit)
 		casillas[row] = { box = holder, fill = fill }
 		local function paint() if On() then PaintCasilla(row) end end
 		if IsTexture(row.CheckMark) then
-			hooksecurefunc(row.CheckMark, "Show", paint)
-			hooksecurefunc(row.CheckMark, "Hide", paint)
-			hooksecurefunc(row.CheckMark, "SetShown", paint)
+			ns.HookOnce(row.CheckMark, "Show", paint, KEY)
+			ns.HookOnce(row.CheckMark, "Hide", paint, KEY)
+			ns.HookOnce(row.CheckMark, "SetShown", paint, KEY)
 		end
-		row:HookScript("OnEnter", paint)
-		row:HookScript("OnLeave", paint)
+		ns.ScriptOnce(row, "OnEnter", paint, KEY)
+		ns.ScriptOnce(row, "OnLeave", paint, KEY)
 	end
 	-- (Its theme pass sets the atlases, alpha and color of these again on every refresh.)
 	Erase(row.CheckButton)
@@ -639,8 +639,8 @@ local function Header(sec)
 	if ns.Once(h) then
 		h:SetBackdrop(FLAT)
 		Erase(h.Resalte)
-		h:HookScript("OnEnter", function() if On() then PaintHeader(sec) end end)
-		h:HookScript("OnLeave", function() if On() then PaintHeader(sec) end end)
+		ns.ScriptOnce(h, "OnEnter", function() if On() then PaintHeader(sec) end end, KEY)
+		ns.ScriptOnce(h, "OnLeave", function() if On() then PaintHeader(sec) end end, KEY)
 	end
 	PaintHeader(sec)
 end
@@ -664,8 +664,8 @@ local function Cards(kql)
 			if IsTexture(card.Resalte) then card.Resalte:SetColorTexture(r, g, b, 0.12) end
 			Ink(card.Etiqueta, picked and "VALUE" or "TEXT")
 			if ns.Once(card) then
-				card:HookScript("OnEnter", function() if On() then Cards(kql) end end)
-				card:HookScript("OnLeave", function() if On() then Cards(kql) end end)
+				ns.ScriptOnce(card, "OnEnter", function() if On() then Cards(kql) end end, KEY)
+				ns.ScriptOnce(card, "OnLeave", function() if On() then Cards(kql) end end, KEY)
 			end
 		end
 	end
@@ -790,7 +790,9 @@ local function FollowWindowFonts(f)
 	WindowFonts(f)
 	if fontsFollowed[f] then return end
 	fontsFollowed[f] = true
-	f:HookScript("OnShow", function(self) WindowFonts(self) end)
+	-- (A window holding a secure button is one ns.ScriptOnce refuses: hooked as before then.)
+	local function shown(self) WindowFonts(self) end
+	if not ns.ScriptOnce(f, "OnShow", shown, KEY) then f:HookScript("OnShow", shown) end
 end
 
 -- Its settings window (the panel above is moved into it on each show).
@@ -932,9 +934,11 @@ end
 -- Wiring
 -- ---------------------------------------------------------------------------------------------
 
+-- (Once per object and method, an error switching the pack off. A frame ns.HookOnce refuses, one
+-- holding a secure button, is hooked as before.)
 local function Hook(owner, method, fn)
 	if type(owner) == "table" and type(owner[method]) == "function" then
-		hooksecurefunc(owner, method, fn)
+		if not ns.HookOnce(owner, method, fn, KEY) then hooksecurefunc(owner, method, fn) end
 		return true
 	end
 end
@@ -1024,7 +1028,7 @@ local function Setup(kql, Kit)
 	Hook(kql, "FijarTemaVisual", function(_, theme)
 		if not On() then return end
 		if type(theme) == "string" and not DARK[theme] then DB().kcqlTheme = theme end
-		C_Timer.After(0, function() KeepDark(kql) end)
+		ns.Queue("KerzoClassicQuestLog:dark", function() KeepDark(kql) end, KEY)
 	end)
 
 	-- The window.
@@ -1033,11 +1037,8 @@ local function Setup(kql, Kit)
 	if Usable(close) and ns.Once(close) then Kit.Close(close) end
 	local function chrome() Chrome(kql, Kit) end
 	-- (Once a frame at most: the divider being dragged lays the window out every frame.)
-	local queued = false
 	local function chromeSoon()
-		if queued then return end
-		queued = true
-		C_Timer.After(0, function() queued = false chrome() end)
+		ns.Queue("KerzoClassicQuestLog:chrome", chrome, KEY)
 	end
 	if Usable(kql.Barra) then
 		Hook(kql.Barra, "AplicarTemaVisual", chrome)
@@ -1051,7 +1052,7 @@ local function Setup(kql, Kit)
 		if On() and Usable(tc) and Kind(tc.TitleText) == "FontString" then Kit.Title(kql, tc.TitleText) end
 	end)
 	Hook(kql, "ActualizarVisibilidadBotonNovedades", chrome)
-	kql:HookScript("OnShow", chrome)
+	if not ns.ScriptOnce(kql, "OnShow", chrome, KEY) then kql:HookScript("OnShow", chrome) end
 	chrome()
 
 	-- The list and detail panels.

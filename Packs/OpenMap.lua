@@ -172,10 +172,10 @@ local inked = setmetatable({}, { __mode = "k" })
 local function InkText(fs)
 	if inked[fs] or not ns.Usable(fs) or not fs.SetTextColor then return end
 	inked[fs] = true
-	hooksecurefunc(fs, "SetTextColor", InkColor)
+	ns.HookOnce(fs, "SetTextColor", InkColor, KEY)
 	InkColor(fs, fs:GetTextColor())
 	if colorOnly[fs] then return end
-	hooksecurefunc(fs, "SetText", InkCodes)
+	ns.HookOnce(fs, "SetText", InkCodes, KEY)
 	InkCodes(fs, fs:GetText())
 end
 
@@ -202,8 +202,8 @@ local function InkBackdrop(f)
 			busy = false
 		end
 	end
-	hooksecurefunc(f, "SetBackdropBorderColor", edge)
-	hooksecurefunc(f, "SetBackdropColor", ground)
+	ns.HookOnce(f, "SetBackdropBorderColor", edge, KEY)
+	ns.HookOnce(f, "SetBackdropColor", ground, KEY)
 	edge(f, f:GetBackdropBorderColor())
 	ground(f, f:GetBackdropColor())
 end
@@ -367,11 +367,11 @@ local function SliderLook(slider)
 		knob:SetVertexColor(1, 1, 1, (not slider.IsEnabled or slider:IsEnabled()) and 1 or 0.4)
 	end
 	paint()
-	slider:HookScript("OnEnter", function() knob:SetSize(14, 14) end)
-	slider:HookScript("OnLeave", function() knob:SetSize(12, 12) end)
-	slider:HookScript("OnShow", paint)
-	slider:HookScript("OnEnable", paint)
-	slider:HookScript("OnDisable", paint)
+	ns.ScriptOnce(slider, "OnEnter", function() knob:SetSize(14, 14) end, KEY)
+	ns.ScriptOnce(slider, "OnLeave", function() knob:SetSize(12, 12) end, KEY)
+	ns.ScriptOnce(slider, "OnShow", paint, KEY)
+	ns.ScriptOnce(slider, "OnEnable", paint, KEY)
+	ns.ScriptOnce(slider, "OnDisable", paint, KEY)
 end
 
 -- Its own scroll bar (the menu's): a thin pill for a thumb on a quiet track.
@@ -390,11 +390,11 @@ local function TextTab(Kit, b, initial)
 	picked[b] = initial and true or false
 	ns.Guard(Kit.Tab, b, function(self) return picked[self] == true end)
 	if type(b.SetSelected) == "function" then
-		hooksecurefunc(b, "SetSelected", function(self, on)
+		ns.HookOnce(b, "SetSelected", function(self, on)
 			picked[self] = on and true or false
 			local look = Kit.TabOf and Kit.TabOf(self)
 			if type(look) == "table" and look.Pick then pcall(look.Pick, picked[self]) end
-		end)
+		end, KEY)
 	end
 end
 
@@ -524,7 +524,7 @@ local function ToolButton(b)
 	ToolGlow(b)
 	for _, line in ipairs(b.lines) do
 		if ns.Usable(line) and line.SetVertexColor then
-			hooksecurefunc(line, "SetVertexColor", ToolLine)
+			ns.HookOnce(line, "SetVertexColor", ToolLine, KEY)
 			local ok, r, g, bl = pcall(line.GetVertexColor, line)
 			if ok then ToolLine(line, r, g, bl) end
 		end
@@ -594,6 +594,8 @@ local function Piece(Kit, f)
 		if controls and ns.Usable(f.ScrollBar) then ns.Guard(Kit.ScrollBar, f.ScrollBar) end
 		-- What it scrolls is often filled again while shown (What's new's notes, page by page):
 		-- what's added is dressed on the next frame.
+		-- (Plain HookScript: the dungeon side panel's list hooks its own OnSizeChanged through
+		-- ns.ScriptOnce, and this one must stay beside it.)
 		local child = f.GetScrollChild and f:GetScrollChild()
 		if ns.Usable(child) and child.HookScript then child:HookScript("OnSizeChanged", DressSoon) end
 	elseif kind == "Slider" then
@@ -664,9 +666,7 @@ ns.OpenMapDress = Dress
 -- Dressed on the next frame, once however many times it's asked for in this one; not if it's
 -- hidden by then (its next show dresses it).
 local soon = {}
-local soonQueued = false
 local function DressQueued()
-	soonQueued = false
 	for f in pairs(soon) do
 		soon[f] = nil
 		if ns.Usable(f) and f:IsShown() then Dress(f) end
@@ -675,10 +675,7 @@ end
 DressSoon = function(f)
 	if not ns.Enabled(KEY) or soon[f] then return end
 	soon[f] = true
-	if not soonQueued then
-		soonQueued = true
-		C_Timer.After(0, DressQueued)
-	end
+	ns.Queue("OpenMap:soon", DressQueued, KEY)
 end
 
 -- Dressed now and on every show (in the same frame: OnShow runs before it's drawn).
@@ -686,6 +683,8 @@ local hooked = setmetatable({}, { __mode = "k" })
 local showScript = setmetatable({}, { __mode = "k" })   -- frame -> its OnShow as it was once hooked
 local function Follow(f)
 	if not ns.Usable(f) then return end
+	-- (Plain HookScript: Rehook below hooks again after the window's own SetScript, which
+	-- ns.ScriptOnce wouldn't.)
 	if not hooked[f] then
 		hooked[f] = true
 		f:HookScript("OnShow", Dress)
@@ -768,8 +767,9 @@ local function OnMap(frame)
 	local map = _G.WorldMapFrame
 	if not map or frame:GetParent() ~= map or frame.dasFit then return end
 	frame.dasFit = true
-	frame:HookScript("OnShow", function(self) FitLater(self) end)
-	frame:HookScript("OnSizeChanged", function(self) FitLater(self) end)
+	ns.ScriptOnce(frame, "OnShow", function(self) FitLater(self) end, KEY)
+	ns.ScriptOnce(frame, "OnSizeChanged", function(self) FitLater(self) end, KEY)
+	-- (Plain HookScript: the game's map, hooked once for each window laid on it.)
 	if ns.Usable(map.ScrollContainer) then
 		map.ScrollContainer:HookScript("OnSizeChanged", function() if frame:IsShown() then FitLater(frame) end end)
 	end
@@ -837,7 +837,7 @@ Look.Dropdown = function(self, frame)
 		Follow(frame)
 		-- A list that grows while it's open (the search's results, made as they're typed for):
 		-- what it added is dressed on the next frame.
-		frame:HookScript("OnSizeChanged", DressSoon)
+		ns.ScriptOnce(frame, "OnSizeChanged", DressSoon, KEY)
 	end)
 	return l, r, t, b
 end
@@ -878,7 +878,7 @@ local function Menu(menu)
 	-- Its tabs refill the body: what they made is dressed in the same frame.
 	if type(menu.tabs) == "table" then
 		for _, tab in pairs(menu.tabs) do
-			if ns.Usable(tab) and tab.HookScript then tab:HookScript("OnClick", function() Dress(menu) end) end
+			if ns.Usable(tab) and tab.HookScript then ns.ScriptOnce(tab, "OnClick", function() Dress(menu) end, KEY) end
 		end
 	end
 	Follow(menu)
@@ -1000,9 +1000,9 @@ end
 local FDJ = _G.ForeverDungeonJournal_NS
 if type(FDJ) == "table" and type(FDJ.MapMarkers) == "table" then
 	for _, name in ipairs({ "ShowRecordedLocationOnMap", "ShowRouteOnMap", "ShowQuestStartOnMap" }) do
-		if type(FDJ.MapMarkers[name]) == "function" then hooksecurefunc(FDJ.MapMarkers, name, TuckNow) end
+		if type(FDJ.MapMarkers[name]) == "function" then ns.HookOnce(FDJ.MapMarkers, name, TuckNow, KEY) end
 	end
-	if type(FDJ.SetWaypointArrow) == "function" then hooksecurefunc(FDJ, "SetWaypointArrow", TuckSoon) end
+	if type(FDJ.SetWaypointArrow) == "function" then ns.HookOnce(FDJ, "SetWaypointArrow", TuckSoon, KEY) end
 end
 
 local function EdgeTabs(list)
@@ -1031,20 +1031,21 @@ local function View(view, quiet)
 			end
 			-- Its tabs refill it, and its list grows as it's filled: dressed in the same frame.
 			for _, b in ipairs(side.tabs or {}) do
-				if ns.Usable(b) then b:HookScript("OnClick", function() Dress(side) end) end
+				if ns.Usable(b) then ns.ScriptOnce(b, "OnClick", function() Dress(side) end, KEY) end
 			end
 			if ns.Usable(side.child) then
-				side.child:HookScript("OnSizeChanged", function() Dress(side.child) end)
+				ns.ScriptOnce(side.child, "OnSizeChanged", function() Dress(side.child) end, KEY)
 			end
 			-- The picked floor's picture: its edge lit again on each floor (the backdrop hook turns it).
 			if type(side.LightThumbs) == "function" then
-				hooksecurefunc(side, "LightThumbs", function() Dress(side.child) end)
+				ns.HookOnce(side, "LightThumbs", function() Dress(side.child) end, KEY)
 			end
 		end
 		-- The floor list opened from the floor's name.
 		if ns.Usable(view.floorButton) then
-			view.floorButton:HookScript("OnClick", function() if view.list then Dress(view.list) end end)
+			ns.ScriptOnce(view.floorButton, "OnClick", function() if view.list then Dress(view.list) end end, KEY)
 		end
+		-- (Plain HookScript for its two OnShow hooks: ns.ScriptOnce takes one per frame.)
 		hooked[view] = true
 		view:HookScript("OnShow", Dress)
 		view:HookScript("OnShow", function(self)
@@ -1054,10 +1055,10 @@ local function View(view, quiet)
 			MapCorner(true)
 			C_Timer.After(0, TuckMarkers)
 		end)
-		view:HookScript("OnHide", function()
+		ns.ScriptOnce(view, "OnHide", function()
 			DJMarkers(false)
 			MapCorner(false)
-		end)
+		end, KEY)
 		if view:IsShown() then
 			openView = view
 			if ns.Enabled(KEY) then
@@ -1199,6 +1200,7 @@ local function PinButton(m)
 	local btn = _G.WorldMapFrame and _G.WorldMapFrame.WorldMapTrackingPinButton
 	if not ns.Usable(btn) or type(btn.SetActive) ~= "function" then return end
 	if type(m.SetPinMode) ~= "function" or type(m.PinMode) ~= "function" or type(m.IsStitched) ~= "function" then return end
+	-- (Plain hooksecurefunc: the game's own button.)
 	hooksecurefunc(btn, "SetActive", function(_, on)
 		if on then
 			if ns.Enabled(KEY) and m.IsStitched() and not m.PinMode() then
@@ -1219,7 +1221,7 @@ ns.Pack(KEY, nil, function(Kit)
 	local m = Mod()
 	if not m then return end
 	if type(m.SetupPanel) == "function" then
-		hooksecurefunc(m, "SetupPanel", function() ns.WatchNow() end)
+		ns.HookOnce(m, "SetupPanel", function() ns.WatchNow() end, KEY)
 	end
 	-- Its edge tabs are given their face here (the rail's, every refresh): dressed as they're faced.
 	-- The rail lights its tabs after this and then ends its refresh in PlaceDungeonTabs, where Rail
@@ -1227,23 +1229,23 @@ ns.Pack(KEY, nil, function(Kit)
 	-- this OpenMap has no PlaceDungeonTabs to follow.
 	local railPainted = type(m.PlaceDungeonTabs) == "function"
 	if type(m.FaceSideTab) == "function" then
-		hooksecurefunc(m, "FaceSideTab", function(b)
+		ns.HookOnce(m, "FaceSideTab", function(b)
 			if not ns.Enabled(KEY) or not ns.Usable(b) then return end
 			local parent = b:GetParent()
 			if parent and parent.main then railFrame = parent end
 			if railPainted then EdgeTabSetup(b) else EdgeTab(b) end
-		end)
+		end, KEY)
 	end
 	-- The rail ends each refresh here, after lighting its tabs; the dungeon's tabs are placed here
 	-- too as its view opens and docks.
 	if railPainted then
-		hooksecurefunc(m, "PlaceDungeonTabs", function()
+		ns.HookOnce(m, "PlaceDungeonTabs", function()
 			if not ns.Enabled(KEY) then return end
 			Rail()
 			local view = _G.OpenMapDungeonView
 			if ns.Usable(view) then View(view, true) end
 			Coords()
-		end)
+		end, KEY)
 	end
 	-- A dungeon's map opened from elsewhere (a link, the way back): the view as it opens.
 	local function opened()
@@ -1251,18 +1253,19 @@ ns.Pack(KEY, nil, function(Kit)
 		if ns.Enabled(KEY) and ns.Usable(view) then View(view, true) end
 	end
 	for _, name in ipairs({ "OpenAwayMap", "ReturnView" }) do
-		if type(m[name]) == "function" then hooksecurefunc(m, name, opened) end
+		if type(m[name]) == "function" then ns.HookOnce(m, name, opened, KEY) end
 	end
 	-- Settings changed: the card and side panel are refilled.
 	if type(m.RefreshDungeonCard) == "function" then
-		hooksecurefunc(m, "RefreshDungeonCard", function()
+		ns.HookOnce(m, "RefreshDungeonCard", function()
 			local view = _G.OpenMapDungeonView
 			if ns.Enabled(KEY) and ns.Usable(view) and view:IsShown() then Dress(view) end
-		end)
+		end, KEY)
 	end
 	-- The map opening: the coordinates and the rail (made with the map's first opening). The game's
 	-- round corner buttons: the shared pass (ns.MapRings), hooked once for this pack and RareScanner's.
 	local map = _G.WorldMapFrame
+	-- (Plain hooks on the game's world map: it may count as protected.)
 	if map and map.HookScript then
 		map:HookScript("OnShow", function()
 			if not ns.Enabled(KEY) then return end
@@ -1286,6 +1289,7 @@ ns.Pack(KEY, nil, function(Kit)
 	-- rail; the row's buttons are made just after it): the corner row looked over next frame. This
 	-- is what follows "Buttons as edge tabs" being switched off while the map is open.
 	if type(m.PlaceDungeonTabs) == "function" then
+		-- (Plain hooksecurefunc: PlaceDungeonTabs is already hooked above through ns.HookOnce.)
 		hooksecurefunc(m, "PlaceDungeonTabs", QueueCorner)
 	end
 	-- The dungeon view is made the first time a dungeon's map opens. Its maker is OpenMap's own,
@@ -1294,10 +1298,10 @@ ns.Pack(KEY, nil, function(Kit)
 	-- those as they come).
 	ns.Watch(KEY, "OpenMapDungeonView", function(view) View(view) end)
 	if type(m.DungeonTabsShown) == "function" then
-		hooksecurefunc(m, "DungeonTabsShown", function()
+		ns.HookOnce(m, "DungeonTabsShown", function()
 			local view = _G.OpenMapDungeonView
 			if view and not views[view] then ns.WatchNow() end
-		end)
+		end, KEY)
 	end
 	-- The list of dungeons at one entrance is drawn through Look:Dropdown as it's made, and is
 	-- dressed there (above); this is only the safety net.

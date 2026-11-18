@@ -59,15 +59,12 @@ local function TitleFonts()
 	return titleFont, titleHover
 end
 
-local refillQueued = false
 local function Refill()
-	refillQueued = false
 	if titleFont then ns.Guard(FillTitleFonts) end
 end
 local function QueueRefill()
-	if not titleFont or refillQueued then return end
-	refillQueued = true
-	C_Timer.After(0, Refill)
+	if not titleFont then return end
+	ns.Queue("BugSack:titleFonts", Refill, KEY)
 end
 ns.me.On("StyleChanged", QueueRefill)
 ns.me.On("SettingChanged", function(scope, path)
@@ -160,7 +157,7 @@ local function Dress(frame, Kit)
 			skip[tab] = true
 			if ns.Controls(KEY) then ns.Guard(Kit.Tab, tab, Picked) end
 			Widen(tab)
-			tab:HookScript("OnShow", function(self) if ns.Enabled(KEY) then Widen(self) end end)
+			ns.ScriptOnce(tab, "OnShow", function(self) if ns.Enabled(KEY) then Widen(self) end end, KEY)
 		end
 	end
 	TabShelf(frame)
@@ -180,9 +177,9 @@ local function Dress(frame, Kit)
 	local text = _G.BugSackScrollText
 	if ns.Usable(text) then
 		ns.Guard(Kit.Font, text)
-		hooksecurefunc(text, "SetFontObject", function(self)
+		ns.HookOnce(text, "SetFontObject", function(self)
 			if ns.Enabled(KEY) then ns.Guard(Kit.Font, self) end
-		end)
+		end, KEY)
 	end
 
 	-- The player's text look on the rest of the words (labels, checkbox names, tab names).
@@ -206,7 +203,7 @@ ns.Pack("BugSack", "BugSack", function()
 	if type(addon) ~= "table" then return end
 	for _, method in ipairs({ "OpenSack", "OpenConfig" }) do
 		if type(addon[method]) == "function" then
-			hooksecurefunc(addon, method, function() ns.Guard(Now) end)
+			ns.HookOnce(addon, method, function() ns.Guard(Now) end, KEY)
 		end
 	end
 end, { window = true, controls = true, text = true })

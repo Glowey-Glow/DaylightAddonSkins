@@ -132,6 +132,7 @@ local function Heading(button)
 	if not ns.Usable(button) or not ns.Usable(button.label) or not ns.Usable(button.accent) then return end
 	if not ns.Once(button) then return end
 	ns.FillAccent(button.accent, 1, nil, KEY)
+	-- (Hooked directly: the Tracker's root is a protected frame, and ns.HookOnce refuses its parts.)
 	hooksecurefunc(button.label, "SetTextColor", function()
 		if not painting then InkHeading(button) end
 	end)
@@ -235,7 +236,7 @@ ns.Watch(KEY, function() return ns.Usable(FF.catchRecapPanel) and FF.catchRecapP
 
 -- The fast path: the calls that make (and open) these windows dress them before they're drawn.
 for _, name in ipairs({ "ShowFishingBugReport", "ShowTraceWindow", "EnsureScanDiagnosticsUI", "ShowCameraDeveloper" }) do
-	if type(FF[name]) == "function" then hooksecurefunc(FF, name, ns.WatchNow) end
+	if type(FF[name]) == "function" then ns.HookOnce(FF, name, ns.WatchNow, KEY) end
 end
 
 ns.Pack("ForeverFishing")

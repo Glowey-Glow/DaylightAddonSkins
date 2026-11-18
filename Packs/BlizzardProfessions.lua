@@ -227,8 +227,8 @@ local function ResetBadge(btn)
 		x:SetVertexColor(s[1] + (1 - s[1]) * t, s[2] + (1 - s[2]) * t, s[3] + (1 - s[3]) * t, 1)
 	end
 	paint(false)
-	btn:HookScript("OnEnter", function() paint(true) end)
-	btn:HookScript("OnLeave", function() paint(false) end)
+	ns.ScriptOnce(btn, "OnEnter", function() paint(true) end, KEY)
+	ns.ScriptOnce(btn, "OnLeave", function() paint(false) end, KEY)
 end
 
 -- A panel inside the window (the quality picker, the output log): the silent window shell, its X,
@@ -358,7 +358,7 @@ local function Slot(btn)
 	if IsTexture(btn.Icon) and Usable(btn.CircleMask) then pcall(btn.Icon.RemoveMaskTexture, btn.Icon, btn.CircleMask) end
 	Kit.Item(btn)
 	if type(btn.SetSlotQuality) == "function" then
-		hooksecurefunc(btn, "SetSlotQuality", function(self, q) Guard(EdgeQuality, self, q) end)
+		ns.HookOnce(btn, "SetSlotQuality", function(self, q) Guard(EdgeQuality, self, q) end, KEY)
 	end
 	-- (The "pick this one" glow while a flyout is open: in your accent.)
 	if IsTexture(btn.HighlightTexture) then Accent(btn.HighlightTexture, 0.6) end
@@ -402,7 +402,7 @@ local function RankBar(bar)
 	Accent(sb:GetStatusBarTexture(), 1)
 	BarValue(bar, sb)
 	if type(bar.Update) == "function" then
-		hooksecurefunc(bar, "Update", function(self) BarValue(self, sb) end)
+		ns.HookOnce(bar, "Update", function(self) BarValue(self, sb) end, KEY)
 	end
 	if Usable(rank) then FontOf(rank.Text) end
 	-- The expansion arrow (one expansion on Forever): hidden and let through, as DaylightUI does.
@@ -470,10 +470,10 @@ local function RecipeRow(row)
 			-- A recipe row: its overlays off (their shown state still says which is picked).
 			Row(row, RecipePicked)
 			if type(row.SetSelected) == "function" then
-				hooksecurefunc(row, "SetSelected", function(self) PaintRow(self) end)
+				ns.HookOnce(row, "SetSelected", function(self) PaintRow(self) end, KEY)
 			end
 			if type(row.SetLabelFontColors) == "function" then
-				hooksecurefunc(row, "SetLabelFontColors", function(self, color) Guard(RecipeInk, self, color) end)
+				ns.HookOnce(row, "SetLabelFontColors", function(self, color) Guard(RecipeInk, self, color) end, KEY)
 			end
 		elseif Usable(row.CollapseButton) then
 			-- A category header: its bar art off, a rule under it, the +/- a chevron (mouse hooks only).
@@ -482,16 +482,16 @@ local function RecipeRow(row)
 			if Controls() then
 				chevrons[row.CollapseButton] = Kit.BareButton(row.CollapseButton, "down")
 				if type(row.CollapseButton.UpdateCollapsedState) == "function" then
-					hooksecurefunc(row.CollapseButton, "UpdateCollapsedState", PointChevron)
+					ns.HookOnce(row.CollapseButton, "UpdateCollapsedState", PointChevron, KEY)
 				end
 			end
 			SmallBar(row.RankBar)
 			if type(row.CheckHighlightTitle) == "function" then
 				-- (Under the mouse the game puts its highlight font object back on the title.)
-				hooksecurefunc(row, "CheckHighlightTitle", function(self)
+				ns.HookOnce(row, "CheckHighlightTitle", function(self)
 					Kit.Refont(self.ButtonText)
 					Kit.InkGameText(self)
-				end)
+				end, KEY)
 			end
 		elseif Kind(row.Label) == "FontString" then
 			-- The "Unlearned" divider: its gold rules faint.
@@ -608,7 +608,7 @@ local function Form(form, host)
 	SmallBar(form.RecipeLevelBar)
 	Panel(form.QualityDialog)
 	if type(form.Init) == "function" then
-		hooksecurefunc(form, "Init", function(self) Guard(FormInit, self) end)
+		ns.HookOnce(form, "Init", function(self) Guard(FormInit, self) end, KEY)
 	end
 	FormInit(form)
 end
@@ -654,8 +654,8 @@ local function GuildRow(row)
 	if Once(row) then
 		Row(row, nil)
 		-- (The button puts its own font object back on hover and when grayed.)
-		row:HookScript("OnEnter", function(self) Kit.Refont(self.Text) end)
-		row:HookScript("OnLeave", function(self) Kit.Refont(self.Text) end)
+		ns.ScriptOnce(row, "OnEnter", function(self) Kit.Refont(self.Text) end, KEY)
+		ns.ScriptOnce(row, "OnLeave", function(self) Kit.Refont(self.Text) end, KEY)
 	end
 	Kit.Refont(row.Text)
 end
@@ -925,7 +925,7 @@ local function Crafting(page, host)
 		end
 		B.StaticEditBox(Kit, page.MinimizedSearchBox)
 		if type(page.ValidateControls) == "function" then
-			hooksecurefunc(page, "ValidateControls", function(self) if On() then Guard(FitAll, self) end end)
+			ns.HookOnce(page, "ValidateControls", function(self) if On() then Guard(FitAll, self) end end, KEY)
 		end
 	end
 	Guild(page.GuildFrame)
@@ -1008,7 +1008,7 @@ local function SideTab(tab)
 	-- own refresh calls on every tab as it opens.)
 	if not ns.SideTile(tab, { picked = TabPicked, key = KEY, pad = 2, quiet = true }) then return end
 	if type(tab.SetChecked) == "function" then
-		hooksecurefunc(tab, "SetChecked", function(self) Guard(TabChecked, self) end)
+		ns.HookOnce(tab, "SetChecked", function(self) Guard(TabChecked, self) end, KEY)
 	end
 end
 
@@ -1087,15 +1087,13 @@ end
 -- it to the screen), next frame and out of combat. The reagent picker in the frame it opens.
 -- ---------------------------------------------------------------------------------------------
 
-local queued = false
+-- (Next frame, once however often it's asked; ns.Queue waits out a fight.)
+local function DressQueued()
+	if not frame or not On() or not ns.Kit then return end
+	ns.OutOfCombat(function() Guard(Dress, frame) end)
+end
 local function Soon()
-	if queued then return end
-	queued = true
-	C_Timer.After(0, function()
-		queued = false
-		if not frame or not On() or not ns.Kit then return end
-		ns.OutOfCombat(function() Guard(Dress, frame) end)
-	end)
+	ns.Queue("Blizzard:professions", DressQueued, KEY)
 end
 
 local hooked = false
@@ -1108,17 +1106,17 @@ local function Hooks(f)
 		end
 	end
 	if type(_G.OpenProfessionsItemFlyout) == "function" then
-		hooksecurefunc("OpenProfessionsItemFlyout", function(_, _, behavior)
+		ns.HookOnce(nil, "OpenProfessionsItemFlyout", function(_, _, behavior)
 			if not On() or type(behavior) ~= "table" or InCombatLockdown() then return end
 			Guard(Flyout, behavior.flyout)
-		end)
+		end, KEY)
 	end
 	local P = _G.Professions
 	if type(P) == "table" and type(P.SetupOutputIcon) == "function" then
-		hooksecurefunc(P, "SetupOutputIcon", function(btn, _, info)
+		ns.HookOnce(P, "SetupOutputIcon", function(btn, _, info)
 			if not On() or not done[btn] or type(info) ~= "table" or not info.hyperlink then return end
 			Guard(EdgeQuality, btn, LinkQuality(info.hyperlink))
-		end)
+		end, KEY)
 	end
 end
 

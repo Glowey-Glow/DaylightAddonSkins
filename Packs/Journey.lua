@@ -37,17 +37,17 @@ end
 
 -- setting = { label, Journey's color names it stands for, its default }
 local LINKS = {
-	{ "linkQuest", L["Quests to do"], { "QUEST", "QUEST_DO", "QUEST_STARTWORK" }, Hex("0084EB") },
-	{ "linkAccept", L["Quests to accept"], { "QUEST_ACCEPT" }, Hex("FFFF00") },
-	{ "linkTurnin", L["Quests to turn in"], { "QUEST_TURNIN" }, Hex("FFA500") },
+	{ "linkQuest", L["Quests to Do"], { "QUEST", "QUEST_DO", "QUEST_STARTWORK" }, Hex("0084EB") },
+	{ "linkAccept", L["Quests to Accept"], { "QUEST_ACCEPT" }, Hex("FFFF00") },
+	{ "linkTurnin", L["Quests to Turn In"], { "QUEST_TURNIN" }, Hex("FFA500") },
 	{ "linkFriendly", L["Friendly NPCs"], { "NPC_FRIENDLY" }, Hex("9DFF9D") },
 	{ "linkHostile", L["Hostile NPCs"], { "NPC_HOSTILE" }, Hex("FF6363") },
 	{ "linkNeutral", L["Neutral NPCs"], { "NPC_NEUTRAL" }, Hex("FFD100") },
-	{ "linkObject", L["Items, objects, spells and other NPCs"], { "ITEM", "GAME_OBJECT", "SPELL", "SKILL", "NPC", "SEARCH_TERM" }, Hex("E36EE4") },
-	{ "linkPlace", L["Places and zones"], { "AREA", "ZONE", "WMOAREA" }, Hex("FFD100") },
-	{ "linkTravel", L["Flights and inns"], { "TAXI", "INN" }, Hex("FFA500") },
-	{ "linkLevel", L["Levels and experience"], { "LEVEL", "XP" }, Hex("FFFF00") },
-	{ "linkWarn", L["Warnings and tips"], { "TIP", "RED_TEXT", "GET_OUT", "QUEST_SKIPPED", "SKIPPED_HEADING" }, Hex("FF0000") },
+	{ "linkObject", L["Items, Objects, Spells and Other NPCs"], { "ITEM", "GAME_OBJECT", "SPELL", "SKILL", "NPC", "SEARCH_TERM" }, Hex("E36EE4") },
+	{ "linkPlace", L["Places and Zones"], { "AREA", "ZONE", "WMOAREA" }, Hex("FFD100") },
+	{ "linkTravel", L["Flights and Inns"], { "TAXI", "INN" }, Hex("FFA500") },
+	{ "linkLevel", L["Levels and Experience"], { "LEVEL", "XP" }, Hex("FFFF00") },
+	{ "linkWarn", L["Warnings and Tips"], { "TIP", "RED_TEXT", "GET_OUT", "QUEST_SKIPPED", "SKIPPED_HEADING" }, Hex("FF0000") },
 }
 
 local DEFAULTS = {
@@ -69,7 +69,7 @@ for _, l in ipairs(LINKS) do DEFAULTS[l[1]] = l[4] end
 local function Extra(at, following, hint)
 	local function off(get) return following(get) end
 	local linkItems = {
-		{ type = "toggle", key = at .. "ownLinks", label = L["Custom link colors"],
+		{ type = "toggle", key = at .. "ownLinks", label = L["Custom Link Colors"],
 		  desc = L["Off: the quests, NPCs, items and places in the steps keep Journey's colors."], disabled = off },
 	}
 	for _, l in ipairs(LINKS) do
@@ -78,42 +78,42 @@ local function Extra(at, following, hint)
 			disabled = function(get) return following(get) or get(at .. "ownLinks") ~= true end }
 	end
 	return {
-		{ label = L["Guide window"], items = {
+		{ label = L["Guide Window"], items = {
 			hint(),
-			{ type = "toggle", key = at .. "showLogo", label = L["Journey logo"],
+			{ type = "toggle", key = at .. "showLogo", label = L["Journey Logo"],
 			  desc = L["The logo at the left of the guide's header."], disabled = off },
-			{ type = "toggle", key = at .. "groupMarks", label = L["Marked steps"],
+			{ type = "toggle", key = at .. "groupMarks", label = L["Marked Steps"],
 			  desc = L["A colored bar in the step boxes the guide marks with a color (it drew their border in it)."], disabled = off },
-			{ type = "dropdown", key = at .. "progress", label = L["Progress bar"],
-			  values = { accent = L["The accent"], own = L["My own color"], journey = L["Journey's blue"] },
+			{ type = "dropdown", key = at .. "progress", label = L["Progress Bar"],
+			  values = { accent = L["The Accent"], own = L["My Own Color"], journey = L["Journey's Blue"] },
 			  desc = L["The color of the guide's progress bar under the title."], disabled = off },
-			{ type = "color", key = at .. "progressColor", label = L["Progress bar color"],
-			  desc = L["Its color when \"My own color\" is picked."],
+			{ type = "color", key = at .. "progressColor", label = L["Progress Bar Color"],
+			  desc = L["Its color when \"My Own Color\" is picked."],
 			  disabled = function(get) return following(get) or get(at .. "progress") ~= "own" end },
 		} },
-		{ label = L["Step buttons"], items = {
+		{ label = L["Step Buttons"], items = {
 			{ type = "dropdown", key = at .. "stepButtons", label = L["Style"],
-			  values = { flat = L["Flat, in the step's color"], daylight = L["DaylightUI buttons"], journey = L["As Journey draws them"] },
+			  values = { flat = L["Flat, in the Step's Color"], daylight = L["Daylight UI Buttons"], journey = L["As Journey Draws Them"] },
 			  desc = L["The buttons in the steps (Go to, Skip and the guide's own). Takes hold after a reload."], disabled = off },
-			{ type = "slider", key = at .. "buttonTint", label = L["Color strength"], min = 0.1, max = 0.8, step = 0.05, unit = "%",
+			{ type = "slider", key = at .. "buttonTint", label = L["Color Strength"], min = 0.1, max = 0.8, step = 0.05, unit = "%",
 			  desc = L["How strongly a flat button shows its step's color."],
 			  disabled = function(get) return following(get) or get(at .. "stepButtons") ~= "flat" end },
-			{ type = "toggle", key = at .. "accentHighlight", label = L["Highlighted buttons in the accent"],
+			{ type = "toggle", key = at .. "accentHighlight", label = L["Highlighted Buttons in the Accent"],
 			  desc = L["Off: the button the guide highlights keeps Journey's blue."], disabled = off },
-			{ type = "toggle", key = at .. "squareItems", label = L["Square item buttons"],
+			{ type = "toggle", key = at .. "squareItems", label = L["Square Item Buttons"],
 			  desc = L["The item and target buttons beside the guide: square icons with a thin border. Takes hold after a reload."],
 			  disabled = off },
-			{ type = "button", label = L["Reload interface"], func = function() ReloadUI() end },
+			{ type = "button", label = L["Reload Interface"], func = function() ReloadUI() end },
 		} },
-		{ label = L["Menus, tooltip and arrow"], items = {
-			{ type = "toggle", key = at .. "menuAccent", label = L["Menus in the accent"],
+		{ label = L["Menus, Tooltip and Arrow"], items = {
+			{ type = "toggle", key = at .. "menuAccent", label = L["Menus in the Accent"],
 			  desc = L["The guide menu's rows light up, and its check marks show, in the accent."], disabled = off },
-			{ type = "toggle", key = at .. "tooltip", label = L["Dress the guide tooltip"],
-			  desc = L["The tooltip of the guide's links in DaylightUI's shell. Takes hold after a reload."], disabled = off },
-			{ type = "toggle", key = at .. "arrowAccent", label = L["Arrow distance in the accent"],
+			{ type = "toggle", key = at .. "tooltip", label = L["Dress the Guide Tooltip"],
+			  desc = L["The tooltip of the guide's links in Daylight UI's shell. Takes hold after a reload."], disabled = off },
+			{ type = "toggle", key = at .. "arrowAccent", label = L["Arrow Distance in the Accent"],
 			  desc = L["Off: the HUD arrow's distance stays gold."], disabled = off },
 		} },
-		{ label = L["Link colors"], items = linkItems },
+		{ label = L["Link Colors"], items = linkItems },
 		ns.HandoverGroup(KEY),
 	}
 end
@@ -138,7 +138,7 @@ ns.Handover(KEY, {
 	end,
 	set = function(key, value) _G.Journey_Account[key] = value end,
 	list = {
-		{ key = "autoquests", label = L["Accept and turn in the guide's quests"],
+		{ key = "autoquests", label = L["Accept and Turn in the Guide's Quests"],
 		  daylight = ns.In(string.format(L["%s, %s"], L["auto accept"], L["auto turn in"]), "Quality of Life"),
 		  ours = function() return ns.DaylightHas("QoL", "questAccept") and ns.DaylightHas("QoL", "questTurnIn") end },
 	},
@@ -634,7 +634,7 @@ local function HookText()
 	local t = TaskType("text")
 	if not t or type(t.RenderFunc) ~= "function" then return end
 	textHooked = true
-	hooksecurefunc(t, "RenderFunc", function(_, _, container)
+	ns.HookOnce(t, "RenderFunc", function(_, _, container)
 		if not (On() and Look("ownLinks") == true) or type(container) ~= "table" then return end
 		ns.Guard(function()
 			Remark(container.text)
@@ -644,7 +644,7 @@ local function HookText()
 				end
 			end
 		end)
-	end)
+	end, KEY)
 end
 
 local function ApplyColors()

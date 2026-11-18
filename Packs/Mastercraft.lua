@@ -220,7 +220,7 @@ ns.me.On("Login", function()
 				Say(string.format(L["Mastercraft stays on its Classic style while Addon Skins dresses it. The style you picked (%s) comes back when its skin is off."],
 					STYLE_NAMES[picked] or tostring(picked)))
 			elseif sessionTheme ~= "classic" then
-				Say(L["Mastercraft takes the DaylightUI look at your next reload."])
+				Say(L["Mastercraft takes the Daylight UI look at your next reload."])
 			end
 		else
 			GiveStyleBack(s)
@@ -559,11 +559,8 @@ local function Relight()
 		if Usable(obj) then Call(obj, e.m, x, y, z, e.a) end
 	end
 end
-local relightQueued = false
 local function RelightSoon()
-	if relightQueued then return end
-	relightQueued = true
-	C_Timer.After(0, function() relightQueued = false Relight() end)
+	ns.Queue("Mastercraft:relight", Relight, KEY)
 end
 ns.me.On("StyleChanged", RelightSoon)
 ns.me.On("SettingChanged", function(scope) if scope == ADDON then RelightSoon() end end)
@@ -1178,7 +1175,7 @@ local function MapButton()
 		if Kind(c) == "Button" and not hosts[c] and type(c.style) == "string" and Kind(c.label) == "FontString"
 			and c.label.mcSetText ~= nil then
 			Piece(c)
-			c:HookScript("OnMouseUp", function() Guard(Names) end)
+			ns.ScriptOnce(c, "OnMouseUp", function() Guard(Names) end, KEY)
 		end
 	end
 end
@@ -1254,12 +1251,12 @@ local function LitMark(b)
 	line:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -3, 1)
 	line:SetHeight(2)
 	line:Hide()
-	hooksecurefunc(b, "LockHighlight", function()
+	ns.HookOnce(b, "LockHighlight", function()
 		if not On() then return end
 		ns.PaintAccent(line, 1, nil, KEY)
 		line:Show()
-	end)
-	hooksecurefunc(b, "UnlockHighlight", function() line:Hide() end)
+	end, KEY)
+	ns.HookOnce(b, "UnlockHighlight", function() line:Hide() end, KEY)
 end
 
 local function SoftRows(list)
@@ -1303,7 +1300,7 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 local function HookGlobal(name)
-	if type(_G[name]) == "function" then hooksecurefunc(name, function() Guard(OpenNow) end) end
+	ns.HookOnce(nil, name, function() Guard(OpenNow) end, KEY)
 end
 
 local function Setup(K)
@@ -1313,12 +1310,12 @@ local function Setup(K)
 		HookGlobal(name)
 	end
 	if type(SlashCmdList) == "table" and type(SlashCmdList.MASTERCRAFT) == "function" then
-		hooksecurefunc(SlashCmdList, "MASTERCRAFT", function() Guard(OpenNow) end)
+		ns.HookOnce(SlashCmdList, "MASTERCRAFT", function() Guard(OpenNow) end, KEY)
 	end
 	-- (Made at login, maybe after this runs.)
 	C_Timer.After(1, function()
 		local mb = _G.MastercraftMinimapButton
-		if Usable(mb) then mb:HookScript("OnClick", function() Guard(OpenNow) end) end
+		ns.ScriptOnce(mb, "OnClick", function() Guard(OpenNow) end, KEY)
 	end)
 
 	-- Windows made from its own events: by name until made, and its pop-ups by the screen's count.
@@ -1399,17 +1396,17 @@ ns.Handover(KEY, {
 		if s then s[key] = value end
 	end,
 	list = {
-		Item("autoJunk", L["Sell junk at vendors"], ns.In(L["sell junk"], "Bags"),
+		Item("autoJunk", L["Sell Junk at Vendors"], ns.In(L["sell junk"], "Bags"),
 			function() return has("Bags", "sellJunk") end),
-		Item("autoRepair", L["Repair at vendors"], ns.In(L["auto repair"], "Bags"),
+		Item("autoRepair", L["Repair at Vendors"], ns.In(L["auto repair"], "Bags"),
 			function() return has("Bags", "autoRepair") end),
-		Item("ownedTooltip", L["How many you own, in item tooltips"],
+		Item("ownedTooltip", L["How Many You Own, in Item Tooltips"],
 			ns.In(L["each character's count in item tooltips"], "Bags"),
 			function() return has("Bags", "viewer.enabled") end),
-		Item("tipOwnersList", L["Who owns it, in item tooltips"],
+		Item("tipOwnersList", L["Who Owns It, in Item Tooltips"],
 			ns.In(L["each character's count in item tooltips"], "Bags"),
 			function() return has("Bags", "viewer.enabled") end),
-		Item("fishEasyCast", L["Double right-click to fish"], ns.In(L["right-click to fish"], "Quality of Life"),
+		Item("fishEasyCast", L["Double Right-Click to Fish"], ns.In(L["right-click to fish"], "Quality of Life"),
 			function() return has("QoL", "fishClick") end),
 	},
 })

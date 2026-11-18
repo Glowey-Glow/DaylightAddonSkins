@@ -93,9 +93,9 @@ local function SortHeading(btn, f)
 	if not Usable(btn) or not Usable(btn.Texto) or not ns.Once(btn) then return end
 	Ink(btn.Texto, "LABEL")
 	-- A sort fills the list again through a function of its own (no Refrescar): striped again.
-	btn:HookScript("OnClick", function() SummaryRows(f) end)
-	btn:HookScript("OnEnter", function() if ns.Enabled(KEY) then Ink(btn.Texto, "VALUE") end end)
-	btn:HookScript("OnLeave", function() if ns.Enabled(KEY) then Ink(btn.Texto, "LABEL") end end)
+	ns.ScriptOnce(btn, "OnClick", function() SummaryRows(f) end, KEY)
+	ns.ScriptOnce(btn, "OnEnter", function() if ns.Enabled(KEY) then Ink(btn.Texto, "VALUE") end end, KEY)
+	ns.ScriptOnce(btn, "OnLeave", function() if ns.Enabled(KEY) then Ink(btn.Texto, "LABEL") end end, KEY)
 end
 
 function SummaryRows(f)
@@ -124,7 +124,7 @@ local function Summary(f, Kit)
 	end
 	QuietRules(f)
 	if type(f.Refrescar) == "function" then
-		hooksecurefunc(f, "Refrescar", function() SummaryRows(f) end)
+		ns.HookOnce(f, "Refrescar", function() SummaryRows(f) end, KEY)
 	end
 	SummaryRows(f)
 end
@@ -185,22 +185,22 @@ local function CheckRow(row, Kit)
 		ns.FillAccent(fill, 1, nil, KEY)
 		fill:SetShown(mark:IsShown())
 	end
-	hooksecurefunc(mark, "Show", paint)
-	hooksecurefunc(mark, "Hide", paint)
+	ns.HookOnce(mark, "Show", paint, KEY)
+	ns.HookOnce(mark, "Hide", paint, KEY)
 	paint()
 	Ink(row.labelTitulo, "LABEL")
 	Ink(row.labelDesc, "TEXT")
-	row:HookScript("OnEnter", function()
+	ns.ScriptOnce(row, "OnEnter", function()
 		if not ns.Enabled(KEY) then return end
 		Ink(row.labelTitulo, "VALUE")
 		Kit.Paint(shell, Kit.ROW_HOVER)
-	end)
-	row:HookScript("OnLeave", function()
+	end, KEY)
+	ns.ScriptOnce(row, "OnLeave", function()
 		if not ns.Enabled(KEY) then return end
 		Ink(row.labelTitulo, "LABEL")
 		Kit.Paint(shell, nil)
-	end)
-	row:HookScript("OnShow", paint)
+	end, KEY)
+	ns.ScriptOnce(row, "OnShow", paint, KEY)
 end
 
 local function Heading(h)
@@ -271,10 +271,10 @@ local function Settings(panel, Kit)
 	-- Its texts (title included) are set again on every show and language change.
 	for _, m in ipairs({ "ActualizarTextosLocalizados", "Refrescar" }) do
 		if type(panel[m]) == "function" then
-			hooksecurefunc(panel, m, function() SettingsTexts(panel, Kit) end)
+			ns.HookOnce(panel, m, function() SettingsTexts(panel, Kit) end, KEY)
 		end
 	end
-	panel:HookScript("OnShow", function() SettingsTexts(panel, Kit) end)
+	ns.ScriptOnce(panel, "OnShow", function() SettingsTexts(panel, Kit) end, KEY)
 end
 
 -- Its windows are made, shown and filled in one call: dressed right after it (no undressed first
@@ -292,10 +292,10 @@ ns.Pack(KEY, "Kerzo Quest Expansion", function()
 	local api = _G.KerzoQuestExpansion
 	if type(api) == "table" then
 		for _, m in ipairs({ "AbrirVentanaResumen", "OpenOverviewWindow" }) do
-			if type(api[m]) == "function" then hooksecurefunc(api, m, OnOpen("KQEVentanaResumen", Summary)) end
+			if type(api[m]) == "function" then ns.HookOnce(api, m, OnOpen("KQEVentanaResumen", Summary), KEY) end
 		end
 		for _, m in ipairs({ "AbrirVentanaTintes", "OpenTintWindow" }) do
-			if type(api[m]) == "function" then hooksecurefunc(api, m, OnOpen("KQEVentanaTintes", Tints)) end
+			if type(api[m]) == "function" then ns.HookOnce(api, m, OnOpen("KQEVentanaTintes", Tints), KEY) end
 		end
 	end
 	ns.Watch(KEY, "KQEVentanaResumen", Summary)

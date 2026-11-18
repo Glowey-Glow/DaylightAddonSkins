@@ -339,7 +339,7 @@ end
 -- The character window
 -- ---------------------------------------------------------------------------------------------
 
-local char = { done = false, queued = false, waiting = false, skip = {} }
+local char = { done = false, waiting = false, skip = {} }
 local CHAR_DEPTH = 8
 
 local function CharEach(frame) Each(ns.Kit, frame) end
@@ -380,16 +380,16 @@ local function ModeTabs(Kit, f)
 			-- The game puts the icon's own crop back on every pick (SetChecked -> UpdateIconInterior)
 			-- and on the portrait's refresh: the tile's crop again after both (post-hooks).
 			if type(tab.SetChecked) == "function" then
-				hooksecurefunc(tab, "SetChecked", function(self) Guard(Crop, self) end)
+				ns.HookOnce(tab, "SetChecked", function(self) Guard(Crop, self) end, KEY)
 			end
 			Crop(tab)
 		end
 	end
 	if type(f.UpdateCharacterModeTabPortrait) == "function" then
-		hooksecurefunc(f, "UpdateCharacterModeTabPortrait", function(self)
+		ns.HookOnce(f, "UpdateCharacterModeTabPortrait", function(self)
 			local t = Usable(self.ModeTabs) and self.ModeTabs.CharacterTab
 			if Usable(t) then Guard(Crop, t) end
-		end)
+		end, KEY)
 	end
 end
 
@@ -431,10 +431,12 @@ local function PaperDollChrome(Kit, f)
 		end
 	end
 	if Usable(_G.GearManagerPopupFrame) then char.skip[_G.GearManagerPopupFrame] = true end
+	-- Pawn's button on this window is its pack's (Packs/Pawn.lua): the walk here would hide its words.
+	if Usable(_G.PawnUI_InventoryPawnButton) then char.skip[_G.PawnUI_InventoryPawnButton] = true end
 	if not Controls() then return end
 	for i = 1, 4 do SidebarTab(Kit, _G["PaperDollSidebarTab" .. i]) end
 	if type(_G.PaperDollFrame_SetSidebar) == "function" then
-		hooksecurefunc("PaperDollFrame_SetSidebar", function() if On() then PaintSidebarSoon() end end)
+		ns.HookOnce(nil, "PaperDollFrame_SetSidebar", function() if On() then PaintSidebarSoon() end end, KEY)
 	end
 	-- The "new set" button (PaperDollTertiaryButtonTemplate: one state texture the game swaps).
 	local pane = pd.EquipmentManagerPane
@@ -458,7 +460,7 @@ local function PaperDollChrome(Kit, f)
 			end
 			point()
 			if type(f.UpdateRightPaneToggleButton) == "function" then
-				hooksecurefunc(f, "UpdateRightPaneToggleButton", function() Guard(point) end)
+				ns.HookOnce(f, "UpdateRightPaneToggleButton", function() Guard(point) end, KEY)
 			end
 		end
 	end
@@ -503,9 +505,9 @@ local function SidePanes(Kit, f)
 		if Usable(pane) and not dressed[pane] then
 			dressed[pane] = true
 			if type(pane.LayoutRows) == "function" then
-				hooksecurefunc(pane, "LayoutRows", function(self)
+				ns.HookOnce(pane, "LayoutRows", function(self)
 					if char.done and On() and ns.Kit then Guard(PaneRows, ns.Kit, self) end
-				end)
+				end, KEY)
 			end
 			PaneRows(Kit, pane)
 		end
@@ -567,7 +569,6 @@ end
 
 local CharacterSoon
 local function CharacterRun()
-	char.queued = false
 	local Kit, f = ns.Kit, _G.CharacterFrame
 	if not Kit or not On() or not CharacterOnScreen() then return end
 	-- DaylightUI 1.8.4 and later dress the game's character window themselves (its System pack).
@@ -596,9 +597,7 @@ local function CharacterRun()
 end
 
 CharacterSoon = function()
-	if char.queued then return end
-	char.queued = true
-	C_Timer.After(0, CharacterRun)
+	ns.Queue("Blizzard:character", CharacterRun, KEY)
 end
 
 local charOwner = {}
@@ -611,7 +610,7 @@ local function CharacterStart()
 		reg:RegisterCallback("CharacterFrame.Show", function() if On() then CharacterSoon() end end, charOwner)
 	end
 	if type(_G.ToggleCharacter) == "function" then
-		hooksecurefunc("ToggleCharacter", function() if On() then CharacterSoon() end end)
+		ns.HookOnce(nil, "ToggleCharacter", function() if On() then CharacterSoon() end end, KEY)
 	end
 	if CharacterOnScreen() then CharacterSoon() end
 	return true
@@ -716,7 +715,7 @@ local function SearchPreview(Kit, c)
 	Kit.Shell(c, "window", QUIET)
 	if type(c.UpdateResultsDisplay) == "function" then
 		hooksecurefunc(c, "UpdateResultsDisplay", function(self)
-			if SpellsOn() then C_Timer.After(0, function() if ns.Kit then Guard(PreviewRows, ns.Kit, self) end end) end
+			if SpellsOn() then ns.Queue(self, function() if ns.Kit then Guard(PreviewRows, ns.Kit, self) end end, KEY) end
 		end)
 	end
 	PreviewRows(Kit, c)
@@ -743,7 +742,7 @@ local function SpellElement(Kit, el)
 	end
 end
 
-local spells = { queued = false, waiting = false }
+local spells = { waiting = false }
 
 -- Really on screen: parented to UIParent (not parked under DaylightUI's Book veil, which is shown
 -- at alpha 0, or its hidden holder), visible, and not faded out.
@@ -754,7 +753,6 @@ local function Really(f)
 end
 local SpellsSoon
 local function SpellPages()
-	spells.queued = false
 	local Kit, f = ns.Kit, _G.PlayerSpellsFrame
 	if not Kit or not SpellsOn() or not Really(f) or ns.DaylightDressesGame("system") then return end
 	if InCombatLockdown() then
@@ -772,9 +770,7 @@ local function SpellPages()
 end
 
 SpellsSoon = function()
-	if spells.queued then return end
-	spells.queued = true
-	C_Timer.After(0, SpellPages)
+	ns.Queue("Blizzard:spellPages", SpellPages, KEY)
 end
 
 -- The loadout dialogs (ClassTalentLoadoutDialogTemplate: a Title, a DialogBorderDarkTemplate

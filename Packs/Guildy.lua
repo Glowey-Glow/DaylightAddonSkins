@@ -257,8 +257,8 @@ local function Text(fs)
 	if not strings[fs] then
 		strings[fs] = true
 		hookedCount = hookedCount + 1
-		hooksecurefunc(fs, "SetTextColor", OnColor)
-		hooksecurefunc(fs, "SetFontObject", OnFontObject)
+		ns.HookOnce(fs, "SetTextColor", OnColor, KEY)
+		ns.HookOnce(fs, "SetFontObject", OnFontObject, KEY)
 	end
 	FontFollow(fs)
 	InkString(fs)
@@ -326,7 +326,7 @@ local function Box(f, backdrop)
 		return
 	end
 	Own(f, function() boxShell[f] = Kit.Shell(f, "row") end)
-	if type(f.SetBackdropBorderColor) == "function" then hooksecurefunc(f, "SetBackdropBorderColor", BoxBorder) end
+	if type(f.SetBackdropBorderColor) == "function" then ns.HookOnce(f, "SetBackdropBorderColor", BoxBorder, KEY) end
 	if f.GetBackdropBorderColor then
 		local ok, r, g, b = pcall(f.GetBackdropBorderColor, f)
 		if ok then BoxBorder(f, r, g, b) end
@@ -458,20 +458,20 @@ local function PanelButton(btn)
 	if Controls() then
 		Kit.Button(btn)
 		Refit(btn, true)
-		hooksecurefunc(btn, "SetText", OnSetText)
+		ns.HookOnce(btn, "SetText", OnSetText, KEY)
 		-- (After the Kit's own: it puts the body size back on these.)
-		btn:HookScript("OnEnable", OnState)
-		btn:HookScript("OnDisable", OnState)
+		ns.ScriptOnce(btn, "OnEnable", OnState, KEY)
+		ns.ScriptOnce(btn, "OnDisable", OnState, KEY)
 		-- A button whose click is the game's secure button laid over it: that button takes the mouse,
 		-- and Guildy lights the one below with LockHighlight.
 		local s = Kit.ButtonOf(btn)
 		if type(btn.relayOverlay) == "function" and type(s) == "table" and type(s.Hover) == "function" then
-			hooksecurefunc(btn, "LockHighlight", function() if On() then s.Hover(true) end end)
-			hooksecurefunc(btn, "UnlockHighlight", function() if On() then s.Hover(false) end end)
+			ns.HookOnce(btn, "LockHighlight", function() if On() then s.Hover(true) end end, KEY)
+			ns.HookOnce(btn, "UnlockHighlight", function() if On() then s.Hover(false) end end, KEY)
 		end
 	end
 	-- What its click opens or rebuilds (a page, the customizer, a menu), dressed in the same frame.
-	btn:HookScript("OnClick", QueueMain)
+	ns.ScriptOnce(btn, "OnClick", QueueMain, KEY)
 end
 
 -- (Not the bottom tabs, whose template has the same three pieces and its "active" ones.)
@@ -558,12 +558,12 @@ local function Segmented(g)
 			if type(s) == "table" and type(s.trace) == "table" and type(s.trace.To) == "function" then
 				s.Light = function() s.trace.To((s.active and not s.off) and true or false) end
 			end
-			b:HookScript("OnEnter", function() Guard(SegPaint, g) end)
-			b:HookScript("OnLeave", function() Guard(SegPaint, g) end)
+			ns.ScriptOnce(b, "OnEnter", function() Guard(SegPaint, g) end, KEY)
+			ns.ScriptOnce(b, "OnLeave", function() Guard(SegPaint, g) end, KEY)
 		end
 	end
 	SegLayout(g)
-	hooksecurefunc(g, "SetValue", function() Guard(SegPaint, g) end)
+	ns.HookOnce(g, "SetValue", function() Guard(SegPaint, g) end, KEY)
 	SegPaint(g)
 end
 
@@ -609,11 +609,11 @@ local function List(sf)
 	local child = sf.GetScrollChild and sf:GetScrollChild()
 	if not Usable(child) then return end
 	local function again() if On() then Queue(child, "sub") end end
-	hooksecurefunc(sf, "SetItems", again)
-	sf:HookScript("OnVerticalScroll", again)
+	ns.HookOnce(sf, "SetItems", again, KEY)
+	ns.ScriptOnce(sf, "OnVerticalScroll", again, KEY)
 	-- (A larger window shows more rows: made in its size and range changes, not in SetItems.)
-	sf:HookScript("OnSizeChanged", again)
-	sf:HookScript("OnScrollRangeChanged", again)
+	ns.ScriptOnce(sf, "OnSizeChanged", again, KEY)
+	ns.ScriptOnce(sf, "OnScrollRangeChanged", again, KEY)
 end
 
 local function Grip(btn)
@@ -644,7 +644,7 @@ end
 -- Customizing: a heading's or tile's handle, a free place and "add below" open the picker, the
 -- Hall of Fame's tile list or a menu with their click (none of them a button of Guildy's toolkit).
 local function OpensSomething(btn)
-	btn:HookScript("OnClick", QueueMain)
+	ns.ScriptOnce(btn, "OnClick", QueueMain, KEY)
 end
 
 -- What one frame of Guildy's is, the first time it's seen.
@@ -877,9 +877,9 @@ function Floating(f)
 			if Usable(note) and Kind(note.Text) == "FontString" then keepInk[note.Text] = true end
 		end
 	end
-	f:HookScript("OnShow", function() Guard(FloatDress, f) end)
+	ns.ScriptOnce(f, "OnShow", function() Guard(FloatDress, f) end, KEY)
 	-- The member card is laid out anew (and sized) while it stays shown, row to row.
-	if type(f.rules) == "table" then hooksecurefunc(f, "SetSize", function() Guard(FloatDress, f) end) end
+	if type(f.rules) == "table" then ns.HookOnce(f, "SetSize", function() Guard(FloatDress, f) end, KEY) end
 	FloatDress(f)
 end
 
@@ -912,7 +912,7 @@ local function Menu(m)
 	Kit.Backdrop(m)
 	Own(m, ns.Shell, m, { window = true }, KEY)
 	-- (Sized on every open, right before it's shown.)
-	hooksecurefunc(m, "SetSize", function() Guard(MenuRows, m) end)
+	ns.HookOnce(m, "SetSize", function() Guard(MenuRows, m) end, KEY)
 	MenuRows(m)
 end
 
@@ -925,7 +925,7 @@ function Dialog(f)
 	Own(f, ns.Shell, f, { window = true }, KEY)
 	-- The confirmation's OK: red for a removal (kept), gold otherwise.
 	if Kind(f.Ok) == "Button" then Text(f.Ok:GetFontString()) end
-	f:HookScript("OnShow", function() if On() then Queue(f, "again") end end)
+	ns.ScriptOnce(f, "OnShow", function() if On() then Queue(f, "again") end end, KEY)
 	Queue(f, "first")
 end
 
@@ -1015,13 +1015,13 @@ local function TextTab(tab, pad, min)
 	TabWords(tab)
 	FitTab(tab, pad, min)
 	local function again() if On() then FitTab(tab, pad, min) end end
-	tab:HookScript("OnShow", again)
-	tab:HookScript("OnEvent", again)
-	tab:HookScript("OnEnter", function() TabWords(tab, true) end)
-	tab:HookScript("OnLeave", function() TabWords(tab, false) end)
+	ns.ScriptOnce(tab, "OnShow", again, KEY)
+	ns.ScriptOnce(tab, "OnEvent", again, KEY)
+	ns.ScriptOnce(tab, "OnEnter", function() TabWords(tab, true) end, KEY)
+	ns.ScriptOnce(tab, "OnLeave", function() TabWords(tab, false) end, KEY)
 	-- (Lit by Guildy while the game's secure button lies over it.)
-	hooksecurefunc(tab, "LockHighlight", function() TabWords(tab, true) end)
-	hooksecurefunc(tab, "UnlockHighlight", function() TabWords(tab, false) end)
+	ns.HookOnce(tab, "LockHighlight", function() TabWords(tab, true) end, KEY)
+	ns.HookOnce(tab, "UnlockHighlight", function() TabWords(tab, false) end, KEY)
 end
 
 local function Options(o)
@@ -1036,7 +1036,7 @@ local function Options(o)
 		TextTab(_G["GuildyOptionsTab" .. i], 15, 70)
 		i = i + 1
 	end
-	o:HookScript("OnShow", function() if On() then Queue(o, "again") end end)
+	ns.ScriptOnce(o, "OnShow", function() if On() then Queue(o, "again") end end, KEY)
 	Queue(o, "first")
 end
 
@@ -1127,9 +1127,9 @@ local function SideTab(tab)
 		end
 	end
 	if not ns.SideTile(tab, { picked = SidePicked, key = KEY, pad = 2 }) then return end
-	if type(tab.SetChecked) == "function" then hooksecurefunc(tab, "SetChecked", ns.SideTilesPaintSoon) end
+	if type(tab.SetChecked) == "function" then ns.HookOnce(tab, "SetChecked", ns.SideTilesPaintSoon, KEY) end
 	-- (Lit by Guildy while the game's secure button lies over it.)
-	if type(tab.SetHover) == "function" then hooksecurefunc(tab, "SetHover", function() ns.SideTilePaint(tab) end) end
+	if type(tab.SetHover) == "function" then ns.HookOnce(tab, "SetHover", function() ns.SideTilePaint(tab) end, KEY) end
 end
 
 -- The tab Guildy puts on the game's guild window while that one shows instead (Info, member
@@ -1173,14 +1173,14 @@ local function CloseLit(btn)
 		if IsTexture(r) and r:GetDrawLayer() == "OVERLAY" and r:GetAlpha() > 0 then x = r end
 	end
 	if not x then return end
-	hooksecurefunc(btn, "LockHighlight", function()
+	ns.HookOnce(btn, "LockHighlight", function()
 		if On() then x:SetVertexColor(ns.AccentOf(KEY)) end
-	end)
-	hooksecurefunc(btn, "UnlockHighlight", function()
+	end, KEY)
+	ns.HookOnce(btn, "UnlockHighlight", function()
 		if not On() then return end
 		local c = ns.Colors().LABEL
 		if c then x:SetVertexColor(c[1], c[2], c[3]) end
-	end)
+	end, KEY)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -1327,8 +1327,8 @@ function Panels(f)
 		local p = select(i, content:GetChildren())
 		if Usable(p) and not hookedPanel[p] then
 			hookedPanel[p] = true
-			p:HookScript("OnShow", PanelShown)
-			p:HookScript("OnHide", PanelHidden)
+			ns.ScriptOnce(p, "OnShow", PanelShown, KEY)
+			ns.ScriptOnce(p, "OnHide", PanelHidden, KEY)
 			if p:IsShown() then PanelShown(p) end
 		end
 	end
@@ -1391,6 +1391,7 @@ local function TabShelf(f, first, last)
 	skip[shelf] = true
 	ns.Shell(shelf, nil, KEY)
 	shelf:SetShown(first:IsShown())
+	-- (Plain HookScript: TextTab already hooks this tab's OnShow through ns.ScriptOnce.)
 	first:HookScript("OnShow", function() shelf:Show() end)
 	first:HookScript("OnHide", function() shelf:Hide() end)
 end
@@ -1417,17 +1418,18 @@ local function Window(f)
 	local cog = f.OptionsButton
 	if Usable(cog) then
 		Guard(PanelButton, cog)
+		-- (Plain HookScript: PanelButton already hooks its OnClick through ns.ScriptOnce.)
 		cog:HookScript("OnClick", OptionsNow)
 	end
 	Panels(f)
-	f:HookScript("OnShow", function()
+	ns.ScriptOnce(f, "OnShow", function()
 		if not On() then return end
 		HoldHost()
 		Panels(f)
 		Queue(f, "again")
 		Spotting()
-	end)
-	f:HookScript("OnHide", MainHidden)
+	end, KEY)
+	ns.ScriptOnce(f, "OnHide", MainHidden, KEY)
 	Queue(f, "first")
 	Spotting()
 end
@@ -1470,7 +1472,7 @@ local dinged
 local function Ding(b)
 	if dinged then return end
 	dinged = b
-	b:HookScript("OnShow", function() Guard(DingPaint, b) end)
+	ns.ScriptOnce(b, "OnShow", function() Guard(DingPaint, b) end, KEY)
 	DingPaint(b)
 end
 
@@ -1511,7 +1513,7 @@ end
 
 local function RepaintSoon()
 	-- (After DaylightUI has put its own new look on, which this follows.)
-	C_Timer.After(0, function() Guard(Repaint) end)
+	ns.Queue("Guildy:repaint", Repaint, KEY)
 end
 
 local function Now()
@@ -1533,13 +1535,13 @@ ns.Pack(KEY, "Guildy", function(K)
 	Kit = K
 	-- /guildy (with the window open it brings Guildy back over the game's).
 	if type(_G.SlashCmdList) == "table" and type(_G.SlashCmdList.GUILDY) == "function" then
-		hooksecurefunc(_G.SlashCmdList, "GUILDY", Now)
+		ns.HookOnce(_G.SlashCmdList, "GUILDY", Now, KEY)
 	end
 	-- Built and shown inside the game's guild window's OnShow: from the game's own open calls (J,
 	-- the guild button; post-hooks on its global functions), and a watch by name for the rest (the
 	-- guild banker, where Guildy opens alone on an event).
 	for _, name in ipairs({ "ToggleGuildFrame", "ToggleCommunitiesFrame" }) do
-		if type(_G[name]) == "function" then hooksecurefunc(name, GuildOpened) end
+		if type(_G[name]) == "function" then ns.HookOnce(nil, name, GuildOpened, KEY) end
 	end
 	ns.Watch(KEY, "GuildyFrame", function(f, K2)
 		Kit = K2

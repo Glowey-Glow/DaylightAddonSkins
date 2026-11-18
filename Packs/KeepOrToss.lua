@@ -27,12 +27,12 @@ local L = ns.L
 local KEY = "KeepOrToss"
 
 ns.Target(KEY, "Keep or Toss", { window = true, text = true, font = "daylight",
-	defaults = { minimal = true }, extraTab = L["Journal look"],
+	defaults = { minimal = true }, extraTab = L["Journal Look"],
 	extra = function(at)
 		return {
-			{ label = L["Journal look"], items = {
-				{ type = "toggle", key = at .. "minimal", label = L["Use its Minimal dark look"],
-				  desc = L["Keep or Toss's journal in its own Minimal look, in dark mode: the one look of its that DaylightUI's window can go behind. Off: its look and dark mode as they were before. A look you pick in Keep or Toss itself stays as you picked it."] },
+			{ label = L["Journal Look"], items = {
+				{ type = "toggle", key = at .. "minimal", label = L["Use Its Minimal Dark Look"],
+				  desc = L["Keep or Toss's journal in its own Minimal look, in dark mode: the one look of its that Daylight UI's window can go behind. Off: its look and dark mode as they were before. A look you pick in Keep or Toss itself stays as you picked it."] },
 			} },
 		}
 	end })
@@ -129,7 +129,7 @@ local function Journal(frame)
 		if ns.Usable(child) and type(child.Paint) == "function" and not panels[child] then
 			-- (Made before the holder, its own shadow is the panel's only child frame.)
 			panels[child] = Holder(child, true)
-			hooksecurefunc(child, "Paint", PaintPanel)
+			ns.HookOnce(child, "Paint", PaintPanel, KEY)
 			-- Painted once already as the journal was made, in the look it had then: the look it
 			-- wears now is put on as the journal opens (its OnShow); until then the holder waits.
 		end
@@ -183,7 +183,7 @@ ns.Pack(KEY, nil, function()
 	Journal(frame)
 	-- What's new is made the first time it's shown, and painted just before.
 	ns.Watch(KEY, "KeepOrTossNews", function(news)
-		news:HookScript("OnShow", function() ns.Guard(Cover) end)
+		ns.ScriptOnce(news, "OnShow", function() ns.Guard(Cover) end, KEY)
 		ns.Guard(Cover)
 	end)
 	-- Its words follow a new DaylightUI font, and this addon's text look.

@@ -81,10 +81,10 @@ local CANVAS_DEPTH = 40    -- how far into an addon's page (scroll frames nest t
                            -- guard: a frame's children never lead back up to it
 local HEADING_SIZE = 15    -- words this big or bigger, on a row or a page of its own, are headings
 
-ns.Target(SETTINGS, L["Game settings window"], { controls = true })
+ns.Target(SETTINGS, L["Game Settings Window"], { controls = true })
 -- (The game's dungeon finder is built in with the game's own windows: there at load or not at all.)
 local hasReady = _G.LFGDungeonReadyPopup ~= nil or _G.LFGDungeonReadyDialog ~= nil
-if hasReady then ns.Target(READY, L["Dungeon ready dialog"], { controls = true }) end
+if hasReady then ns.Target(READY, L["Dungeon Ready Dialog"], { controls = true }) end
 
 local function weak() return setmetatable({}, { __mode = "k" }) end
 
@@ -481,8 +481,8 @@ local function Stepper(btn, dir)
 		steppers[btn] = s
 		s.chevron = Kit.BareButton(btn, dir)
 		-- (After the Kit's own: these run last and set the color this pack wants.)
-		btn:HookScript("OnEnter", function(self) s.hover = true; PaintStepper(self) end)
-		btn:HookScript("OnLeave", function(self) s.hover = false; PaintStepper(self) end)
+		ns.ScriptOnce(btn, "OnEnter", function(self) s.hover = true; PaintStepper(self) end, SETTINGS)
+		ns.ScriptOnce(btn, "OnLeave", function(self) s.hover = false; PaintStepper(self) end, SETTINGS)
 	end
 	-- (Its unnamed arrow art was put out of sight by the Kit once; the named pieces the game sets
 	-- again as it's grayed and lit go each pass.)
@@ -567,8 +567,8 @@ local function TabLook(tab)
 	line:Hide()
 	local t = { label = label, line = line }
 	tabs[tab] = t
-	tab:HookScript("OnEnter", function(self) t.hover = true; PaintTab(self) end)
-	tab:HookScript("OnLeave", function(self) t.hover = false; PaintTab(self) end)
+	ns.ScriptOnce(tab, "OnEnter", function(self) t.hover = true; PaintTab(self) end, SETTINGS)
+	ns.ScriptOnce(tab, "OnLeave", function(self) t.hover = false; PaintTab(self) end, SETTINGS)
 	PaintTab(tab)
 end
 
@@ -835,8 +835,8 @@ local function CategoryRow(row)
 			wash:SetAllPoints(row)
 			catLooks[row] = { fill = fill }
 			-- The game sets the words' font object again as the mouse comes and goes: put back at once.
-			row:HookScript("OnEnter", PaintCategory)
-			row:HookScript("OnLeave", PaintCategory)
+			ns.ScriptOnce(row, "OnEnter", PaintCategory, SETTINGS)
+			ns.ScriptOnce(row, "OnLeave", PaintCategory, SETTINGS)
 		end
 		PaintCategory(row)
 	else
@@ -949,14 +949,8 @@ local function SafePass()
 	passAccent = false   -- (also when the pass stopped on an error)
 end
 
-local passQueued = false
 local function PassSoon()
-	if passQueued then return end
-	passQueued = true
-	C_Timer.After(0, function()
-		passQueued = false
-		SafePass()
-	end)
+	ns.Queue("BlizzardSettings:pass", SafePass, SETTINGS)
 end
 
 local ticker
@@ -1065,7 +1059,7 @@ local function DressPanel(p)
 	for _, box in ipairs(boxes) do
 		-- (Only where the game already handles the wheel: a script of ours on a box without one would
 		-- take the wheel from the frame under it.)
-		if box:GetScript("OnMouseWheel") then box:HookScript("OnMouseWheel", PassSoon) end
+		if box:GetScript("OnMouseWheel") then ns.ScriptOnce(box, "OnMouseWheel", PassSoon, SETTINGS) end
 	end
 
 	Try1(DressFrame, p)

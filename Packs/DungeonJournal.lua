@@ -130,7 +130,7 @@ local function Popup(frame)
 	end
 	if not popups[frame] then
 		popups[frame] = true
-		frame:HookScript("OnShow", function() Settle(fix) end)
+		ns.ScriptOnce(frame, "OnShow", function() Settle(fix) end, KEY)
 	end
 	if frame:IsShown() then Settle(fix) end
 end
@@ -205,7 +205,7 @@ local function RunLog(win, Kit)
 	local FDJ = _G.ForeverDungeonJournal_NS
 	-- Every redraw (picking a run, a kill or loot while it's open) goes through RefreshRunLog.
 	if type(FDJ) == "table" and later and type(FDJ.RefreshRunLog) == "function" then
-		hooksecurefunc(FDJ, "RefreshRunLog", later)
+		ns.HookOnce(FDJ, "RefreshRunLog", later, KEY)
 	end
 end
 
@@ -251,12 +251,13 @@ local function LootFilter(win)
 		if ns.Usable(win.fdjTip) then Popup(win.fdjTip) end
 	end
 	Popup(win)
+	-- (Plain HookScript: Popup has hooked its OnShow through ns.ScriptOnce.)
 	win:HookScript("OnShow", menus)
 	menus()
 	-- Its stat tip is made the first time a stat is hovered.
 	if type(win.statChecks) == "table" then
 		for _, check in pairs(win.statChecks) do
-			if ns.Usable(check) and check.HookScript then check:HookScript("OnEnter", menus) end
+			if ns.Usable(check) and check.HookScript then ns.ScriptOnce(check, "OnEnter", menus, KEY) end
 		end
 	end
 end
@@ -416,7 +417,7 @@ local function QuestTracker(f, Kit)
 		QuestRows(f)
 		if ns.Usable(header) then Kit.InkGameText(header) end
 	end, KEY)
-	if later then f:HookScript("OnSizeChanged", later) end
+	if later then ns.ScriptOnce(f, "OnSizeChanged", later, KEY) end
 end
 
 local function QuestTrackers(Kit)
@@ -433,8 +434,8 @@ local function Card(c, Kit)
 	if not ns.Usable(c) or not First(c) then return end
 	Flat(c, 0.35)
 	Ink(c.title, "VALUE")
-	c:HookScript("OnEnter", function(self) if ns.Enabled(KEY) then self:SetBackdropBorderColor(1, 1, 1, 0.2) end end)
-	c:HookScript("OnLeave", function(self) if ns.Enabled(KEY) then self:SetBackdropBorderColor(1, 1, 1, 0.07) end end)
+	ns.ScriptOnce(c, "OnEnter", function(self) if ns.Enabled(KEY) then self:SetBackdropBorderColor(1, 1, 1, 0.2) end end, KEY)
+	ns.ScriptOnce(c, "OnLeave", function(self) if ns.Enabled(KEY) then self:SetBackdropBorderColor(1, 1, 1, 0.07) end end, KEY)
 	if c:GetObjectType() == "Button" then ns.Guard(Kit.HoverWash, c) end
 end
 
@@ -487,18 +488,15 @@ local function JournalPopups(frame)
 	local results = frame.searchResultsFrame
 	if ns.Usable(results) and First(results) then
 		Popup(results)
-		local queued
 		local function rows()
-			queued = nil
 			if results:IsShown() then WhiteHovers(results) end
 		end
 		local function later()
-			if queued then return end
-			queued = true
-			C_Timer.After(0, rows)
+			ns.Queue("ForeverDungeonJournal:results", rows, KEY)
 		end
+		-- (Plain HookScript: Popup has hooked its OnShow through ns.ScriptOnce.)
 		results:HookScript("OnShow", later)
-		results:HookScript("OnSizeChanged", later)
+		ns.ScriptOnce(results, "OnSizeChanged", later, KEY)
 		later()
 	end
 	local languages = frame.languageMenu
@@ -581,7 +579,7 @@ end
 local function RPGDone(box, Kit)
 	if Window(box, Kit) then
 		Ink(box.title, "VALUE")
-		if ns.Usable(box.text) then hooksecurefunc(box.text, "SetText", ValueName) end
+		if ns.Usable(box.text) then ns.HookOnce(box.text, "SetText", ValueName, KEY) end
 	end
 	ValueName(box.text)
 	RefitDone(box)
@@ -680,26 +678,26 @@ ns.Pack(KEY, nil, function(Kit)
 	local FDJ = _G.ForeverDungeonJournal_NS
 	if type(FDJ) ~= "table" then return end
 	if type(FDJ.ToggleRunLog) == "function" then
-		hooksecurefunc(FDJ, "ToggleRunLog", function()
+		ns.HookOnce(FDJ, "ToggleRunLog", function()
 			local win = _G.ForeverDungeonJournalRunLog
 			if ns.Enabled(KEY) and ns.Usable(win) then ns.Guard(RunLog, win, Kit) end
-		end)
+		end, KEY)
 	end
 	-- A summoned boss's quest (2.0.9, Gahz'rilla): its red "must be summoned" line, which
 	-- DaylightUI's quest page pass makes plain white, back in the warning ink after that pass.
 	if type(FDJ.PlaceSummonHelp) == "function" then
-		hooksecurefunc(FDJ, "PlaceSummonHelp", function()
-			C_Timer.After(0, function()
+		ns.HookOnce(FDJ, "PlaceSummonHelp", function()
+			ns.Queue("ForeverDungeonJournal:summon", function()
 				local f = _G.ForeverDungeonJournalFrame
 				local note = ns.Enabled(KEY) and ns.Usable(f) and f.questSummonNote
 				if note and note:IsShown() then Ink(note, "BAD") end
-			end)
-		end)
+			end, KEY)
+		end, KEY)
 	end
 	-- The boss icon size control on its dungeon maps (the journal's, and the world map's in a
 	-- dungeon): a flat box, DaylightUI's - and + buttons, its label in the label ink.
 	if type(FDJ.UpdateMapBossSizer) == "function" then
-		hooksecurefunc(FDJ, "UpdateMapBossSizer", function(panel)
+		ns.HookOnce(FDJ, "UpdateMapBossSizer", function(panel)
 			local c = type(panel) == "table" and panel.fdjBossSizer
 			if not ns.Enabled(KEY) or not ns.Usable(c) or c.dasSized then return end
 			c.dasSized = true
@@ -711,45 +709,45 @@ ns.Pack(KEY, nil, function(Kit)
 					if ns.Usable(b) then ns.Guard(Kit.Button, b) end
 				end
 			end
-		end)
+		end, KEY)
 	end
 	if type(FDJ.ToggleLootFilterWindow) == "function" then
-		hooksecurefunc(FDJ, "ToggleLootFilterWindow", function(frame)
+		ns.HookOnce(FDJ, "ToggleLootFilterWindow", function(frame)
 			local win = type(frame) == "table" and frame.lootFilterWindow or _G.ForeverDungeonJournalLootFilter
 			if ns.Enabled(KEY) and ns.Usable(win) then ns.Guard(LootFilter, win) end
-		end)
+		end, KEY)
 	end
 	-- Its loot search box shows with the first step of a search, inside this call.
 	if type(FDJ.ShowLootFilterResults) == "function" then
-		hooksecurefunc(FDJ, "ShowLootFilterResults", function(frame)
+		ns.HookOnce(FDJ, "ShowLootFilterResults", function(frame)
 			local box = type(frame) == "table" and frame.lootFilterLoading
 			if ns.Enabled(KEY) and ns.Usable(box) then ns.Guard(Loading, box, Kit) end
-		end)
+		end, KEY)
 	end
 	-- The resize notes are made and shown inside this call.
 	if type(FDJ.StartResizeMode) == "function" then
-		hooksecurefunc(FDJ, "StartResizeMode", function()
+		ns.HookOnce(FDJ, "StartResizeMode", function()
 			if ns.Enabled(KEY) then ns.Guard(ResizeNotes, _G.ForeverDungeonJournalFrame, Kit) end
-		end)
+		end, KEY)
 	end
 	-- The Tier Sets page is made the first time it opens (its icon, a piece's Back to Tiers).
 	if type(FDJ.OpenTierPage) == "function" then
-		hooksecurefunc(FDJ, "OpenTierPage", function()
+		ns.HookOnce(FDJ, "OpenTierPage", function()
 			ns.Guard(TierPage, _G.ForeverDungeonJournalTierPanel)
-		end)
+		end, KEY)
 	end
 	if type(FDJ.ShowLootFilterList) == "function" then
-		hooksecurefunc(FDJ, "ShowLootFilterList", function(frame)
+		ns.HookOnce(FDJ, "ShowLootFilterList", function(frame)
 			local panel = type(frame) == "table" and frame.lootFilterResults
 			if ns.Enabled(KEY) and ns.Usable(panel) then ns.Guard(NoMatch, panel) end
-		end)
+		end, KEY)
 	end
 	-- An item set's row: filled (and shown) on every hover of a set piece once it was clicked.
 	if type(FDJ.UpdateSetStrip) == "function" then
-		hooksecurefunc(FDJ, "UpdateSetStrip", function(owner)
+		ns.HookOnce(FDJ, "UpdateSetStrip", function(owner)
 			local strip = FDJ.setStrip
 			if ns.Enabled(KEY) and ns.Usable(strip) and strip:IsShown() then ns.Guard(SetStrip, strip, owner) end
-		end)
+		end, KEY)
 	end
 	-- Inside a dungeon, both Dungeon Journal and OpenMap lay a dungeon map over the world map, one on
 	-- top of the other (its floor buttons, its "World Map" toggle and its boss icon size poking
@@ -770,6 +768,8 @@ ns.Pack(KEY, nil, function(Kit)
 				if ns.Usable(child) and child.fdjWing then child:Hide() end
 			end
 		end
+		-- (Plain hooksecurefunc: not looks but the overlay handed to OpenMap, so it follows the
+		-- Skins module alone, not this pack's switch or its errors.)
 		hooksecurefunc(FDJ, "RefreshWorldMapOverlay", function()
 			if not ns.Enabled() then return end
 			if not openMap then
@@ -793,11 +793,11 @@ ns.Pack(KEY, nil, function(Kit)
 	-- shows. (Each frame is dressed once; a later call only looks it up.)
 	local function After(name, get, fn)
 		if type(FDJ[name]) ~= "function" then return end
-		hooksecurefunc(FDJ, name, function(...)
+		ns.HookOnce(FDJ, name, function(...)
 			if not ns.Enabled(KEY) then return end
 			local f = get(...)
 			if ns.Usable(f) then ns.Guard(fn, f, Kit) end
-		end)
+		end, KEY)
 	end
 	local function Global(name) return function() return _G[name] end end
 	local function Field(name) return function() return FDJ[name] end end
@@ -808,11 +808,11 @@ ns.Pack(KEY, nil, function(Kit)
 	local function AfterClick(btn, script, get, fn)
 		if not ns.Usable(btn) or not btn.HookScript or clicked[btn] then return end
 		clicked[btn] = true
-		btn:HookScript(script, function()
+		ns.ScriptOnce(btn, script, function()
 			if not ns.Enabled(KEY) then return end
 			local f = get()
 			if ns.Usable(f) then ns.Guard(fn, f, Kit) end
-		end)
+		end, KEY)
 	end
 	-- The home page's icons, made with its header: the Character Logs, Sleeping Bag and Onyxia
 	-- icons' right-click menus, and the Forever emblem's "back to full view" note.
@@ -872,7 +872,7 @@ ns.Pack(KEY, nil, function(Kit)
 	-- lookups until all three are found, then nothing).
 	if type(FDJ.UpdateRunTracker) == "function" then
 		local tracker, trackerHint, bossHint, all
-		hooksecurefunc(FDJ, "UpdateRunTracker", function()
+		ns.HookOnce(FDJ, "UpdateRunTracker", function()
 			if all or not ns.Enabled(KEY) then return end
 			if not tracker then
 				tracker = _G.ForeverDungeonJournalRunTracker
@@ -894,24 +894,24 @@ ns.Pack(KEY, nil, function(Kit)
 				if bossHint then ns.Guard(Window, bossHint, Kit) end
 			end
 			all = (tracker and trackerHint and bossHint) and true or false
-		end)
+		end, KEY)
 	end
 
 	-- The quest trackers: redrawn through RefreshQuestTracker and ToggleQuestTracking (the Track
 	-- buttons), both dressed right after they run; a moment after the Track button too, for a redraw
 	-- it leaves for the next frame.
 	if type(FDJ.RefreshQuestTracker) == "function" then
-		hooksecurefunc(FDJ, "RefreshQuestTracker", function()
+		ns.HookOnce(FDJ, "RefreshQuestTracker", function()
 			if ns.Enabled(KEY) then QuestTrackers(Kit) end
-		end)
+		end, KEY)
 	end
 	if type(FDJ.ToggleQuestTracking) == "function" then
-		hooksecurefunc(FDJ, "ToggleQuestTracking", function()
+		ns.HookOnce(FDJ, "ToggleQuestTracking", function()
 			if ns.Enabled(KEY) then QuestTrackers(Kit) end
 			C_Timer.After(0.1, function()
 				if ns.Enabled(KEY) then QuestTrackers(Kit) end
 			end)
-		end)
+		end, KEY)
 	end
 
 	-- The look-out by name (or field), as the safety net for all of the above. It's the only way
@@ -934,6 +934,6 @@ ns.Pack(KEY, nil, function(Kit)
 	ns.Watch(KEY, "ForeverDungeonJournalFrame", function(frame)
 		JournalPopups(frame)
 		HomeIcons(frame)
-		frame:HookScript("OnShow", JournalPopups)
+		ns.ScriptOnce(frame, "OnShow", JournalPopups, KEY)
 	end)
 end)

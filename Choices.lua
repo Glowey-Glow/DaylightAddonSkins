@@ -1,6 +1,6 @@
 -- The choice window: on first load (and whenever a new conflict turns up), the features your other
--- addons do that DaylightUI already does, each with a switch: on = DaylightUI handles it (the
--- default), off = the addon keeps it. Apply sets them (Core.lua, ns.Choose); Ask me later closes it
+-- addons do that DaylightUI already does, each with a switch: on = the addon keeps its own, off =
+-- DaylightUI handles it (the default; the addon's own is switched off). Apply sets them (Core.lua, ns.Choose); Ask me later closes it
 -- and it comes back at the next login. Every choice can be changed again on Look and Feel (the addon picked),
 -- and "Show the choices again" on the All windows page opens it with all of them.
 -- Built from DaylightUI's own widgets (API.Skin, API.Text, API.Switch, API.Button, API.Close).
@@ -46,7 +46,7 @@ local function Build()
 	local sub = API.Text(frame, "body", "LEFT")
 	sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
 	sub:SetWidth(W - PAD * 2)
-	sub:SetText(string.format(L["Some of your addons do things DaylightUI already does. Pick who handles each one: on = DaylightUI (the addon's own is switched off), off = the addon keeps it. You can change any of these later in DaylightUI options: %s > %s > %s, with the addon picked."],
+	sub:SetText(string.format(L["Some of your addons do things Daylight UI already does. Pick who handles each one: on = the addon keeps its own, off = Daylight UI handles it (the addon's own is switched off). You can change any of these later in Daylight UI options: %s > %s > %s, with the addon picked."],
 		ns.Module("Plugins"), L["Addons"], L["Look and Feel"]))
 	Ink(sub, "TEXT")
 	frame.sub = sub
@@ -76,8 +76,8 @@ local function Build()
 	apply:SetScript("OnClick", function()
 		local reload = false
 		for _, r in ipairs(rows) do
-			local pick = r.switch.on == true
-			ns.Choose(r.addon, r.key, pick)
+			-- (The switch shows the addon's own: on = the addon keeps it, off = Daylight UI's.)
+			ns.Choose(r.addon, r.key, r.switch.on ~= true)
 			if r.reload then reload = true end
 		end
 		frame:Hide()
@@ -86,7 +86,7 @@ local function Build()
 		end
 	end)
 
-	local later = API.Button(frame, L["Ask me later"], 26)
+	local later = API.Button(frame, L["Ask Me Later"], 26)
 	later:SetSize(150, 26)
 	later:SetPoint("BOTTOMRIGHT", -PAD, PAD)
 	later:SetScript("OnClick", function() frame:Hide() end)
@@ -132,7 +132,7 @@ function ns.ShowChoices(all)
 	if InCombatLockdown() then return end
 	local list = ns.Conflicts(all)
 	if #list == 0 then
-		if all then print("|cffa335eeAddon Skins|r: " .. L["none of your addons does anything DaylightUI is doing now."]) end
+		if all then print("|cffa335eeAddon Skins|r: " .. L["none of your addons does anything Daylight UI is doing now."]) end
 		return
 	end
 	if not frame then Build() end
@@ -164,15 +164,15 @@ function ns.ShowChoices(all)
 		Ink(row.name, "VALUE")
 		local what = ""
 		if c.item.daylight and c.item.reload then
-			what = string.format(L["DaylightUI: %s  (takes a /reload)"], c.item.daylight)
+			what = string.format(L["Daylight UI: %s  (takes a /reload)"], c.item.daylight)
 		elseif c.item.daylight then
-			what = string.format(L["DaylightUI: %s"], c.item.daylight)
+			what = string.format(L["Daylight UI: %s"], c.item.daylight)
 		elseif c.item.reload then
 			what = "  " .. L["(takes a /reload)"]
 		end
 		row.what:SetText(what)
 		Ink(row.what, "TEXT")
-		row.switch.SetOn(c.daylight)
+		row.switch.SetOn(not c.daylight)
 		row:Show()
 		rows[#rows + 1] = { addon = c.addon, key = c.item.key, switch = row.switch, was = c.daylight, reload = c.item.reload }
 		y = y + ROW

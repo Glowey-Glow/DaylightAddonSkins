@@ -1,13 +1,13 @@
 ## Interface: 16001
 ## Title: Addon Skins for |cffa335eeDaylightUI|r
 ## IconTexture: Interface\AddOns\DaylightAddonSkins\Media\icon.png
-## Notes: A DaylightUI plugin: dresses the windows of your other addons (Keep or Toss, DoesItDie, Camping Kit, LootTriage, OpenMap, Spoken, Forever Fishing, Polestar, Forever Leveling BiS, Journey Guides, OneForAll, Questie, Dialogue UI, Shortest Path Forever, Dungeon Journal, Total RP 3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFG Forever, Guildy, Mastercraft, High Fidelity World Map), and the game windows DaylightUI leaves bare, in the DaylightUI look. Needs DaylightUI and its Window Skins module.
+## Notes: A Daylight UI plugin: dresses the windows of your other addons (Keep or Toss, DoesItDie, Camping Kit, LootTriage, OpenMap, Spoken, Forever Fishing, Polestar, Forever Leveling BiS, Journey Guides, OneForAll, Questie, Dialogue UI, Shortest Path Forever, Dungeon Journal, Total RP 3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFG Forever, Guildy, Mastercraft, High Fidelity World Map, Details!, AtlasLoot Continued, Pawn), and the game windows Daylight UI leaves bare, in the Daylight UI look. Needs Daylight UI and its Window Skins module.
 ## Author: Glowey
 ## X-License: All Rights Reserved
 ## X-Curse-Project-ID: 1799579
 ## Version: @project-version@
 ## Dependencies: DaylightUI
-## OptionalDeps: DaylightUI_Skins, DaylightUI_Bags, CampingKit, DoesItDie, KeepOrToss, LootTriage, OpenMap, Spoken, ForeverFishing, Polestar, ForeverLevelingBiS, Journey, OneForAll, Questie, DialogueUI, ShortestPathForever, ForeverCore, ForeverDungeonJournal, totalRP3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFGForever, Guildy
+## OptionalDeps: DaylightUI_Skins, DaylightUI_Bags, CampingKit, DoesItDie, KeepOrToss, LootTriage, OpenMap, Spoken, ForeverFishing, Polestar, ForeverLevelingBiS, Journey, OneForAll, Questie, DialogueUI, ShortestPathForever, ForeverCore, ForeverDungeonJournal, totalRP3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFGForever, Guildy, Details, AtlasLootContinued, AtlasLootContinued_Favourites, Pawn
 ## SavedVariables: DaylightAddonSkinsDB
 # Mastercraft stays out of OptionalDeps: its pack sets Mastercraft's style before Mastercraft loads.
 
@@ -58,7 +58,11 @@ Packs\LFGForever.lua
 Packs\Guildy.lua
 Packs\Mastercraft.lua
 Packs\HighFidelityWorldMap.lua
+Packs\Details.lua
+Packs\AtlasLootContinued.lua
+Packs\Pawn.lua
 Auto.lua
 Grid.lua
+Status.lua
 Options.lua
 Choices.lua

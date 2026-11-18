@@ -275,9 +275,7 @@ end
 -- shown. Each page a control was just made on is looked over once on the next frame (only its own
 -- frames: nothing of the Settings panel's is hooked).
 local blizzPending = {}    -- canvas -> true, until the next frame's pass
-local blizzQueued = false
 local function BlizzPass()
-	blizzQueued = false
 	local Kit = ns.Kit
 	if not Kit or not ns.Enabled(KEY) then wipe(blizzPending) return end
 	local controls = ns.Controls(KEY)
@@ -288,9 +286,7 @@ local function BlizzPass()
 end
 local function QueueBlizz(canvas)
 	blizzPending[canvas] = true
-	if blizzQueued then return end
-	blizzQueued = true
-	C_Timer.After(0, BlizzPass)
+	ns.Queue("Questie:blizzPages", BlizzPass, KEY)
 end
 
 -- The settings window's own pass (side tabs, each tab's scroll bar, title and rule), set once the
@@ -321,7 +317,7 @@ if Controls and type(Controls.Create) == "function" then
 	-- Its colors: gold names, white descriptions, set again on every refresh. DaylightUI's:
 	-- names white, sentences soft white, headings tan, off dimmed.
 	if type(Controls.Refresh) == "function" then
-		hooksecurefunc(Controls, "Refresh", function(control)
+		ns.HookOnce(Controls, "Refresh", function(control)
 			if type(control) ~= "table" or not ns.Enabled(KEY) or not InWindow(control) then return end
 			local item, w = control.itemData, control.widget
 			local on = not (w and w.IsEnabled) or w:IsEnabled()
@@ -333,7 +329,7 @@ if Controls and type(Controls.Create) == "function" then
 				Ink(w.Text, on and "VALUE" or "OFF")
 				Ink(control.valueDisplay, on and "TEXT" or "OFF")
 			end
-		end)
+		end, KEY)
 	end
 end
 
@@ -362,7 +358,7 @@ ns.Watch(KEY, "QuestieStandaloneSettings", function(frame, Kit)
 							key = KEY,
 						})
 						if made and child.Selected.SetShown then
-							hooksecurefunc(child.Selected, "SetShown", ns.SideTilesPaintSoon)
+							ns.HookOnce(child.Selected, "SetShown", ns.SideTilesPaintSoon, KEY)
 						end
 					end
 				end
@@ -375,25 +371,21 @@ ns.Watch(KEY, "QuestieStandaloneSettings", function(frame, Kit)
 	end
 	-- (fonts: its title, tab names and page words, followed on every show.)
 	ns.DressOnShow(frame, { fonts = true }, tabs)
-	local queued = false
 	local function Run()
-		queued = false
 		if frame:IsShown() then ns.Guard(tabs) end
 	end
 	QueueTabs = function()
-		if queued then return end
-		queued = true
-		C_Timer.After(0, Run)
+		ns.Queue("Questie:settingsTabs", Run, KEY)
 	end
 	-- A click on a tab: the picked tile moves (repainted on the click of the button inside it), and the tab's canvas, built on its first showing, is looked
 	-- over as it arrives.
 	for _, child in ipairs({ frame:GetChildren() }) do
 		if ns.Usable(child) and child.button and child.button.HookScript then
-			child.button:HookScript("OnClick", function()
+			ns.ScriptOnce(child.button, "OnClick", function()
 				if not ns.Enabled(KEY) then return end
 				if controls then ns.SideTilesPaintSoon() end
 				QueueTabs()
-			end)
+			end, KEY)
 		end
 	end
 end)
@@ -403,7 +395,7 @@ end)
 -- tabs are made and before it's drawn.
 local OptionsEngine = Module("QuestieOptionsEngine")
 if OptionsEngine and type(OptionsEngine.ShowFrame) == "function" then
-	hooksecurefunc(OptionsEngine, "ShowFrame", function() ns.WatchNow() end)
+	ns.HookOnce(OptionsEngine, "ShowFrame", function() ns.WatchNow() end, KEY)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -453,8 +445,8 @@ local function Mark(tex, ticked)
 	if not ns.Usable(tex) or marks[tex] ~= nil then return end
 	marks[tex] = ticked
 	PaintMark(tex)
-	hooksecurefunc(tex, "SetDesaturated", OnMarkDesaturated)
-	hooksecurefunc(tex, "SetVertexColor", OnMarkColor)
+	ns.HookOnce(tex, "SetDesaturated", OnMarkDesaturated, KEY)
+	ns.HookOnce(tex, "SetVertexColor", OnMarkColor, KEY)
 end
 
 local function SwatchEnter(self)
@@ -481,7 +473,7 @@ local function MenuButton(btn)
 		if type(c) == "table" then tex:SetVertexColor(c[1], c[2], c[3]) else tex:SetVertexColor(0.7, 0.7, 0.7) end
 	end
 	local swatch = btn.ColorSwatch
-	if ns.Usable(swatch) and swatch.HookScript then swatch:HookScript("OnEnter", SwatchEnter) end
+	ns.ScriptOnce(swatch, "OnEnter", SwatchEnter, KEY)
 end
 
 -- The accent changed: the ticks follow.
@@ -490,14 +482,9 @@ local function Repaint()
 		if ns.Usable(tex) then PaintMark(tex) end
 	end
 end
-local repaintQueued = false
 local function QueueRepaint()
-	if repaintQueued or next(marks) == nil then return end
-	repaintQueued = true
-	C_Timer.After(0, function()
-		repaintQueued = false
-		if ns.Enabled(KEY) then ns.Guard(Repaint) end
-	end)
+	if next(marks) == nil then return end
+	ns.Queue("Questie:marks", Repaint, KEY)
 end
 ns.me.On("StyleChanged", QueueRepaint)
 ns.me.On("SettingChanged", function(scope, path)
@@ -550,7 +537,7 @@ local function Menu(list)
 			if ns.Usable(part) then part:SetAlpha(0) end
 		end
 		ns.Shell(list, nil, KEY)
-		list:HookScript("OnShow", MenuFonts)
+		ns.ScriptOnce(list, "OnShow", MenuFonts, KEY)
 		if list:IsShown() then MenuFonts(list) end
 	end
 	if ns.Controls(KEY) then MenuRows(list) end
@@ -567,7 +554,7 @@ ns.Watch(KEY, "L_DropDownListQuestie1", function()
 	local lib = type(LibStub) == "table" and LibStub("LibUIDropDownMenuQuestie-4.0", true)
 	if lib and type(lib.UIDropDownMenu_CreateFrames) == "function" then
 		local levels, buttons
-		hooksecurefunc(lib, "UIDropDownMenu_CreateFrames", function()
+		ns.HookOnce(lib, "UIDropDownMenu_CreateFrames", function()
 			if not ns.Enabled(KEY) then return end
 			local l, b = _G.L_UIDROPDOWNMENUQUESTIE_MAXLEVELS, _G.L_UIDROPDOWNMENUQUESTIE_MAXBUTTONS
 			if l ~= nil and l == levels and b == buttons then return end
@@ -577,7 +564,7 @@ ns.Watch(KEY, "L_DropDownListQuestie1", function()
 				if not list then break end
 				ns.Guard(Menu, list)
 			end
-		end)
+		end, KEY)
 	end
 end)
 
@@ -642,7 +629,7 @@ end)
 -- shown as it's made): looked for right after that call.
 local Tutorial = Module("Tutorial")
 if Tutorial and type(Tutorial.CreateChooseObjectiveTypeFrame) == "function" then
-	hooksecurefunc(Tutorial, "CreateChooseObjectiveTypeFrame", function() ns.WatchNow() end)
+	ns.HookOnce(Tutorial, "CreateChooseObjectiveTypeFrame", function() ns.WatchNow() end, KEY)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -698,7 +685,7 @@ end)
 -- Looked for right after the tracker's frame is made, before Questie first colors or shows it.
 local TrackerBase = Module("TrackerBaseFrame")
 if TrackerBase and type(TrackerBase.Initialize) == "function" then
-	hooksecurefunc(TrackerBase, "Initialize", function() ns.WatchNow() end)
+	ns.HookOnce(TrackerBase, "Initialize", function() ns.WatchNow() end, KEY)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -738,7 +725,7 @@ local function Tip(tip)
 		ownTips[tip] = true
 		ns.Guard(API.Skin, tip, TipLook())
 	end
-	tip:HookScript("OnShow", Settle)
+	ns.ScriptOnce(tip, "OnShow", Settle, KEY)
 	Settle(tip)
 end
 
@@ -751,9 +738,9 @@ ns.Watch(KEY, "QuestieGamepadMapTooltip", Tip)
 -- first hover of a path, in that very call.)
 local IconTooltip = Module("MapIconTooltip")
 if IconTooltip and type(IconTooltip.ShowOnTooltip) == "function" then
-	hooksecurefunc(IconTooltip, "ShowOnTooltip", function(_, tip)
+	ns.HookOnce(IconTooltip, "ShowOnTooltip", function(_, tip)
 		if tip and tip ~= GameTooltip and not tipped[tip] then ns.WatchNow() end
-	end)
+	end, KEY)
 end
 
 -- DaylightUI's tooltip opacity changed: the shells made here follow.
@@ -774,11 +761,11 @@ end)
 
 local DebugOffer = Module("QuestieDebugOffer")
 if DebugOffer and type(DebugOffer.ShowOffer) == "function" then
-	hooksecurefunc(DebugOffer, "ShowOffer", function()
+	ns.HookOnce(DebugOffer, "ShowOffer", function()
 		if not ns.Enabled(KEY) then return end
 		local frame = _G.QuestieDebugOfferFrame
 		if ns.Usable(frame) and ns.Kit then ns.Guard(ns.PlainWindow, frame, nil, KEY) end
-	end)
+	end, KEY)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -791,12 +778,10 @@ end
 
 -- The consent frame is made as QuestieTrace loads, so it's found at login; its export window is
 -- then looked for right as QuestieTraceCore.ShowExportWindow makes and shows it.
-local traceHooked = false
 ns.Watch(KEY, "QuestieTraceConsentFrame", function(frame)
 	local core = _G.QuestieTraceCore
-	if not traceHooked and type(core) == "table" and type(core.ShowExportWindow) == "function" then
-		traceHooked = true
-		hooksecurefunc(core, "ShowExportWindow", function() ns.WatchNow() end)
+	if type(core) == "table" then
+		ns.HookOnce(core, "ShowExportWindow", function() ns.WatchNow() end, KEY)
 	end
 	if not ns.Once(frame) then return end
 	ns.NoBackdrop(frame)
@@ -875,22 +860,22 @@ ns.Handover(KEY, {
 		end
 	end,
 	list = {
-		{ key = "nameplateEnabled", label = L["Quest icons over nameplates"],
+		{ key = "nameplateEnabled", label = L["Quest Icons Over Nameplates"],
 		  daylight = L["quest marks on its nameplates"],
 		  ours = function() return ns.DaylightHas("Nameplates", "quest") end },
-		{ key = "enableTooltips", label = L["Quest lines in unit and item tooltips"],
+		{ key = "enableTooltips", label = L["Quest Lines in Unit and Item Tooltips"],
 		  daylight = L["the quest lines its Quests module paints in tooltips"],
 		  ours = QuestsOn },
-		{ key = "soundOnQuestComplete", label = L["Sound when a quest is ready"],
+		{ key = "soundOnQuestComplete", label = L["Sound When a Quest Is Ready"],
 		  daylight = ns.In(L["the tracker's chime"], "Quests"),
 		  ours = function() return ns.DaylightHas("Quests", "sound") end },
-		{ key = "autoAccept.enabled", label = L["Accept quests automatically"],
+		{ key = "autoAccept.enabled", label = L["Accept Quests Automatically"],
 		  daylight = ns.In(L["auto accept"], "Quality of Life"),
 		  ours = function() return ns.DaylightHas("QoL", "questAccept") end },
-		{ key = "autocomplete", label = L["Turn in quests automatically"],
+		{ key = "autocomplete", label = L["Turn in Quests Automatically"],
 		  daylight = ns.In(L["auto turn in"], "Quality of Life"),
 		  ours = function() return ns.DaylightHas("QoL", "questTurnIn") end },
-		{ key = "minimapCoordinatesEnabled", label = L["Coordinates on the minimap"],
+		{ key = "minimapCoordinatesEnabled", label = L["Coordinates on the Minimap"],
 		  daylight = L["the info panel's coordinates"],
 		  ours = function() return ns.DaylightHas("InfoPanel", "map.coords.enabled") end },
 	},

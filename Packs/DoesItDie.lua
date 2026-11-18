@@ -81,7 +81,7 @@ local function Tab(button)
 			PaintTab(fs, words, false)
 		end
 	end
-	hooksecurefunc(fs, "SetTextColor", Follow)
+	ns.HookOnce(fs, "SetTextColor", Follow, KEY)
 	Follow(fs, fs:GetTextColor())
 end
 
@@ -121,7 +121,7 @@ local function Choices(frame, depth)
 	for _, c in ipairs({ frame:GetChildren() }) do
 		if ns.Usable(c) then
 			if c:GetObjectType() == "Button" and c.GetBackdrop and c:GetBackdrop() then
-				if First(c) then c:HookScript("OnClick", DressMenu) end
+				ns.ScriptOnce(c, "OnClick", DressMenu, KEY)
 			else
 				Choices(c, depth + 1)
 			end

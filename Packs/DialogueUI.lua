@@ -112,9 +112,9 @@ end
 -- After a method of a global mixin (pooled widgets made from now on) or of a frame.
 local function After(owner, method, fn)
 	if type(owner) == "table" and type(owner[method]) == "function" then
-		hooksecurefunc(owner, method, function(self, ...)
+		ns.HookOnce(owner, method, function(self, ...)
 			if On() then ns.Guard(fn, self, ...) end
-		end)
+		end, KEY)
 	end
 end
 
@@ -193,6 +193,8 @@ for name in pairs(ROLE) do
 	local font = _G[name]
 	if type(font) == "table" and type(font.SetTextColor) == "function" then
 		ownColor[font] = { font:GetTextColor() }
+		-- (Hooked directly, not through ns.HookOnce: it keeps the addon's own color even while this
+		-- pack is off, for the switch to put back.)
 		hooksecurefunc(font, "SetTextColor", function(self, r, g, b)
 			if coloring then return end
 			ownColor[self] = { r, g, b }
@@ -254,6 +256,7 @@ for _, name in ipairs(FONTS) do
 	local font = _G["DUIFont_" .. name]
 	if type(font) == "table" and type(font.GetFont) == "function" and type(font.SetFont) == "function" then
 		ownFont[font] = { font:GetFont() }
+		-- (Hooked directly, as the colors above.)
 		hooksecurefunc(font, "SetFont", function(self, path, size, flags)
 			if fonting then return end
 			ownFont[self] = { path, size, flags }
@@ -309,11 +312,18 @@ for _, method in ipairs({ "HandleGossip", "HandleQuestDetail", "HandleQuestProgr
 	After(talk, method, Tree)
 end
 -- A gossip warning's paragraphs (its Brown theme's red rewritten, as in the options).
-After(talk, "HandleGossipConfirm", function(self)
-	local content = self.ContentFrame
-	if not ns.Usable(content) then return end
-	for _, region in ipairs({ content:GetRegions() }) do Unbrick(region) end
-end)
+-- (A second hook on HandleGossipConfirm, after Tree's above: ns.HookOnce keeps one per method,
+-- so this one is hooked directly.)
+if type(talk.HandleGossipConfirm) == "function" then
+	hooksecurefunc(talk, "HandleGossipConfirm", function(self)
+		if not On() then return end
+		ns.Guard(function()
+			local content = self.ContentFrame
+			if not ns.Usable(content) then return end
+			for _, region in ipairs({ content:GetRegions() }) do Unbrick(region) end
+		end)
+	end)
+end
 local focus = talk.GamePadFocusIndicator
 After(focus, "LoadTheme", Tree)
 After(focus, "SetTheme", Tree)
@@ -324,12 +334,12 @@ do
 	local portrait = type(header) == "table" and header.Portrait
 	if ns.Usable(portrait) and portrait.SetVertexColor then
 		local busy = false
-		hooksecurefunc(portrait, "SetVertexColor", function(self)
+		ns.HookOnce(portrait, "SetVertexColor", function(self)
 			if busy or not On() then return end
 			busy = true
 			self:SetVertexColor(1, 1, 1)
 			busy = false
-		end)
+		end, KEY)
 	end
 end
 
@@ -400,9 +410,9 @@ if ns.Usable(settings) then
 	After(settings, "LoadTheme", Settings)
 	After(settings, "SelectTabByID", Tree)
 	After(settings, "UpdateCurrentTab", Tree)
-	settings:HookScript("OnShow", function()
-		C_Timer.After(0, function() if settings:IsShown() then ns.Guard(Settings) end end)
-	end)
+	ns.ScriptOnce(settings, "OnShow", function()
+		ns.Queue("DialogueUI:settings", function() if settings:IsShown() then ns.Guard(Settings) end end, KEY)
+	end, KEY)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -455,16 +465,16 @@ ns.Handover(KEY, {
 		_G.DialogueUI_DB[key] = value
 	end,
 	list = {
-		{ key = "AutoSelectGossip", label = L["Pick an NPC's only gossip option"],
+		{ key = "AutoSelectGossip", label = L["Pick an NPC's Only Gossip Option"],
 		  daylight = ns.In(L["skip gossip"], "Quality of Life"),
 		  ours = function() return ns.DaylightHas("QoL", "skipGossip") end },
-		{ key = "AutoCompleteQuest", label = L["Turn in quests automatically"],
+		{ key = "AutoCompleteQuest", label = L["Turn in Quests Automatically"],
 		  daylight = ns.In(L["auto turn in"], "Quality of Life"),
 		  ours = function() return ns.DaylightHas("QoL", "questTurnIn") end },
-		{ key = "BookUIEnabled", label = L["Its own window for books and letters"],
-		  daylight = ns.In(L["the game's book window in the DaylightUI look"], "Window Skins"), reload = true,
+		{ key = "BookUIEnabled", label = L["Its Own Window for Books and Letters"],
+		  daylight = ns.In(L["the game's book window in the Daylight UI look"], "Window Skins"), reload = true,
 		  ours = function() return ns.Enabled() end },
-		{ key = "UseBlizzardTooltip", label = L["Its own tooltip for rewards"],
+		{ key = "UseBlizzardTooltip", label = L["Its Own Tooltip for Rewards"],
 		  daylight = ns.In(L["its tooltip, with item level and quality"], "Tooltip"), reload = true,
 		  ours = function() return ns.ModuleOn("Tooltip") end },
 	},

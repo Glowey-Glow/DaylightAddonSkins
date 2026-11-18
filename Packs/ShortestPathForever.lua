@@ -30,9 +30,9 @@ ns.Target(KEY, "Shortest Path Forever", { window = true, controls = true, text =
 	defaults = { dock = true }, extraTab = "DaylightUI",
 	extra = function(at)
 		return {
-			{ label = L["Quest tracker"], items = {
-				{ type = "toggle", key = at .. "dock", label = L["Put the Forever sections under DaylightUI's quest tracker"],
-				  desc = L["Shortest Path's lifts, boats and journey steps (and any other Forever addon's tracker sections) sit right under your quest list and look like it. Off: ForeverCore places them as it does without DaylightUI."] },
+			{ label = L["Quest Tracker"], items = {
+				{ type = "toggle", key = at .. "dock", label = L["Put the Forever Sections Under Daylight UI's Quest Tracker"],
+				  desc = L["Shortest Path's lifts, boats and journey steps (and any other Forever addon's tracker sections) sit right under your quest list and look like it. Off: ForeverCore places them as it does without Daylight UI."] },
 			} },
 			ns.HandoverGroup(KEY),
 		}
@@ -190,7 +190,7 @@ if type(LogTabs) == "table" then
 	end
 	for _, method in ipairs({ "ShowQuests", "Select" }) do
 		if type(LogTabs[method]) == "function" then
-			hooksecurefunc(LogTabs, method, function() C_Timer.After(0, Repaint) end)
+			ns.HookOnce(LogTabs, method, function() C_Timer.After(0, Repaint) end, KEY)
 		end
 	end
 end
@@ -214,6 +214,8 @@ local function Rewire(row, Kit)
 	if wired[row] == now or type(Kit.RowOf) ~= "function" then return end
 	local r = Kit.RowOf(row)
 	if not r then return end
+	-- (Hooked directly: hooked again each time its script is set anew, which ns.ScriptOnce
+	-- would refuse as already done.)
 	row:HookScript("OnEnter", function() r.hover = true; Kit.RepaintRow(row) end)
 	row:HookScript("OnLeave", function() r.hover = false; Kit.RepaintRow(row) end)
 	wired[row] = row:GetScript("OnEnter")
@@ -277,13 +279,17 @@ local function Templated(frame, Kit)
 	for _, inner in ipairs(lists) do
 		if stops then
 			local function rows() ns.Guard(StopRows, inner, Kit) end
-			hooksecurefunc(inner, "SetHeight", rows)
+			ns.HookOnce(inner, "SetHeight", rows, KEY)
 			rows()
+			-- (A second SetHeight hook on the same list: ns.HookOnce keeps one per method, so this
+			-- one is hooked directly.)
+			hooksecurefunc(inner, "SetHeight", soon)
+		else
+			ns.HookOnce(inner, "SetHeight", soon, KEY)
 		end
-		hooksecurefunc(inner, "SetHeight", soon)
-		hooksecurefunc(inner, "SetSize", soon)
+		ns.HookOnce(inner, "SetSize", soon, KEY)
 	end
-	frame:HookScript("OnShow", soon)
+	ns.ScriptOnce(frame, "OnShow", soon, KEY)
 	walk()
 end
 
@@ -327,7 +333,7 @@ ns.Watch(KEY, "ForeverCoreContextMenu", function(menu, Kit)
 	local scroll = menu.scroll
 	if ns.Controls(KEY) and type(scroll) == "table" and ns.Usable(scroll.ScrollBar) then ns.Guard(Kit.ScrollBar, scroll.ScrollBar) end
 	ns.DressOnShow(menu, { scrollBars = false, fonts = true })
-	hooksecurefunc(menu, "SetSize", function() ns.Guard(MenuRows, menu, Kit) end)
+	ns.HookOnce(menu, "SetSize", function() ns.Guard(MenuRows, menu, Kit) end, KEY)
 	-- (Its first opening made it and drew it in one call: drawn already.)
 	ns.Guard(MenuRows, menu, Kit)
 end)
@@ -339,13 +345,13 @@ end)
 -- Shortest Path's map menu) are found by the watches, a frame late at most.
 local function Opened() ns.WatchNow() end
 if type(_G.ForeverCore) == "table" and type(_G.ForeverCore.ContextMenu) == "function" then
-	hooksecurefunc(_G.ForeverCore, "ContextMenu", Opened)
+	ns.HookOnce(_G.ForeverCore, "ContextMenu", Opened, KEY)
 end
 ns.me.On("Login", function()
 	local slash = _G.SlashCmdList
 	if type(slash) ~= "table" then return end
 	for _, name in ipairs({ "SHORTESTPATHFOREVER", "FOREVERCORE" }) do
-		if type(slash[name]) == "function" then hooksecurefunc(slash, name, Opened) end
+		if type(slash[name]) == "function" then ns.HookOnce(slash, name, Opened, KEY) end
 	end
 end)
 
@@ -363,7 +369,7 @@ ns.me.On("Login", function()
 	if type(Settings) == "table" and type(Settings.SetOnValueChangedCallback) == "function" then
 		pcall(Settings.SetOnValueChangedCallback, "ShortestPathForever_minimapButton", function()
 			-- (After Shortest Path's own answer to the change, which makes the button.)
-			C_Timer.After(0, function() ns.WithKit(OptionsButton) end)
+			ns.Queue("ShortestPathForever:optionsButton", function() ns.WithKit(OptionsButton) end, KEY)
 		end)
 	end
 end)
@@ -643,6 +649,8 @@ local function Sections(host)
 			styled[module] = true
 			for _, method in ipairs({ "EndLayout", "LayoutContents", "Update" }) do
 				if type(module[method]) == "function" then
+					-- (Hooked directly: a tracker section can hold a quest's secure item button,
+					-- and ns.HookOnce refuses a protected frame.)
 					hooksecurefunc(module, method, Styled)
 					break
 				end
@@ -661,7 +669,7 @@ end
 -- Its text changes on a timer (departures counting down) through ForeverCore's own function.
 local section = type(_G.ForeverCore) == "table" and _G.ForeverCore.TrackerSection
 if type(section) == "table" and type(section.UpdateText) == "function" then
-	hooksecurefunc(section, "UpdateText", Styled)
+	ns.HookOnce(section, "UpdateText", Styled, KEY)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -961,20 +969,20 @@ ns.Handover(KEY, {
 		_G.ShortestPathForeverDB[key] = value
 	end,
 	list = {
-		{ key = "mapFlightMasters", label = L["Flight master pins on the world map"],
+		{ key = "mapFlightMasters", label = L["Flight Master Pins on the World Map"],
 		  daylight = ns.In(L["map pins"], "Window Skins"),
 		  ours = function() return ns.DaylightHas("Skins", "mapFlights") end },
-		{ key = "pins", label = L["Boat and zeppelin pins on the world map"],
+		{ key = "pins", label = L["Boat and Zeppelin Pins on the World Map"],
 		  daylight = ns.In(L["map pins"], "Window Skins"),
 		  ours = function() return ns.DaylightHas("Skins", "mapTravel") end },
-		{ key = "destinationPin", label = L["Pin over the destination"],
+		{ key = "destinationPin", label = L["Pin Over the Destination"],
 		  daylight = ns.In(L["the in-world quest marker"], "Quests", "Navigation"),
 		  ours = function() return ns.DaylightHas("Quests", "nav.marker") end },
-		{ key = "arrow", label = L["Direction arrow (and the route marker it sets)"],
+		{ key = "arrow", label = L["Direction Arrow (and the Route Marker It Sets)"],
 		  daylight = string.format(L["the quest arrow (%s); with Shortest Path's off, routes no longer steer the marker"],
 			string.format(L["%s, %s"], ns.Module("Quests"), ns.Module("Navigation"))),
 		  ours = function() return ns.DaylightHas("Quests", "nav.arrow") end },
-		{ key = QUEST_LIST, label = L["Forever quest list"],
+		{ key = QUEST_LIST, label = L["Forever Quest List"],
 		  daylight = ns.In(L["your quest list"], "Quests"),
 		  ours = function() return ns.ModuleOn("Quests") end },
 	},

@@ -15,8 +15,10 @@ local L = ns.L
 
 -- CurseForge pages, by addon key (a link is only shown for an addon that isn't installed).
 ns.LINKS = {
+	["AtlasLootContinued"] = "https://www.curseforge.com/wow/addons/atlasloot-continued",
 	["BugSack"] = "https://www.curseforge.com/wow/addons/bugsack",
 	["CampingKit"] = "https://www.curseforge.com/wow/addons/camping-kit",
+	["Details"] = "https://www.curseforge.com/wow/addons/details",
 	["DialogueUI"] = "https://www.curseforge.com/wow/addons/dialogueui",
 	["DoesItDie"] = "https://www.curseforge.com/wow/addons/does-it-die",
 	["ForeverDungeonJournal"] = "https://www.curseforge.com/wow/addons/dungeonjournal",
@@ -34,6 +36,7 @@ ns.LINKS = {
 	["Mastercraft"] = "https://www.curseforge.com/wow/addons/mastercraft",
 	["OneForAll"] = "https://www.curseforge.com/wow/addons/oneforall-forever",
 	["OpenMap"] = "https://www.curseforge.com/wow/addons/openmap",
+	["Pawn"] = "https://www.curseforge.com/wow/addons/pawn",
 	["Polestar"] = "https://www.curseforge.com/wow/addons/polestar-guides",
 	["Questie"] = "https://www.curseforge.com/wow/addons/questie",
 	["RareScanner"] = "https://www.curseforge.com/wow/addons/rarescanner",

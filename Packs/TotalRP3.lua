@@ -243,9 +243,9 @@ end
 -- A pooled row hidden under the mouse (its list is rebuilt on a click) never hears the mouse
 -- leave, and would keep its hover wash wherever it's shown next: it's told on hide.
 local function ClearHoverOnHide(b)
-	b:HookScript("OnHide", function(self)
+	ns.ScriptOnce(b, "OnHide", function(self)
 		if ExecuteFrameScript then pcall(ExecuteFrameScript, self, "OnLeave") end
-	end)
+	end, KEY)
 end
 
 local function Category(Kit, b)
@@ -257,14 +257,14 @@ local function Category(Kit, b)
 	CategoryInk(b)
 	ClearHoverOnHide(b)
 	-- Each rebuild gives it its font object again after picking it, then shows it.
-	b:HookScript("OnShow", CategoryInk)
+	ns.ScriptOnce(b, "OnShow", CategoryInk, KEY)
 	-- Buttons made before the mixin was hooked (below) are hooked one by one.
 	local mixin = _G.TRP3_CategoryButtonMixin
 	if type(b.SetSelected) == "function" and not (mixin and b.SetSelected == mixin.SetSelected) then
-		hooksecurefunc(b, "SetSelected", function(self)
+		ns.HookOnce(b, "SetSelected", function(self)
 			if ns.Kit then ns.Guard(ns.Kit.RepaintRow, self) end
 			CategoryInk(self)
-		end)
+		end, KEY)
 	end
 end
 
@@ -441,11 +441,11 @@ local function SliderLook(slider, withTrack)
 	end
 	s.paint = paint
 	paint()
-	slider:HookScript("OnEnter", function() s.knob:SetSize(14, 14) end)
-	slider:HookScript("OnLeave", function() s.knob:SetSize(12, 12) end)
-	slider:HookScript("OnShow", paint)
-	slider:HookScript("OnEnable", paint)
-	slider:HookScript("OnDisable", paint)
+	ns.ScriptOnce(slider, "OnEnter", function() s.knob:SetSize(14, 14) end, KEY)
+	ns.ScriptOnce(slider, "OnLeave", function() s.knob:SetSize(12, 12) end, KEY)
+	ns.ScriptOnce(slider, "OnShow", paint, KEY)
+	ns.ScriptOnce(slider, "OnEnable", paint, KEY)
+	ns.ScriptOnce(slider, "OnDisable", paint, KEY)
 end
 
 -- The stepper arrows beside a slider: kept, gray.
@@ -577,10 +577,10 @@ local function Tab(Kit, tab)
 	if ns.Controls(KEY) then
 		ns.Guard(Kit.Tab, tab, function(self) return tabPicked[self] == "SELECTED" end)
 	end
-	hooksecurefunc(tab, "SetTabState", function(self, state)
+	ns.HookOnce(tab, "SetTabState", function(self, state)
 		tabPicked[self] = state
 		if ns.Enabled(KEY) then PaintTab(Kit, self) end
-	end)
+	end, KEY)
 	PaintTab(Kit, tab)
 end
 
@@ -658,8 +658,9 @@ local SKIP_KINDS = { GameTooltip = true, SimpleHTML = true, Model = true, Player
 local DEPTH = 16
 
 local Queue
+-- (A panel's OnShow below stays a plain HookScript with its own table: a window's own OnShow, on
+-- the same frame, goes through ns.ScriptOnce, which takes one hook per frame and script.)
 local shownHooked = setmetatable({}, { __mode = "k" })
-local sizeHooked = setmetatable({}, { __mode = "k" })
 local rowsHooked = setmetatable({}, { __mode = "k" })
 
 -- One frame: its pieces (once), its backdrop, its art by file, its text. Answers whether what's
@@ -711,10 +712,9 @@ local function Dress(Kit, f, depth, inShell, rows)
 	-- Edit mode adds lines to a scroll child: dressed as it grows.
 	if f.GetScrollChild and not rows then
 		local child = f:GetScrollChild()
-		if ns.Usable(child) and not sizeHooked[child] then
-			sizeHooked[child] = true
+		if ns.Usable(child) then
 			local shelled = inShell or dressed[f] == "shell"
-			child:HookScript("OnSizeChanged", function(self) Queue(self, shelled) end)
+			ns.ScriptOnce(child, "OnSizeChanged", function(self) Queue(self, shelled) end, KEY)
 		end
 	end
 	-- A ScrollBox list: each row as it is filled.
@@ -818,7 +818,7 @@ local function MainFrame(f, Kit)
 		RedArtButton(Kit, f.ResizeButton)
 		dressed[f.ResizeButton] = true
 	end
-	f:HookScript("OnShow", function(self) Queue(self, true) end)
+	ns.ScriptOnce(f, "OnShow", function(self) Queue(self, true) end, KEY)
 	if f:IsShown() then Queue(f, true) end
 end
 
@@ -826,7 +826,7 @@ end
 local function Root(f)
 	if not ns.Usable(f) or not ns.Once(f) then return end
 	HOSTS[f] = true
-	f:HookScript("OnShow", function(self) Queue(self, false) end)
+	ns.ScriptOnce(f, "OnShow", function(self) Queue(self, false) end, KEY)
 	if f:IsShown() then Queue(f, false) end
 end
 
@@ -846,7 +846,7 @@ local function Glow(f, Kit)
 	ns.Shell(f, { window = true }, KEY)
 	dressed[f] = "shell"
 	HOSTS[f] = true
-	f:HookScript("OnShow", function(self) Queue(self, true) end)
+	ns.ScriptOnce(f, "OnShow", function(self) Queue(self, true) end, KEY)
 	if f:IsShown() then Queue(f, true) end
 end
 
@@ -870,14 +870,14 @@ local function Tooltip(tip, Kit)
 		end
 	end
 	settle(tip)
-	tip:HookScript("OnShow", settle)
+	ns.ScriptOnce(tip, "OnShow", settle, KEY)
 	if ns.Controls(KEY) and ns.Usable(tip.CloseButton) then ns.Guard(Kit.Close, tip.CloseButton) end
 end
 
 -- Sidebar buttons made from now on are hooked through the mixin they copy.
 local mixin = _G.TRP3_CategoryButtonMixin
 if type(mixin) == "table" and type(mixin.SetSelected) == "function" then
-	hooksecurefunc(mixin, "SetSelected", function(self)
+	ns.HookOnce(mixin, "SetSelected", function(self)
 		if not ns.Enabled(KEY) then return end
 		if dressed[self] then
 			if ns.Kit then ns.Guard(ns.Kit.RepaintRow, self) end
@@ -885,7 +885,7 @@ if type(mixin) == "table" and type(mixin.SetSelected) == "function" then
 		else
 			Queue(self, true)
 		end
-	end)
+	end, KEY)
 end
 
 ns.Pack(KEY, nil, function()
@@ -929,10 +929,10 @@ ns.Handover(KEY, {
 		if c then pcall(c.setValue, key, value) end
 	end,
 	list = {
-		{ key = "tooltip_char_HideOriginal", label = L["Unit tooltip (its RP card replacing the game's)"],
+		{ key = "tooltip_char_HideOriginal", label = L["Unit Tooltip (Its RP Card Replacing the Game's)"],
 		  daylight = L["its unit tooltip; Total RP 3's RP card then shows beside it"],
 		  ours = function() return ns.DaylightHas("Tooltip", "anchor", function() return true end) end },
-		{ key = "chat_color", label = L["Name colors in chat"],
+		{ key = "chat_color", label = L["Name Colors in Chat"],
 		  daylight = L["class-colored names in chat"],
 		  ours = function() return ns.DaylightHas("Chat", "classColors") end },
 	},

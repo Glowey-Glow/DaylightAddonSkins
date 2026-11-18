@@ -197,7 +197,7 @@ local function Section(section, Kit)
 	if Kind(header) == "Button" then
 		Tint(header.Icon)
 		if IsTexture(header.Icon) then
-			hooksecurefunc(header.Icon, "SetAtlas", function(icon) if On() then Tint(icon) end end)
+			ns.HookOnce(header.Icon, "SetAtlas", function(icon) if On() then Tint(icon) end end, KEY)
 		end
 		-- Its title is the header's own string: the button's font objects color it per state.
 		local large = _G.GameFontNormalLarge
@@ -234,8 +234,8 @@ local function FilterPanel(fp, Kit)
 			if ns.Kit then ns.Kit.Refont(mine.Label) end
 			Ink(mine.Label, over and "VALUE" or "LABEL")
 		end
-		mine:HookScript("OnEnter", function() paint(true) end)
-		mine:HookScript("OnLeave", function() paint(false) end)
+		ns.ScriptOnce(mine, "OnEnter", function() paint(true) end, KEY)
+		ns.ScriptOnce(mine, "OnLeave", function() paint(false) end, KEY)
 	end
 	local gear = fp.SettingsGear
 	if Usable(gear) and IsTexture(gear.Icon) then gear.Icon:SetDesaturated(true) end
@@ -340,11 +340,11 @@ local function Window(f, Kit)
 	if Controls() and ns.Walk then ns.Walk(Kit, f, { rows = false, skip = skip }, nil, nil, KEY) end
 	TextLook(f)
 	FitTabsSoon(fp)
-	f:HookScript("OnShow", function()
+	ns.ScriptOnce(f, "OnShow", function()
 		if not On() then return end
 		TextLook(f)
 		FitTabsSoon(fp)
-	end)
+	end, KEY)
 end
 
 -- The window as soon as it's there (built and shown in one call): from each way it opens, then a
@@ -358,16 +358,16 @@ end
 
 ns.Pack(KEY, "LFG Forever", function()
 	for _, name in ipairs({ "LFGForever_ToggleWindow", "LFGForever_OnAddonCompartmentClick" }) do
-		if type(_G[name]) == "function" then hooksecurefunc(name, Now) end
+		if type(_G[name]) == "function" then ns.HookOnce(nil, name, Now, KEY) end
 	end
 	if type(_G.SlashCmdList) == "table" and type(_G.SlashCmdList.LFGFOREVER) == "function" then
-		hooksecurefunc(_G.SlashCmdList, "LFGFOREVER", Now)
+		ns.HookOnce(_G.SlashCmdList, "LFGFOREVER", Now, KEY)
 	end
 	local mini = _G.LFGForeverMinimapButton
-	if Usable(mini) then mini:HookScript("OnClick", Now) end
+	if Usable(mini) then ns.ScriptOnce(mini, "OnClick", Now, KEY) end
 	-- Its Search key (2.1.0, a key binding that clicks this button) opens the window too.
 	local key = _G.LFGForeverSearchKeyButton
-	if Usable(key) and key.HookScript then key:HookScript("OnClick", Now) end
+	if Usable(key) and key.HookScript then ns.ScriptOnce(key, "OnClick", Now, KEY) end
 	ns.Watch(KEY, function()
 		local f = _G.LFGForeverFrame
 		return Usable(f) and Usable(f.Content) and Usable(f.Content.FilterPanel) and f or nil

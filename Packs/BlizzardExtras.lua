@@ -70,8 +70,8 @@ end
 local function AccentPick(btn, picked)
 	PickFill(btn, picked)
 	-- (Kit.Row's own hover hooks ran first, so these follow them; the mouse only.)
-	btn:HookScript("OnEnter", function() PickFill(btn, picked) end)
-	btn:HookScript("OnLeave", function() PickFill(btn, picked) end)
+	ns.ScriptOnce(btn, "OnEnter", function() PickFill(btn, picked) end, KEY)
+	ns.ScriptOnce(btn, "OnLeave", function() PickFill(btn, picked) end, KEY)
 end
 
 local function RepaintPicked(list, picked)
@@ -221,7 +221,7 @@ local function Portrait(Kit, b)
 	-- The open window changes from the game's own code (SetFocusedFrame): repainted after it.
 	if type(b.SetSelectedState) == "function" then
 		local one = { b }
-		hooksecurefunc(b, "SetSelectedState", function() RepaintPicked(one, PortraitPicked) end)
+		ns.HookOnce(b, "SetSelectedState", function() RepaintPicked(one, PortraitPicked) end, KEY)
 	end
 end
 
@@ -360,10 +360,8 @@ local function CategoryHeaders(Kit, f)
 end
 
 local cdmOwner = {}
-local cdmQueued = false
 
 local function CooldownPass()
-	cdmQueued = false
 	local f, Kit = _G.CooldownViewerSettings, ns.Kit
 	if not (Usable(f) and Kit and On() and Controls()) then return end
 	if InCombatLockdown() then
@@ -376,9 +374,8 @@ local function CooldownPass()
 end
 
 local function CooldownSoon()
-	if cdmQueued or not On() then return end
-	cdmQueued = true
-	C_Timer.After(0, CooldownPass)
+	if not On() then return end
+	ns.Queue("Blizzard:cooldownSettings", CooldownPass, KEY)
 end
 
 Entry("CooldownViewerSettings", function(f, Kit)
@@ -387,7 +384,7 @@ Entry("CooldownViewerSettings", function(f, Kit)
 		local tab = f[k]
 		StaticSideTab(Kit, tab)
 		-- (The mouse only: a click on the tab, never the game's own calls.)
-		if Usable(tab) and tab.HookScript then tab:HookScript("OnMouseUp", CooldownSoon) end
+		if Usable(tab) and tab.HookScript then ns.ScriptOnce(tab, "OnMouseUp", CooldownSoon, KEY) end
 	end
 	StaticDropdown(Kit, f.LayoutDropdown)
 	local gear = f.SettingsDropdown
@@ -478,7 +475,7 @@ Entry("GuildBankFrame", function(f, Kit)
 	end
 	-- (After the game has checked the picked tab: only these eight repainted.)
 	if type(f.UpdateTabs) == "function" then
-		hooksecurefunc(f, "UpdateTabs", function() RepaintPicked(bankButtons, BankTabPicked) end)
+		ns.HookOnce(f, "UpdateTabs", function() RepaintPicked(bankButtons, BankTabPicked) end, KEY)
 	end
 end)
 
@@ -641,21 +638,21 @@ for i = 1, 4 do
 end
 
 if type(_G.StaticPopup_Show) == "function" then
-	hooksecurefunc("StaticPopup_Show", function()
+	ns.HookOnce(nil, "StaticPopup_Show", function()
 		local Kit = ns.Kit
 		if not Kit or #popups == 0 or not On() then return end
 		for i = 1, #popups do
 			local f = popups[i]
 			if f:IsShown() then Guard(PopupText, Kit, f) end
 		end
-	end)
+	end, KEY)
 end
 
 -- The item's quality, set again as its data arrives (the box shows before the item is cached).
 if type(_G.SetItemButtonQuality) == "function" then
-	hooksecurefunc("SetItemButtonQuality", function(btn)
+	ns.HookOnce(nil, "SetItemButtonQuality", function(btn)
 		if popupItems[btn] and ns.Kit and On() then Guard(ItemEdge, btn) end
-	end)
+	end, KEY)
 end
 
 -- The world map's pin button --------------------------------------------------------------------
@@ -703,7 +700,7 @@ local function PinButton(btn)
 	end
 	PinAccent()
 	-- (A post-hook on the button's own Refresh: after the game's DesaturateHierarchy.)
-	if type(btn.Refresh) == "function" then hooksecurefunc(btn, "Refresh", function() Guard(PinAccent) end) end
+	if type(btn.Refresh) == "function" then ns.HookOnce(btn, "Refresh", function() Guard(PinAccent) end, KEY) end
 end
 
 Entry("WorldMapFrame", function(map)

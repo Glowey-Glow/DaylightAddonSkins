@@ -25,10 +25,418 @@ ns.caps = {}
 
 local defaults = {}
 
+-- An error inside ns.Guard: put down against the pack whose code raised it (Broken skins, below),
+-- or handed to the game's error handler as before when no pack's file is in it.
+local GuardError
+
 local function Guard(fn, ...)
-	return xpcall(fn, geterrorhandler(), ...)
+	return xpcall(fn, GuardError, ...)
 end
 ns.Guard = Guard
+
+-- ---------------------------------------------------------------------------------------------
+-- Targets that come in several folders, and what the game says of each folder
+-- ---------------------------------------------------------------------------------------------
+
+-- key -> the addon's folders, its main one first (caps.folders on ns.Target; a target with none
+-- is the one folder named as its key). The pack runs as the main folder loads; the others are
+-- for "installed / enabled / loaded" and the version, and a pack reaches them with ns.OnLoad
+-- (never loaded by this plugin: a load-on-demand part is dressed when the addon loads it).
+ns.folders = { ForeverDungeonJournal = { "ForeverDungeonJournal", "ForeverCore" } }
+local singleFolder = {}
+function ns.Folders(key)
+	local list = ns.folders[key]
+	if list then return list end
+	list = singleFolder[key]
+	if not list then
+		list = { key }
+		singleFolder[key] = list
+	end
+	return list
+end
+
+local A = _G.C_AddOns
+
+-- Whether the folder is in the AddOns folder at all.
+function ns.AddonExists(folder)
+	if A and type(A.DoesAddOnExist) == "function" then
+		local ok, yes = pcall(A.DoesAddOnExist, folder)
+		if ok then return yes and true or false end
+	end
+	local info = A and A.GetAddOnInfo or _G.GetAddOnInfo
+	if type(info) ~= "function" then return true end
+	local ok, name, _, _, _, reason = pcall(info, folder)
+	if not ok then return true end
+	return name ~= nil and reason ~= "MISSING"
+end
+
+-- Whether the folder is ticked in the addon list for the character playing now (the game's own
+-- test: C_AddOns.GetAddOnEnableState(name, UnitGUID("player")) above None; the name alone, for
+-- all characters, where a character can't be named).
+function ns.AddonEnabledHere(folder)
+	local get = A and A.GetAddOnEnableState
+	if type(get) ~= "function" then return true end
+	local guid = _G.UnitGUID and _G.UnitGUID("player")
+	local ok, state
+	if guid then ok, state = pcall(get, folder, guid) end
+	if not ok or type(state) ~= "number" then ok, state = pcall(get, folder) end
+	if not ok or type(state) ~= "number" then return true end
+	return state > 0
+end
+
+function ns.AddonLoaded(folder)
+	if not (A and type(A.IsAddOnLoaded) == "function") then return false end
+	local ok, loaded = pcall(A.IsAddOnLoaded, folder)
+	return ok and loaded and true or false
+end
+
+local function LoadOnDemand(folder)
+	if not (A and type(A.IsAddOnLoadOnDemand) == "function") then return false end
+	local ok, lod = pcall(A.IsAddOnLoadOnDemand, folder)
+	return ok and lod and true or false
+end
+
+-- Why an enabled folder didn't load (the game's own words, "Dependency missing" and the like).
+local function NotLoadedReason(folder)
+	local info = A and A.GetAddOnInfo
+	if type(info) ~= "function" then return nil end
+	local ok, _, _, _, _, reason = pcall(info, folder)
+	if not ok or type(reason) ~= "string" or reason == "" then return nil end
+	local text = _G["ADDON_" .. reason]
+	return type(text) == "string" and text or reason
+end
+
+local function Meta(folder, field)
+	local get = A and A.GetAddOnMetadata or _G.GetAddOnMetadata
+	if type(get) ~= "function" then return nil end
+	local ok, value = pcall(get, folder, field)
+	if ok and type(value) == "string" and value ~= "" then return value end
+	return nil
+end
+ns.Meta = Meta
+
+-- The game's windows: targets named "Blizzard..." (the game windows, the settings window, the
+-- dungeon-ready dialog). Always there; their "version" is the game's build.
+local function IsGame(key)
+	return type(key) == "string" and key:sub(1, 8) == "Blizzard"
+end
+ns.IsGameTarget = IsGame
+
+function ns.GameVersion()
+	local version, build = _G.GetBuildInfo()
+	return string.format("%s (%s)", tostring(version), tostring(build))
+end
+
+-- This plugin's version ("@project-version@" when run from its source folder: a version too).
+function ns.OurVersion() return Meta(ADDON, "Version") or "?" end
+
+-- The version of `key`'s addon: each installed folder's, joined (a change in any one counts);
+-- "-" when none is installed.
+local function TargetVersion(key)
+	if IsGame(key) then return ns.GameVersion() end
+	local out
+	for _, folder in ipairs(ns.Folders(key)) do
+		if ns.AddonExists(folder) then
+			local v = Meta(folder, "Version") or "?"
+			out = out and (out .. " / " .. v) or v
+		end
+	end
+	return out or "-"
+end
+ns.TargetVersion = TargetVersion
+
+local failedNow          -- (Broken skins, below)
+
+-- Where `key` stands, for the status list and the grids: "error" (its pack is off after an
+-- error), "missing" (no folder of it installed), "disabled" (not ticked for this character),
+-- "off" (its switch, or DaylightUI's Skins module), "active" (loaded and dressed), "lod" (a
+-- load-on-demand addon not loaded yet), "notloaded" (ticked but not loaded; second return: the
+-- game's reason). The game's own windows are always there.
+function ns.TargetState(key)
+	if failedNow[key] then return "error", failedNow[key].err end
+	if IsGame(key) then
+		if not ns.SwitchedOn(key) then return "off" end
+		return "active"
+	end
+	local any, enabled, loaded, lod, reason = false, false, false, false, nil
+	for _, folder in ipairs(ns.Folders(key)) do
+		if ns.AddonExists(folder) then
+			any = true
+			if ns.AddonEnabledHere(folder) then
+				enabled = true
+				if ns.AddonLoaded(folder) then
+					loaded = true
+				elseif LoadOnDemand(folder) then
+					lod = true
+				else
+					reason = reason or NotLoadedReason(folder)
+				end
+			end
+		end
+	end
+	if not any then return "missing" end
+	if not enabled then return "disabled" end
+	if not ns.SwitchedOn(key) then return "off" end
+	if loaded then return "active" end
+	if lod then return "lod" end
+	return "notloaded", reason
+end
+
+-- fn(folder) once `folder` has loaded: now, or as it loads (never loaded by this: a load-on-demand
+-- part of an addon is dressed when the addon loads it). For a pack whose addon comes in several
+-- folders (caps.folders): ns.OnLoad("DBM-GUI", function() ... end).
+local onLoad = {}        -- folder -> { fn, ... }
+local loadWatch
+function ns.OnLoad(folder, fn)
+	if type(folder) ~= "string" or type(fn) ~= "function" then return end
+	if ns.AddonLoaded(folder) then
+		Guard(fn, folder)
+		return
+	end
+	local list = onLoad[folder]
+	if not list then
+		list = {}
+		onLoad[folder] = list
+	end
+	list[#list + 1] = fn
+	if not loadWatch then
+		loadWatch = CreateFrame("Frame")
+		loadWatch:SetScript("OnEvent", function(self, _, name)
+			local fns = onLoad[name]
+			if not fns then return end
+			onLoad[name] = nil
+			for i = 1, #fns do Guard(fns[i], name) end
+			if next(onLoad) == nil then self:UnregisterEvent("ADDON_LOADED") end
+		end)
+	end
+	loadWatch:RegisterEvent("ADDON_LOADED")
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Broken skins. Another addon's update can break a pack. An error in a pack (its ns.Pack function,
+-- a watch's dressing, or a hook of its that runs through ns.Guard, ns.HookOnce, ns.ScriptOnce or
+-- ns.Queue) is put down once, with one line in chat, as
+--   DaylightAddonSkinsDB.failed[key] = { ours = this plugin's version, target = the addon's,
+--     err = the error's first line, at = time() }
+-- and from then on the pack is skipped: ns.Enabled(key) says no (every pack's hooks ask it), its
+-- watches are dropped, and its ns.Pack function isn't run after a reload. Its card on All Windows
+-- shows the error. As soon as either version changes, the record goes and the pack is tried again;
+-- ns.Retry(key) (the card's right-click, /skins retry) does it by hand.
+-- Which pack an error belongs to: the key it ran under when known, else the first of this plugin's
+-- Packs files in the error and its stack (each file is the pack of the first target it registers;
+-- the Blizzard* files without one are the game windows').
+-- ---------------------------------------------------------------------------------------------
+
+failedNow = {}           -- key -> record: the packs off for this session
+local svLoaded = false   -- (this plugin's saved variables are only there from its ADDON_LOADED)
+local listeners = {}
+local fileKey = {}       -- "Questie" (Packs/Questie.lua) -> its target key
+
+local debugstack = _G.debugstack
+local CHAT = "|cffa335eeAddon Skins|r: "
+
+-- "Questie" for a path to this plugin's Packs/Questie.lua in an error or a stack. The game cuts a
+-- long path's start to "..." ("...ddonSkins/Packs/Questie.lua"): what's left must end the way this
+-- plugin's folder does (so DaylightUI_Skins' own Packs files never count).
+local OURS = ("interface/addons/" .. ADDON .. "/"):lower()
+local OURS_DIR = "/" .. ADDON:lower() .. "/"
+local function PackFileIn(text)
+	if type(text) ~= "string" then return nil end
+	for before, name in text:gmatch("([^%s\"'%[%]]*)[/\\]Packs[/\\]([%w_]+)%.lua") do
+		local head = (before:gsub("\\", "/")):lower()
+		head = (head:gsub("^@", ""))
+		if head:sub(1, 3) == "..." then
+			local tail = head:sub(4) .. "/"
+			if #tail > 1 and OURS:sub(-#tail) == tail then return name end
+		elseif ("/" .. head .. "/"):sub(-#OURS_DIR) == OURS_DIR then
+			return name
+		end
+	end
+	return nil
+end
+
+local function KeyOfFile(file)
+	if not file then return nil end
+	local key = fileKey[file]
+	if not key and file:sub(1, 8) == "Blizzard" then key = "Blizzard" end
+	return key
+end
+
+-- The pack file that called the function asking (a registration: ns.Target, ns.Pack).
+local function CallerFile()
+	if type(debugstack) ~= "function" then return nil end
+	local ok, stack = pcall(debugstack, 3, 4, 0)
+	return ok and PackFileIn(stack) or nil
+end
+
+local function NoteFile(key)
+	local file = CallerFile()
+	if file and not fileKey[file] then fileKey[file] = key end
+end
+
+-- The target an error came from, or nil.
+local function KeyOfError(err)
+	local file = PackFileIn(err)
+	if not file and type(debugstack) == "function" then
+		local ok, stack = pcall(debugstack, 2)
+		if ok then file = PackFileIn(stack) end
+	end
+	local key = KeyOfFile(file)
+	if key and ns.targets[key] then return key end
+	return nil
+end
+
+local function FailedDB()
+	if not svLoaded then return nil end
+	local db = _G.DaylightAddonSkinsDB
+	if type(db) ~= "table" then
+		db = {}
+		_G.DaylightAddonSkinsDB = db
+	end
+	if type(db.failed) ~= "table" then db.failed = {} end
+	return db.failed, db
+end
+
+-- The full error as well (to the game's error handler, BugSack's) only for a copy run from its
+-- source folder or with DaylightUI_Dev loaded, as DaylightUI does for its own addon skins.
+local function Dev()
+	return ns.OurVersion() == "@project-version@" or ns.AddonLoaded("DaylightUI_Dev")
+end
+
+local function FirstLine(err)
+	local line = tostring(err or "?"):match("^[^\n]*") or "?"
+	line = line:gsub("^.-[Ii]nterface[/\\][Aa]dd[Oo]ns[/\\]" .. ADDON .. "[/\\]", "")
+	if #line > 300 then line = line:sub(1, 300) end
+	return line
+end
+
+local function StatusChanged()
+	for i = 1, #listeners do xpcall(listeners[i], geterrorhandler()) end
+end
+
+-- fn() whenever a pack fails or is tried again (to repaint what shows it).
+function ns.OnStatusChange(fn)
+	if type(fn) == "function" then listeners[#listeners + 1] = fn end
+end
+
+-- The record of `key`'s error while its pack is off, or nil.
+function ns.Failed(key)
+	return key and failedNow[key] or nil
+end
+
+function ns.AnyFailed()
+	return next(failedNow) ~= nil
+end
+
+-- "until Questie or Addon Skins updates" in a sentence: the game for its own windows.
+function ns.RetryWhen(key)
+	if IsGame(key) then return ns.L["Retried when the game or Addon Skins updates."] end
+	return string.format(ns.L["Retried when %s or Addon Skins updates."], ns.targets[key] or key)
+end
+
+-- Puts down `key`'s error and switches its pack off (true), once: false when `key` isn't a
+-- target or is already off.
+function ns.Fail(key, err)
+	if type(key) ~= "string" or not ns.targets[key] or failedNow[key] then return false end
+	local rec = { ours = ns.OurVersion(), target = TargetVersion(key), err = FirstLine(err), at = _G.time() }
+	failedNow[key] = rec
+	local db = FailedDB()
+	if db then db[key] = rec end
+	local L = ns.L
+	local label = ns.targets[key] or key
+	if IsGame(key) then
+		print(CHAT .. string.format(L["Couldn't dress %s: it hit an error, so it's left as it is until the game or Addon Skins updates. /skins status has the details."], label))
+	else
+		print(CHAT .. string.format(L["Couldn't dress %s: it hit an error, so it's left as it is until %s or Addon Skins updates. /skins status has the details."], label, label))
+	end
+	if Dev() then xpcall(function() geterrorhandler()(err) end, function() end) end
+	StatusChanged()
+	return true
+end
+
+-- `key`'s pack tried again (after a reload: its windows were left as they were). Nothing when
+-- it isn't off.
+function ns.Retry(key)
+	local was = failedNow[key]
+	failedNow[key] = nil
+	local db, all = FailedDB()
+	if db then db[key] = nil end
+	if all and all.testFail == key then all.testFail = nil end
+	if was then StatusChanged() end
+	return was ~= nil
+end
+
+function ns.RetryAll()
+	local any = false
+	for key in pairs(failedNow) do
+		if ns.Retry(key) then any = true end
+	end
+	local db, all = FailedDB()
+	if db then wipe(db) end
+	if all then all.testFail = nil end
+	return any
+end
+
+-- /skins test <addon>: `key`'s pack fails once on purpose, as it next runs (after a reload).
+function ns.TestFail(key)
+	local _, all = FailedDB()
+	if all then all.testFail = key end
+end
+
+local function TakeTestFail(key)
+	local db = svLoaded and _G.DaylightAddonSkinsDB
+	if type(db) == "table" and key and db.testFail == key then
+		db.testFail = nil
+		return true
+	end
+	return false
+end
+
+GuardError = function(err)
+	local key = KeyOfError(err)
+	if key then
+		-- (Once: the same hook failing on every frame says nothing more.)
+		if failedNow[key] or ns.Fail(key, err) then return end
+	end
+	geterrorhandler()(err)
+end
+
+-- A function run for `pack` (a hook's, a queued refresh's): not while the pack is off; the shared
+-- helpers read its look while it runs (current, below); an error switches the pack off.
+local running            -- the pack whose function is running
+local function RunError(err)
+	local pack = running
+	if pack and (failedNow[pack] or ns.Fail(pack, err)) then return end
+	GuardError(err)
+end
+
+-- The saved records, read as this plugin's saved variables come: kept while both versions are
+-- the same, else gone (tried again), with one line in chat naming them.
+local svWatch = CreateFrame("Frame")
+svWatch:RegisterEvent("ADDON_LOADED")
+svWatch:SetScript("OnEvent", function(self, _, name)
+	if name ~= ADDON then return end
+	self:UnregisterEvent("ADDON_LOADED")
+	svLoaded = true
+	local db = FailedDB()
+	local again = {}
+	local ours = ns.OurVersion()
+	for key, rec in pairs(db) do
+		if type(rec) == "table" and ns.targets[key] and rec.ours == ours and rec.target == TargetVersion(key) then
+			if not failedNow[key] then failedNow[key] = rec end
+		else
+			db[key] = nil
+			if type(rec) == "table" and ns.targets[key] then again[#again + 1] = ns.targets[key] end
+		end
+	end
+	-- (Errors from before the saved variables came.)
+	for key, rec in pairs(failedNow) do db[key] = rec end
+	if #again > 0 then
+		table.sort(again)
+		print(CHAT .. string.format(ns.L["Trying again after an update: %s."], table.concat(again, ", ")))
+	end
+	if next(failedNow) then StatusChanged() end
+end)
 
 -- An addon this plugin dresses, for the options list. caps = what of its look can be set on its
 -- own page: window (shell), controls (buttons, boxes, scroll bars), text (font, size, outline),
@@ -37,7 +445,12 @@ ns.Guard = Guard
 -- A pack with settings of its own adds defaults = { name = value } (kept under look.<addon>.<name>
 -- like the rest) and extra = function(at, following, hint) returning option groups, shown on its
 -- page under the tab extraTab.
+-- An addon split across folders lists them: caps.folders = { "DBM-Core", "DBM-GUI" } (the main
+-- one first; caps.targets is read the same way). One switch, one card and one pack cover them all.
 function ns.Target(addon, label, caps)
+	local folders = caps and (caps.folders or caps.targets)
+	if type(folders) == "table" and #folders > 0 then ns.folders[addon] = folders end
+	NoteFile(addon)
 	if ns.targets[addon] then
 		if caps then ns.caps[addon] = caps end
 		return
@@ -113,7 +526,8 @@ function ns.TipAlphaChanged(scope, path)
 		or (scope == "general" and path == "windowAlpha")
 end
 
-function ns.Enabled(key)
+-- Whether `key`'s switch is on (and DaylightUI's Skins module), whatever became of its pack.
+local function SwitchedOn(key)
 	local on = skinsOn
 	if on == nil then
 		local ok, value = pcall(API.IsModuleEnabled, "Skins")
@@ -122,6 +536,14 @@ function ns.Enabled(key)
 	end
 	if not on then return false end
 	return not key or Setting(key) ~= false
+end
+ns.SwitchedOn = SwitchedOn
+
+-- Whether `key`'s windows are to be dressed: its switch is on and its pack isn't off after an
+-- error (Broken skins, above).
+function ns.Enabled(key)
+	if key and failedNow[key] then return false end
+	return SwitchedOn(key)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -675,17 +1097,40 @@ function ns.WithKit(fn)
 end
 
 -- ns.Pack(addon, label, fn, caps): fn(Kit) runs once `addon` has loaded; return false to be asked
--- again. caps: see ns.Target.
+-- again. caps: see ns.Target. A target split across folders (caps.folders) runs as its main
+-- folder loads. An error in fn switches the pack off (Broken skins, above); a pack that's off
+-- isn't run.
 function ns.Pack(addon, label, fn, caps)
 	if label then ns.Target(addon, label, caps) end
-	me.RegisterSkin(addon, function(Kit)
+	-- The target it dresses: its own, or (a Blizzard_* addon's) its file's.
+	local key = (label or ns.targets[addon]) and addon or KeyOfFile(CallerFile())
+	local folder = addon
+	local list = ns.folders[addon]
+	if list and list[1] then
+		folder = list[1]
+		for _, f in ipairs(list) do
+			if f == addon then folder = addon break end
+		end
+	end
+	me.RegisterSkin(folder, function(Kit)
 		GotKit(Kit)
-		if not fn or not ns.Enabled(label and addon or nil) then return end
+		if key and failedNow[key] then return end
+		local run = fn
+		if key and TakeTestFail(key) then
+			run = function() error("Addon Skins test error (/skins test " .. key .. ")", 0) end
+		end
+		if not run or not ns.Enabled(label and addon or nil) then return end
 		local was = current
 		if label then current = addon end
-		local ok, out = pcall(fn, Kit)
+		local ok, out = pcall(run, Kit)
 		current = was
-		if not ok then error(out, 0) end
+		if not ok then
+			if key and ns.targets[key] then
+				ns.Fail(key, out)
+				return
+			end
+			error(out, 0)
+		end
 		return out
 	end)
 end
@@ -707,11 +1152,16 @@ local ticking = false
 
 local function Found(w, frame)
 	ns.WithKit(function(Kit)
+		if failedNow[w.key] then return end
 		local was = current
 		current = w.key
 		local ok, err = pcall(w.fn, frame, Kit)
 		current = was
-		if not ok then error(err, 0) end
+		if not ok then
+			-- (Put down against its pack; the game's error handler only for one that isn't a target.)
+			if ns.Fail(w.key, err) or failedNow[w.key] then return end
+			error(err, 0)
+		end
 	end)
 end
 
@@ -784,10 +1234,156 @@ local Once = ns.Once
 
 local function Usable(obj)
 	if not obj or type(obj) ~= "table" or not obj.GetObjectType then return false end
-	if obj.IsForbidden and obj:IsForbidden() then return false end
+	-- (pcall: a prototype table that only reaches frame methods through its metatable, like
+	-- LibQTip's, errors here; it isn't a frame, so it isn't forbidden.)
+	if obj.IsForbidden then
+		local ok, no = pcall(obj.IsForbidden, obj)
+		if ok and no then return false end
+	end
 	return true
 end
 ns.Usable = Usable
+
+-- ns.Usable, and not one of the game's protected frames: what ns.HookOnce and ns.ScriptOnce
+-- accept. (ns.Usable itself still lets protected frames through, as the packs expect.)
+local function Unprotected(obj)
+	if not Usable(obj) then return false end
+	if obj.IsProtected then
+		local ok, protected = pcall(obj.IsProtected, obj)
+		if ok and protected then return false end
+	end
+	return true
+end
+ns.Unprotected = Unprotected
+
+-- ---------------------------------------------------------------------------------------------
+-- Shared refresh helpers, for packs that follow an addon's own calls (the migration pass moves
+-- the packs' hand-made queues and hook flags onto these).
+--
+-- Rules (see the Taint notes in Packs/Blizzard.lua): hook the target addon's own functions and
+-- frames only. Never hooksecurefunc the game's protected frames, nor a function the game runs
+-- from secure code (an action button's update, a frame shown from its event code); never hook a
+-- function the addon hands to C_Timer (it runs from the timer, not from the call that set it).
+-- Looks only inside the callbacks: textures, fonts, colors, DaylightUI's shells.
+--
+--   ns.Queue(id, fn, pack)
+--     Coalesces a burst: however often it's asked in one frame, fn runs once, on the next frame
+--     (C_Timer.After(0)). id = anything (a string, a frame); the last fn given for an id runs.
+--     In a fight it waits for the fight's end (then runs once). Skipped while `pack` is off.
+--   ns.HookOnce(obj, method, fn, pack)
+--     hooksecurefunc(obj, method, fn) once per object, method and pack (a second call is a
+--     no-op: safe to call from code that runs on every show). obj = nil hooks the global
+--     function `method`. Refused (false) for a protected or forbidden frame.
+--   ns.ScriptOnce(frame, script, fn, pack)
+--     frame:HookScript(script, fn), once per frame, script and pack. Refused for a protected
+--     or forbidden frame, or one without that script.
+-- `pack` = the target key; left out, the pack being dressed as it's called (inside a pack's
+-- function or a watch). fn runs only while ns.Enabled(pack), with the shared helpers reading
+-- that pack's look, and an error in it switches the pack off (Broken skins) instead of
+-- repeating every frame. Example:
+--   ns.HookOnce(SomeAddon, "RefreshList", function() ns.Queue("SomeAddon:list", Repaint) end, KEY)
+--   ns.ScriptOnce(SomeAddonFrame, "OnShow", function(f) ns.Queue(f, function() Dress(f) end) end, KEY)
+-- ---------------------------------------------------------------------------------------------
+
+-- fn(...) for `pack`, guarded (RunError: Broken skins, above).
+local function Run(pack, fn, ...)
+	if pack and not ns.Enabled(pack) then return end
+	local was, wasRunning = current, running
+	if pack then current = pack end
+	running = pack
+	xpcall(fn, RunError, ...)
+	current, running = was, wasRunning
+end
+
+local function Wrap(fn, pack)
+	return function(...) Run(pack, fn, ...) end
+end
+
+local hookedOnce = setmetatable({}, { __mode = "k" })   -- obj -> { ["method:pack"] = true }
+local hookedGlobal = {}                                   -- "name:pack" -> true
+
+function ns.HookOnce(obj, method, fn, pack)
+	pack = pack or current
+	if type(method) ~= "string" or type(fn) ~= "function" then return false end
+	local id = method .. ":" .. tostring(pack)
+	if obj == nil then
+		if type(_G[method]) ~= "function" then return false end
+		if hookedGlobal[id] then return true end
+		hookedGlobal[id] = true
+		hooksecurefunc(method, Wrap(fn, pack))
+		return true
+	end
+	if type(obj) ~= "table" or type(obj[method]) ~= "function" then return false end
+	if obj.GetObjectType and not Unprotected(obj) then return false end
+	local set = hookedOnce[obj]
+	if not set then
+		set = {}
+		hookedOnce[obj] = set
+	end
+	if set[id] then return true end
+	set[id] = true
+	hooksecurefunc(obj, method, Wrap(fn, pack))
+	return true
+end
+
+function ns.ScriptOnce(frame, script, fn, pack)
+	pack = pack or current
+	if type(script) ~= "string" or type(fn) ~= "function" or not Unprotected(frame) then return false end
+	if not (frame.HasScript and frame:HasScript(script)) then return false end
+	local id = "script:" .. script .. ":" .. tostring(pack)
+	local set = hookedOnce[frame]
+	if not set then
+		set = {}
+		hookedOnce[frame] = set
+	end
+	if set[id] then return true end
+	set[id] = true
+	frame:HookScript(script, Wrap(fn, pack))
+	return true
+end
+
+-- Two lists swapped on each run, so a function that queues again lands in the next one.
+local queueFns, queuePacks = {}, {}
+local spare, sparePack = {}, {}
+local queueSoon, heldForFight = false, false
+local FlushQueue
+
+local function AfterFight()
+	heldForFight = false
+	FlushQueue()
+end
+
+FlushQueue = function()
+	queueSoon = false
+	if next(queueFns) == nil then return end
+	if InCombatLockdown() then
+		-- (Kept as they are: one run once the fight is over.)
+		if not heldForFight then
+			heldForFight = true
+			ns.OutOfCombat(AfterFight)
+		end
+		return
+	end
+	local list, packs = queueFns, queuePacks
+	queueFns, queuePacks = spare, sparePack
+	for id, fn in pairs(list) do
+		local pack = packs[id]
+		Run(pack ~= false and pack or nil, fn)
+	end
+	wipe(list)
+	wipe(packs)
+	spare, sparePack = list, packs
+end
+
+function ns.Queue(id, fn, pack)
+	if id == nil or type(fn) ~= "function" then return end
+	queueFns[id] = fn
+	queuePacks[id] = pack or current or false
+	if not queueSoon and not heldForFight then
+		queueSoon = true
+		C_Timer.After(0, FlushQueue)
+	end
+end
 
 -- Hides a piece of another addon's art for good.
 function ns.Kill(region)
@@ -1436,7 +2032,8 @@ local function ApplyHandover(addon, h, repair)
 	if type(h.ready) == "function" and not h.ready() then return false end
 	local rec, all = Handed(addon)
 	local asked = Asked(addon)
-	local enabled = ns.Enabled(addon)
+	-- (The switch alone: a pack off after an error keeps the player's handover choices.)
+	local enabled = SwitchedOn(addon)
 	for _, item in ipairs(h.list) do
 		local want = false
 		if enabled then
@@ -1574,7 +2171,7 @@ function ns.Conflicts(all)
 	local out = {}
 	for _, addon in ipairs(ns.order) do
 		local h = handovers[addon]
-		if h and ns.Enabled(addon) and (type(h.ready) ~= "function" or h.ready()) then
+		if h and SwitchedOn(addon) and (type(h.ready) ~= "function" or h.ready()) then
 			local asked, rec = Asked(addon), Handed(addon)
 			for _, item in ipairs(h.list) do
 				if not item.switch and not item.gone then
@@ -1638,16 +2235,19 @@ function ns.HandoverGroup(addon)
 		if not item.switch and not item.gone then
 			items[#items + 1] = { type = "toggle", key = UsePath(addon, item.key),
 				label = item.label or item.key,
+				-- Shown flipped, as in the choice window: on = the addon's own, off = Daylight UI's
+				-- (the stored setting stays true = Daylight UI).
+				invert = true,
 				desc = item.daylight
-					and string.format(L["On: DaylightUI does this (%s) and %s's own is switched off. Off: %s's own, as it was."], item.daylight, label, label)
-					or string.format(L["On: DaylightUI does this and %s's own is switched off. Off: %s's own, as it was."], label, label),
+					and string.format(L["On: %s's own, as it was. Off: Daylight UI does this (%s) and %s's own is switched off."], label, item.daylight, label)
+					or string.format(L["On: %s's own, as it was. Off: Daylight UI does this and %s's own is switched off."], label, label),
 				reload = item.reload or nil }
 		end
 	end
-	items[#items + 1] = { type = "button", label = string.format(L["Give everything back to %s"], label),
+	items[#items + 1] = { type = "button", label = string.format(L["Give Everything Back to %s"], label),
 		desc = string.format(L["Puts back every one of %s's settings this plugin switched off, as they were."], label),
 		func = function() ns.GiveBack(addon) end }
-	return { label = string.format(L["DaylightUI or %s"], label), items = items }
+	return { label = string.format(L["Daylight UI or %s"], label), items = items }
 end
 
 -- Got the Kit as early as DaylightUI will give it.
@@ -1699,9 +2299,9 @@ function ns.RegisterSettings(pages)
 			icon = "Interface\\AddOns\\" .. ADDON .. "\\Media\\icon-glyph.png",
 			needs = { 1, 1 },
 			short = ns.L["Addons"],
-			blurb = ns.L["Your other addons' windows in the DaylightUI look."],
+			blurb = ns.L["Your other addons' windows in the Daylight UI look."],
 		})
-		DUI:RegisterModule(ADDON, { plugin = ADDON, label = ns.L["Addon skins"], defaults = defaults,
+		DUI:RegisterModule(ADDON, { plugin = ADDON, label = ns.L["Addon Skins"], defaults = defaults,
 			options = pages and { pages = pages } or nil })
 	end)
 end

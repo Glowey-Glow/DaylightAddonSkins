@@ -61,7 +61,6 @@ local function NewsButtons()
 	return found
 end
 
-local hooked = setmetatable({}, { __mode = "k" })
 local function Clicked()
 	clicked = true
 	ns.WatchNow()
@@ -70,10 +69,7 @@ end
 ns.Pack("LootTriage", "LootTriage", function()
 	ns.Watch("LootTriage", function() return NewsButtons()[1] end, function()
 		for _, button in ipairs(NewsButtons()) do
-			if not hooked[button] then
-				hooked[button] = true
-				button:HookScript("OnClick", Clicked)
-			end
+			ns.ScriptOnce(button, "OnClick", Clicked, "LootTriage")
 		end
 	end)
 	ns.Watch("LootTriage", Find, function(dialog, Kit)

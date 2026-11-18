@@ -1,5 +1,15 @@
 # DaylightUI Addon Skins
 
+## 1.16.0
+- New skins: Details! (its meter windows follow Daylight UI's own meter look: bars, track, font, rows; plus its options, breakdown, report windows, menus and tooltips), AtlasLoot Continued and Pawn. Details' meter windows join the Daylight UI overlaps (Daylight UI's damage meter by default).
+- The overlap window now reads the other way round: on = the addon keeps its own, off = Daylight UI handles it. Daylight UI is still the default, and the choices you already made are kept. The switches on Look and Feel match.
+- /skins: every addon's state (Active, Switched Off, Not Installed, Not Enabled on This Character, Error). /skins report opens a copy box with a full report for bug reports, /skins retry tries a skin again. All Windows has a Status card with the same list.
+- A skin that runs into an error is switched off with one chat line instead of erroring again and again, its card shows the error, and it's tried again by itself once the addon or Addon Skins updates (or right-click its card).
+- An addon that's installed but switched off on this character shows so on All Windows, without a Get Addon link.
+- Every skin now hooks and refreshes through one shared layer: fewer repeated passes, and one skin's error can't break another. A few refresh passes now wait for a fight to end, as the game windows already did.
+- LayerSwap: a Layer Button row in its settings menu (Shift + click: Always or On Hover), and its menus close when you click anywhere else.
+- Labels and buttons in Title Case, and "Daylight UI" written with a space.
+
 ## 1.15.0
 - Checked against today's addon updates, including the addons you may not have installed.
 - No more doubled borders on game windows DaylightUI dresses itself: the Battle.net friend toast, the layering notice and its minimize button, the master looter's item, and the profession window (its side tabs, Create buttons and cards). The Game windows skin now leaves those to DaylightUI while its System skins are on, and still dresses them when they're off.

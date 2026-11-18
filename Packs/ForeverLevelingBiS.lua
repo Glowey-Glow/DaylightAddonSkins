@@ -69,6 +69,8 @@ for _, name in ipairs(FONTS) do
 	local font = _G["ForeverLevelingBiS" .. name]
 	if type(font) == "table" and font.GetFont and font.SetFont then
 		own[font] = { font:GetFont() }
+		-- (Hooked directly, not through ns.HookOnce: it keeps the addon's own font even while this
+		-- pack is off, for the switch to put back.)
 		hooksecurefunc(font, "SetFont", function(self, path, size, flags)
 			if busy then return end
 			own[self] = { path, size, flags }
@@ -151,12 +153,12 @@ local function Dress(f, kind)
 	ns.NoBackdrop(f)
 	-- It may lay its backdrop on again: taken straight back off.
 	local clearing = false
-	hooksecurefunc(f, "SetBackdrop", function(self, info)
+	ns.HookOnce(f, "SetBackdrop", function(self, info)
 		if clearing or info == nil then return end
 		clearing = true
 		ns.NoBackdrop(self)
 		clearing = false
-	end)
+	end, KEY)
 	if kind == "list" then
 		ns.Shell(f, { bgAlpha = 0.97 }, KEY)
 	else
@@ -194,17 +196,13 @@ end
 -- The buttons in a window, `depth` levels down: a click on one looks again at once (after its own
 -- click has run), for the panel, dialog or list it may just have made and opened, so that is
 -- dressed before it's drawn.
-local clicks = setmetatable({}, { __mode = "k" })
 local HookClicks
 local function HookChildren(depth, look, ...)
 	for i = 1, select("#", ...) do
 		local child = select(i, ...)
 		if ns.Usable(child) then
 			if child:GetObjectType() == "Button" then
-				if not clicks[child] then
-					clicks[child] = true
-					child:HookScript("OnClick", look)
-				end
+				ns.ScriptOnce(child, "OnClick", look, KEY)
 			elseif depth > 0 then
 				HookClicks(child, depth - 1, look)
 			end
@@ -303,7 +301,7 @@ ns.Watch(KEY, "ForeverLevelingBiSWishDock", function(frame)
 end)
 -- (The button is made at login.)
 ns.Watch(KEY, "ForeverLevelingBiSMinimapButton", function(button)
-	button:HookScript("OnClick", Opened)
+	ns.ScriptOnce(button, "OnClick", Opened, KEY)
 end)
 
 local ok = false
@@ -314,10 +312,10 @@ ns.Pack(KEY, nil, function()
 	RestyleAll()
 	local slash = _G.SlashCmdList
 	if type(slash) == "table" and type(slash.FOREVERLEVELINGBIS) == "function" then
-		hooksecurefunc(slash, "FOREVERLEVELINGBIS", Opened)
+		ns.HookOnce(slash, "FOREVERLEVELINGBIS", Opened, KEY)
 	end
 	if type(_G.ForeverLevelingBiS_OnAddonCompartmentClick) == "function" then
-		hooksecurefunc("ForeverLevelingBiS_OnAddonCompartmentClick", Opened)
+		ns.HookOnce(nil, "ForeverLevelingBiS_OnAddonCompartmentClick", Opened, KEY)
 	end
 end)
 

@@ -274,10 +274,10 @@ local function Tip(tip)
 		ours[tip] = true
 		ns.Guard(API.Skin, tip, TipLook())
 	end
-	tip:HookScript("OnShow", function(self)
+	ns.ScriptOnce(tip, "OnShow", function(self)
 		Settle(self)
 		Shopping(self)
-	end)
+	end, KEY)
 	Settle(tip)
 	Shopping(tip)
 end
@@ -366,6 +366,7 @@ local function StopGo(Kit, b)
 	local hl = b.GetHighlightTexture and b:GetHighlightTexture()
 	if ns.Usable(hl) then Kit.Hide(hl) end
 	ns.Guard(Kit.HoverWash, b)
+	-- (Plain HookScript: a child of the secure alert button, which ns.ScriptOnce may refuse.)
 	b:HookScript("OnEnter", function(self)
 		if ns.Enabled(KEY) then Tip(self.tooltip) end
 	end)
@@ -461,10 +462,10 @@ local function SearchHint(eb)
 			local text = eb:GetText()
 			hint:SetShown(not eb:HasFocus() and (type(text) ~= "string" or text == ""))
 		end
-		eb:HookScript("OnTextChanged", update)
-		eb:HookScript("OnEditFocusGained", update)
-		eb:HookScript("OnEditFocusLost", update)
-		eb:HookScript("OnShow", update)
+		ns.ScriptOnce(eb, "OnTextChanged", update, KEY)
+		ns.ScriptOnce(eb, "OnEditFocusGained", update, KEY)
+		ns.ScriptOnce(eb, "OnEditFocusLost", update, KEY)
+		ns.ScriptOnce(eb, "OnShow", update, KEY)
 		update()
 	end
 	local ink = ns.Colors().OFF
@@ -661,6 +662,7 @@ local function SearchExtras(eb)
 	showClear()
 	-- A click puts the cursor in it and leaves the search as it is.
 	eb:SetScript("OnMouseDown", nil)
+	-- (Plain HookScript for the three scripts SearchHint already hooks through ns.ScriptOnce.)
 	eb:HookScript("OnTextChanged", function(self, user)
 		showClear()
 		if user then
@@ -679,10 +681,10 @@ local function SearchExtras(eb)
 		if suggestList and suggestList:IsShown() and suggestList:IsMouseOver() then return end
 		SuggestHide()
 	end)
-	eb:HookScript("OnHide", SuggestHide)
+	ns.ScriptOnce(eb, "OnHide", SuggestHide, KEY)
 	-- Up and Down move through the list; Enter on a picked name searches for it (RareScanner's
 	-- own Enter has already searched what was typed).
-	eb:HookScript("OnArrowPressed", function(_, key)
+	ns.ScriptOnce(eb, "OnArrowPressed", function(_, key)
 		if not (suggestList and suggestList:IsShown()) then return end
 		local n = 0
 		for _, row in ipairs(suggestRows) do
@@ -697,23 +699,23 @@ local function SearchExtras(eb)
 		local row = suggestRows[suggestPick]
 		pickedName = row and row.name or nil
 		SuggestPaint()
-	end)
+	end, KEY)
 	-- (RareScanner's Enter has dropped the focus, and with it the list, by the time this runs.)
-	eb:HookScript("OnEnterPressed", function(self)
+	ns.ScriptOnce(eb, "OnEnterPressed", function(self)
 		local name = pickedName
 		pickedName = nil
 		if name then Run(self, name) else SuggestHide() end
-	end)
-	eb:HookScript("OnEscapePressed", function()
+	end, KEY)
+	ns.ScriptOnce(eb, "OnEscapePressed", function()
 		pickedName = nil
 		SuggestHide()
-	end)
+	end, KEY)
 	-- The pins' names, each time RareScanner lays them out.
 	local provider = _G.RareScannerDataProviderMixin
 	if type(provider) == "table" and type(provider.RefreshAllData) == "function" then
-		hooksecurefunc(provider, "RefreshAllData", function(self)
+		ns.HookOnce(provider, "RefreshAllData", function(self)
 			if ns.Enabled(KEY) then ns.Guard(ReadPins, self) end
-		end)
+		end, KEY)
 		ns.Guard(ReadPins, provider)
 	end
 end
@@ -763,7 +765,7 @@ end
 
 local function RouteSoon()
 	RouteNow()
-	C_Timer.After(0, RouteNow)
+	ns.Queue("RareScanner:route", RouteNow, KEY)
 end
 
 -- Its button in the map's corner (from the map button library, made when the map first loads or
@@ -782,7 +784,7 @@ local function MapButton()
 			ns.MapIconGround(b)
 			-- Its menu starts and resets routes.
 			if type(b.OnMenuResponse) == "function" then
-				hooksecurefunc(b, "OnMenuResponse", function() RouteSoon() end)
+				ns.HookOnce(b, "OnMenuResponse", function() RouteSoon() end, KEY)
 			end
 		end
 	end
@@ -794,7 +796,6 @@ end
 
 local LD = LibStub("LibDialog-1.0RS", true)
 local dialogs = setmetatable({}, { __mode = "k" })
-local routeHooked = setmetatable({}, { __mode = "k" })
 
 local function Dialog(Kit, d)
 	if not ns.Usable(d) then return end
@@ -810,10 +811,7 @@ local function Dialog(Kit, d)
 		if ns.Usable(b) then
 			ns.Guard(Kit.Button, b)
 			-- (The route reset popup's Yes starts a new route.)
-			if not routeHooked[b] then
-				routeHooked[b] = true
-				b:HookScript("OnClick", function() RouteSoon() end)
-			end
+			ns.ScriptOnce(b, "OnClick", function() RouteSoon() end, KEY)
 		end
 	end
 	for _, e in ipairs(type(d.editboxes) == "table" and d.editboxes or {}) do
@@ -907,9 +905,7 @@ local function PaintPick(row)
 end
 
 local pickBoxes = {}          -- scroll boxes waiting for a repaint (reused)
-local pickQueued = false
 local function PaintPicksNow()
-	pickQueued = false
 	for box in pairs(pickBoxes) do
 		pickBoxes[box] = nil
 		if ns.Usable(box) and box.ForEachFrame and ns.Enabled(KEY) then
@@ -921,10 +917,7 @@ end
 local function PaintPicks(box)
 	if not box then return end
 	pickBoxes[box] = true
-	if not pickQueued then
-		pickQueued = true
-		C_Timer.After(0, PaintPicksNow)
-	end
+	ns.Queue("RareScanner:picks", PaintPicksNow, KEY)
 end
 
 local function RareRow(Kit, row)
@@ -1080,7 +1073,7 @@ local function Explorer(Kit, f)
 	end
 	for _, panel in ipairs(panels) do
 		if ns.Usable(panel) and panel.HookScript then
-			panel:HookScript("OnShow", function() if ns.Enabled(KEY) then QueueExplorer() end end)
+			ns.ScriptOnce(panel, "OnShow", function() if ns.Enabled(KEY) then QueueExplorer() end end, KEY)
 		end
 	end
 	-- The lists' rows, as they're filled.
@@ -1090,9 +1083,7 @@ local function Explorer(Kit, f)
 end
 
 -- Everything inside, on the next frame after each show (and when a panel inside shows).
-local expQueued = false
 local function RunExplorer()
-	expQueued = false
 	local Kit, f = ns.Kit, _G.RSExplorerFrame
 	if not Kit or not ns.Enabled(KEY) or not ns.Usable(f) or not f:IsShown() then return end
 	Explorer(Kit, f)
@@ -1112,9 +1103,7 @@ local function RunExplorer()
 end
 
 QueueExplorer = function()
-	if expQueued then return end
-	expQueued = true
-	C_Timer.After(0, RunExplorer)
+	ns.Queue("RareScanner:explorer", RunExplorer, KEY)
 end
 
 -- The drop chance boxes in its loot filter menu (RSExplorerLootChanceFilterTemplate rows): their
@@ -1132,12 +1121,12 @@ local function ChanceBox(Kit, row)
 	back:SetFrameLevel(math.max(0, box:GetFrameLevel() - 1))
 	back:EnableMouse(false)
 	local s = Kit.Shell(back, "input")
-	box:HookScript("OnEnter", function()
+	ns.ScriptOnce(box, "OnEnter", function()
 		if ns.Enabled(KEY) then Kit.Paint(s, Kit.ROW_HOVER) end
-	end)
-	box:HookScript("OnLeave", function()
+	end, KEY)
+	ns.ScriptOnce(box, "OnLeave", function()
 		if ns.Enabled(KEY) then Kit.Paint(s, nil) end
-	end)
+	end, KEY)
 end
 
 local ChanceBoxesIn
@@ -1252,10 +1241,10 @@ local function Markers(Kit, w)
 	Font(f.text)
 	-- Its SetDisabled paints the label gold again (or gray): ours goes back on each time.
 	if type(w.SetDisabled) == "function" then
-		hooksecurefunc(w, "SetDisabled", function(self, disabled)
+		ns.HookOnce(w, "SetDisabled", function(self, disabled)
 			if not ns.Enabled(KEY) or type(self.frame) ~= "table" then return end
 			Ink(self.frame.label, disabled and "OFF" or "LABEL")
-		end)
+		end, KEY)
 	end
 	if not ns.Controls(KEY) then return end
 	for _, key in ipairs({ "DLeft", "DMiddle", "DRight" }) do
@@ -1270,15 +1259,15 @@ local function Markers(Kit, w)
 	box:EnableMouse(false)
 	local s = Kit.Shell(box, "input")
 	ns.Guard(Kit.BareButton, f.dropButton, "down")
-	f.dropButton:HookScript("OnEnter", function()
+	ns.ScriptOnce(f.dropButton, "OnEnter", function()
 		if ns.Enabled(KEY) then Kit.Paint(s, Kit.ROW_HOVER) end
-	end)
-	f.dropButton:HookScript("OnLeave", function()
+	end, KEY)
+	ns.ScriptOnce(f.dropButton, "OnLeave", function()
 		if ns.Enabled(KEY) then Kit.Paint(s, nil) end
-	end)
-	f.dropButton:HookScript("OnClick", function()
+	end, KEY)
+	ns.ScriptOnce(f.dropButton, "OnClick", function()
 		if ns.Enabled(KEY) then ns.Guard(MarkerList, Kit, w) end
-	end)
+	end, KEY)
 end
 
 -- AceGUI is shared and a newer copy may replace it when another addon loads: hooked again then.
@@ -1287,6 +1276,7 @@ local function HookAce()
 	local AG = LibStub("AceGUI-3.0", true)
 	if type(AG) ~= "table" or type(AG.RegisterAsWidget) ~= "function" then return end
 	if AG.RegisterAsWidget == aceHooked then return end
+	-- (Plain hooksecurefunc: a newer AceGUI in the same table is hooked again, which ns.HookOnce wouldn't.)
 	hooksecurefunc(AG, "RegisterAsWidget", function(_, w)
 		if type(w) ~= "table" or w.type ~= "RS_Markers" or not ns.Enabled(KEY) then return end
 		ns.WithKit(function(Kit) Markers(Kit, w) end)
@@ -1354,6 +1344,7 @@ end
 
 ns.Pack(KEY, nil, function(Kit)
 	-- The alert: dressed now (or when the fight ends), and checked again as it shows.
+	-- (Plain hooks: the alert is a secure button, which ns.HookOnce / ns.ScriptOnce refuse.)
 	ns.OutOfCombat(function() if ns.Enabled(KEY) then Alert(Kit) end end)
 	if type(BUTTON.ShowButton) == "function" then
 		hooksecurefunc(BUTTON, "ShowButton", function()
@@ -1367,20 +1358,22 @@ ns.Pack(KEY, nil, function(Kit)
 	BUTTON:HookScript("OnLeave", function() if ns.Enabled(KEY) then AlertHover(false) end end)
 	local pool = BUTTON.LootBar and BUTTON.LootBar.itemFramesPool
 	if type(pool) == "table" and type(pool.ShowIfReady) == "function" then
-		hooksecurefunc(pool, "ShowIfReady", function()
+		ns.HookOnce(pool, "ShowIfReady", function()
 			if ns.Enabled(KEY) then AlertLoot() end
-		end)
+		end, KEY)
 	end
 
 	-- Its map pins' and chat links' tooltips.
 	if type(QT) == "table" then
 		if type(QT.Acquire) == "function" then
-			hooksecurefunc(QT, "Acquire", function(lib, key)
+			ns.HookOnce(QT, "Acquire", function(lib, key)
 				local tips = lib.activeTooltips
 				if type(tips) == "table" then QTip(tips[key]) end
-			end)
+			end, KEY)
 		end
 		local proto = QT.tipPrototype
+		-- (Plain hooksecurefunc on the prototype: it reaches a frame's methods through its metatable,
+		-- and ns.HookOnce's frame check would call them on a table that isn't a frame.)
 		-- Each tooltip as it's shown (Show is the frame's own, reached through the prototype's
 		-- metatable; the hook sits on the prototype, so only this library's tooltips go through it).
 		if type(proto) == "table" and type(proto.Show) == "function" then
@@ -1419,9 +1412,9 @@ ns.Pack(KEY, nil, function(Kit)
 	-- function up by name on every hover, so the hook here is the one it calls; the look-out by name
 	-- stays as the fallback.)
 	if type(_G.RareScanner_OnAddonCompartmentEnter) == "function" then
-		hooksecurefunc("RareScanner_OnAddonCompartmentEnter", function()
+		ns.HookOnce(nil, "RareScanner_OnAddonCompartmentEnter", function()
 			Tip(_G.RareScanner_AddonCompartimentTooltip)
-		end)
+		end, KEY)
 	end
 	ns.Watch(KEY, "RareScanner_AddonCompartimentTooltip", function(tip) Tip(tip) end)
 
@@ -1434,6 +1427,7 @@ ns.Pack(KEY, nil, function(Kit)
 			ns.Guard(MapButton)
 			RouteNow()
 		end
+		-- (Plain HookScript: the game's world map, which may count as protected.)
 		map:HookScript("OnShow", mapShown)
 		-- The game's round corner buttons, as the map opens and on every zoom and map change: the
 		-- shared pass (ns.MapRings), hooked once for this pack and OpenMap's.
@@ -1450,10 +1444,10 @@ ns.Pack(KEY, nil, function(Kit)
 
 	-- Its popups, on every Spawn.
 	if type(LD) == "table" and type(LD.Spawn) == "function" then
-		hooksecurefunc(LD, "Spawn", function(lib)
+		ns.HookOnce(LD, "Spawn", function(lib)
 			if not ns.Enabled(KEY) or type(lib.active_dialogs) ~= "table" then return end
 			for _, d in ipairs(lib.active_dialogs) do ns.Guard(Dialog, Kit, d) end
-		end)
+		end, KEY)
 	end
 
 	-- The explorer. The lists' selection callbacks are taken from the frames when the explorer
@@ -1464,43 +1458,43 @@ ns.Pack(KEY, nil, function(Kit)
 		-- explorer first opens, so it's hooked now, before that).
 		local function Filled(owner, fn)
 			if not ns.Usable(owner) or type(owner.OnElementInitialize) ~= "function" then return end
-			hooksecurefunc(owner, "OnElementInitialize", function(self, row)
+			ns.HookOnce(owner, "OnElementInitialize", function(self, row)
 				if not ns.Enabled(KEY) or not ns.Usable(row) then return end
 				rowList[row] = self
 				ns.Guard(fn, Kit, row)
-			end)
+			end, KEY)
 		end
 		Filled(ex.RareNPCList, RareRow)
 		Filled(ex.RareLoot, LootRow)
 		Filled(ex.CustomLoot, GroupRow)
 		local list = ex.RareNPCList
 		if ns.Usable(list) and type(list.OnElementSelectionChanged) == "function" then
-			hooksecurefunc(list, "OnElementSelectionChanged", function(self)
+			ns.HookOnce(list, "OnElementSelectionChanged", function(self)
 				if not ns.Enabled(KEY) then return end
 				PaintPicks(self.scrollBox)
 				Pool(ex.lootItemsPool)
-			end)
+			end, KEY)
 		end
 		local cl = ex.CustomLoot
 		if ns.Usable(cl) and type(cl.OnElementSelectionChanged) == "function" then
-			hooksecurefunc(cl, "OnElementSelectionChanged", function(self)
+			ns.HookOnce(cl, "OnElementSelectionChanged", function(self)
 				if not ns.Enabled(KEY) then return end
 				if ns.Usable(self.GroupList) then PaintPicks(self.GroupList.scrollBox) end
 				if ns.Usable(self.GroupInfo) then Pool(self.GroupInfo.lootItemsPool) end
-			end)
+			end, KEY)
 		end
 		if type(ex.UpdateLootButton) == "function" then
-			hooksecurefunc(ex, "UpdateLootButton", function(self)
+			ns.HookOnce(ex, "UpdateLootButton", function(self)
 				if not ns.Enabled(KEY) then return end
 				local b = self.Filters and self.Filters.ToggleLootButton
 				if ns.Usable(b) then Grey(b.Arrow, "TEXT") end
-			end)
+			end, KEY)
 		end
-		ex:HookScript("OnShow", function(self)
+		ns.ScriptOnce(ex, "OnShow", function(self)
 			if not ns.Enabled(KEY) then return end
 			Explorer(Kit, self)
 			QueueExplorer()
-		end)
+		end, KEY)
 		if ex:IsShown() then
 			Explorer(Kit, ex)
 			QueueExplorer()

@@ -280,7 +280,7 @@ local function HeaderRow(row)
 		if icon then
 			if not toggles[icon] then
 				toggles[icon] = true
-				hooksecurefunc(icon, "SetAtlas", ToggleInk)
+				ns.HookOnce(icon, "SetAtlas", ToggleInk, KEY)
 			end
 			ToggleInk(icon)
 		else
@@ -289,17 +289,17 @@ local function HeaderRow(row)
 			if Usable(label) then g:SetFontObject(label:GetFontObject() or GameFontNormal) else g:SetFontObject(GameFontNormal) end
 			g:SetPoint("RIGHT", row, "RIGHT", -10, 0)
 			glyphs[row] = g
-			if type(row.UpdateCollapsedState) == "function" then hooksecurefunc(row, "UpdateCollapsedState", OnCollapsed) end
+			if type(row.UpdateCollapsedState) == "function" then ns.HookOnce(row, "UpdateCollapsedState", OnCollapsed, KEY) end
 		end
 		local label = HeaderLabel(row)
 		if Usable(label) and label.SetTextColor then
 			headerLabels[label] = true
-			hooksecurefunc(label, "SetFontObject", HeaderFontSet)
-			hooksecurefunc(label, "SetTextColor", HeaderFontSet)
-			if label.SetVertexColor then hooksecurefunc(label, "SetVertexColor", HeaderFontSet) end
+			ns.HookOnce(label, "SetFontObject", HeaderFontSet, KEY)
+			ns.HookOnce(label, "SetTextColor", HeaderFontSet, KEY)
+			if label.SetVertexColor then ns.HookOnce(label, "SetVertexColor", HeaderFontSet, KEY) end
 			local function again() HeaderFontSet(label) end
-			row:HookScript("OnEnter", again)
-			row:HookScript("OnLeave", again)
+			ns.ScriptOnce(row, "OnEnter", again, KEY)
+			ns.ScriptOnce(row, "OnLeave", again, KEY)
 		end
 	end
 	GlyphState(row)
@@ -334,7 +334,7 @@ local function StatRow(row)
 	if not rowDone[row] then
 		rowDone[row] = true
 		WashHighlight(row, row:GetRegions())
-		if Usable(row.Value) then hooksecurefunc(row.Value, "SetFontObject", ValueFont) end
+		if Usable(row.Value) then ns.HookOnce(row.Value, "SetFontObject", ValueFont, KEY) end
 	end
 	Kit.InkGameText(row)
 end
@@ -452,9 +452,9 @@ local function Slot(btn)
 	slotShells[btn] = Kit.Outline(btn, 2, "outline", true)
 	if IsTexture(btn.Selected) then
 		btn.Selected:SetAlpha(0)
-		hooksecurefunc(btn.Selected, "SetShown", SelectedShown)
-		hooksecurefunc(btn.Selected, "Show", SelectedShown)
-		hooksecurefunc(btn.Selected, "Hide", SelectedShown)
+		ns.HookOnce(btn.Selected, "SetShown", SelectedShown, KEY)
+		ns.HookOnce(btn.Selected, "Show", SelectedShown, KEY)
+		ns.HookOnce(btn.Selected, "Hide", SelectedShown, KEY)
 	end
 	SlotPaint(btn)
 end
@@ -553,11 +553,11 @@ local function SliderLook(slider)
 	knob:AddMaskTexture(mask)
 	sliderFills[slider] = { fill = fill, knob = knob }
 	SliderPaint(slider)
-	slider:HookScript("OnEnter", SliderEnter)
-	slider:HookScript("OnLeave", SliderLeave)
-	slider:HookScript("OnShow", SliderPaint)
-	slider:HookScript("OnEnable", SliderPaint)
-	slider:HookScript("OnDisable", SliderPaint)
+	ns.ScriptOnce(slider, "OnEnter", SliderEnter, KEY)
+	ns.ScriptOnce(slider, "OnLeave", SliderLeave, KEY)
+	ns.ScriptOnce(slider, "OnShow", SliderPaint, KEY)
+	ns.ScriptOnce(slider, "OnEnable", SliderPaint, KEY)
+	ns.ScriptOnce(slider, "OnDisable", SliderPaint, KEY)
 end
 
 local function Steppers(frame)
@@ -634,7 +634,7 @@ function Visit(f, depth)
 	if n == 0 then return end
 	if depth >= 1 and depth <= 4 and not paged[f] and f:GetObjectType() == "Frame" and f.HookScript then
 		paged[f] = true
-		f:HookScript("OnShow", Queue)
+		ns.ScriptOnce(f, "OnShow", Queue, KEY)
 	end
 	VisitEach(depth + 1, f:GetChildren())
 end
@@ -669,17 +669,14 @@ local function Pass(frame)
 	Kit.RepaintSoon()
 end
 
-local queued = false
 local function RunQueued()
-	queued = false
 	local frame = _G.TrueshotLodgeFrame
 	if Usable(frame) and frame:IsShown() and ns.Enabled(KEY) then ns.Guard(Pass, frame) end
 end
 
+-- (However often it's asked in a frame: one pass, on the next.)
 function Queue()
-	if queued then return end
-	queued = true
-	C_Timer.After(0, RunQueued)
+	ns.Queue("TrueshotLodge:pass", RunQueued, KEY)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -704,18 +701,18 @@ end
 -- a child frame, which it only moves, and its anchors read the same mirrored).
 local function SideTab(tab)
 	skip[tab] = true
-	tab:HookScript("OnMouseUp", Queue)
+	ns.ScriptOnce(tab, "OnMouseUp", Queue, KEY)
 	if not ns.Controls(KEY) or not IsTexture(tab.Icon) then return end
 	Kit.Strip(tab)
 	if not ns.SideTile(tab, { picked = TabPicked, copy = true, key = KEY }) then return end
 	-- Picked or not, when TrueshotLodge shows or hides a tab's checked art itself (the gear, "?",
 	-- a profile's links).
-	if type(tab.SetChecked) == "function" then hooksecurefunc(tab, "SetChecked", ns.SideTilesPaintSoon) end
+	if type(tab.SetChecked) == "function" then ns.HookOnce(tab, "SetChecked", ns.SideTilesPaintSoon, KEY) end
 	local sel = tab.SelectedTexture
 	if IsTexture(sel) then
-		hooksecurefunc(sel, "Show", ns.SideTilesPaintSoon)
-		hooksecurefunc(sel, "Hide", ns.SideTilesPaintSoon)
-		hooksecurefunc(sel, "SetShown", ns.SideTilesPaintSoon)
+		ns.HookOnce(sel, "Show", ns.SideTilesPaintSoon, KEY)
+		ns.HookOnce(sel, "Hide", ns.SideTilesPaintSoon, KEY)
+		ns.HookOnce(sel, "SetShown", ns.SideTilesPaintSoon, KEY)
 	end
 end
 
@@ -751,9 +748,9 @@ local function TitleButton(btn)
 	end
 	titleOn[btn] = on
 	TitleTint(btn, on)
-	hooksecurefunc(btn, "LockHighlight", TitleLock)
-	hooksecurefunc(btn, "UnlockHighlight", TitleUnlock)
-	btn:HookScript("OnClick", Queue)
+	ns.HookOnce(btn, "LockHighlight", TitleLock, KEY)
+	ns.HookOnce(btn, "UnlockHighlight", TitleUnlock, KEY)
+	ns.ScriptOnce(btn, "OnClick", Queue, KEY)
 end
 
 -- The filter buttons: DaylightUI buttons. TrueshotLodge says a filter is on with gold words, a
@@ -768,9 +765,7 @@ local function NoGlow(btn)
 	if IsTexture(glow) then Kit.Erase(glow) end
 end
 
-local glowQueued = false
 local function NoGlows()
-	glowQueued = false
 	for btn in pairs(filterLines) do NoGlow(btn) end
 end
 
@@ -804,10 +799,7 @@ local function FilterInk(fs, r, g, b)
 		return
 	end
 	-- (Its glow is made right after its words are colored, the first time it's on.)
-	if not glowQueued then
-		glowQueued = true
-		C_Timer.After(0, NoGlows)
-	end
+	ns.Queue("TrueshotLodge:glows", NoGlows, KEY)
 end
 
 local function FilterButton(btn)
@@ -823,7 +815,7 @@ local function FilterButton(btn)
 	local fs = btn:GetFontString()
 	if Usable(fs) then
 		filterOf[fs] = btn
-		hooksecurefunc(fs, "SetTextColor", FilterInk)
+		ns.HookOnce(fs, "SetTextColor", FilterInk, KEY)
 	end
 	-- What it is now: its glow shows while it's on.
 	local glow = btn.ftGlow
@@ -841,7 +833,7 @@ end
 local function Details(details)
 	for i = 1, details:GetNumRegions() do
 		local r = select(i, details:GetRegions())
-		if Usable(r) and r:GetObjectType() == "FontString" then hooksecurefunc(r, "SetFontObject", DetailsInk) end
+		if Usable(r) and r:GetObjectType() == "FontString" then ns.HookOnce(r, "SetFontObject", DetailsInk, KEY) end
 	end
 	for i = 1, details:GetNumChildren() do
 		local c = select(i, details:GetChildren())
@@ -963,7 +955,7 @@ local function Dress(frame, K)
 		end
 	end
 
-	frame:HookScript("OnShow", Queue)
+	ns.ScriptOnce(frame, "OnShow", Queue, KEY)
 	Pass(frame)
 	Queue()
 end
@@ -994,12 +986,12 @@ local function Hooks()
 	if type(slash) ~= "table" or type(slash.TRUESHOTLODGE) ~= "function" then return end
 	hooked = true
 	-- /tsl and /trueshotlodge: dressed straight after the command made and opened the window.
-	hooksecurefunc(slash, "TRUESHOTLODGE", function() ns.Guard(Now) end)
+	ns.HookOnce(slash, "TRUESHOTLODGE", function() ns.Guard(Now) end, KEY)
 	-- The minimap button.
 	local ldb = type(LibStub) == "table" and LibStub("LibDataBroker-1.1", true)
 	local obj = ldb and ldb:GetDataObjectByName("TrueshotLodge")
 	if type(obj) == "table" and type(obj.OnClick) == "function" then
-		hooksecurefunc(obj, "OnClick", function() ns.Guard(Now) end)
+		ns.HookOnce(obj, "OnClick", function() ns.Guard(Now) end, KEY)
 	end
 end
 
@@ -1013,7 +1005,7 @@ ns.Pack(KEY, "TrueshotLodge", function()
 	ns.me.On("SettingChanged", function(scope, path)
 		if scope == "DaylightAddonSkins" and type(path) == "string"
 			and string.find(path, "look." .. KEY .. ".", 1, true) == 1 then
-			C_Timer.After(0, function() ns.Guard(Repaint) end)
+			ns.Queue("TrueshotLodge:repaint", Repaint, KEY)
 		end
 	end)
 end, { window = true, controls = true, text = true })

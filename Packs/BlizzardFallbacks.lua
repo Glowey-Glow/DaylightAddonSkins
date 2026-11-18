@@ -260,7 +260,7 @@ local function IconTab(Kit, tab, picked, symbol)
 		ns.SideTile(tab, { picked = picked, key = KEY, pad = 2 })
 	end
 	if type(tab.SetChecked) == "function" then
-		hooksecurefunc(tab, "SetChecked", function() Guard(ns.SideTilePaint, tab) end)
+		ns.HookOnce(tab, "SetChecked", function() Guard(ns.SideTilePaint, tab) end, KEY)
 	end
 end
 
@@ -521,35 +521,31 @@ local function InQuestWindows(frame)
 	return (Usable(qf) and (frame == qf or Under(frame, qf))) or (Usable(popup) and (frame == popup or Under(frame, popup)))
 end
 
-local questHooked = false
 Fallback(Named("QuestFrame"), NpcOwned, function(f, Kit)
-	f:HookScript("OnHide", function() if ns.Kit then Guard(QuestTextBack, ns.Kit) end end)
+	ns.ScriptOnce(f, "OnHide", function() if ns.Kit then Guard(QuestTextBack, ns.Kit) end end, KEY)
 	Kit.Window(f)
 	for _, n in ipairs(QUEST_PANELS) do
 		local panel = _G[n]
 		if Usable(panel) then
 			Kit.Strip(panel)
 			-- (After the panel's own OnShow, which fills and recolors it.)
-			panel:HookScript("OnShow", function() Refill(f, QuestText) end)
+			ns.ScriptOnce(panel, "OnShow", function() Refill(f, QuestText) end, KEY)
 		end
 	end
 	for _, n in ipairs({ "QuestDetailScrollFrame", "QuestRewardScrollFrame", "QuestProgressScrollFrame", "QuestGreetingScrollFrame" }) do
 		if Usable(_G[n]) then Kit.Inset(_G[n]) end
 	end
 	ns.Words(_G.QuestNpcNameFrame, 1)
-	if not questHooked then
-		questHooked = true
-		for _, fn in ipairs({ "QuestFrameGreetingPanel_OnShow", "QuestInfo_ShowRewards", "QuestFrameProgressItems_Update" }) do
-			if type(_G[fn]) == "function" then hooksecurefunc(fn, function() Refill(f, QuestText) end) end
-		end
-		if type(_G.QuestInfoItem_OnClick) == "function" then
-			hooksecurefunc("QuestInfoItem_OnClick", function() Refill(f, PaintPicks) end)
-		end
-		if type(_G.QuestInfo_Display) == "function" then
-			hooksecurefunc("QuestInfo_Display", function(_, parent)
-				if ns.Kit and Usable(parent) and not InQuestWindows(parent) then Guard(QuestTextBack, ns.Kit) end
-			end)
-		end
+	for _, fn in ipairs({ "QuestFrameGreetingPanel_OnShow", "QuestInfo_ShowRewards", "QuestFrameProgressItems_Update" }) do
+		if type(_G[fn]) == "function" then ns.HookOnce(nil, fn, function() Refill(f, QuestText) end, KEY) end
+	end
+	if type(_G.QuestInfoItem_OnClick) == "function" then
+		ns.HookOnce(nil, "QuestInfoItem_OnClick", function() Refill(f, PaintPicks) end, KEY)
+	end
+	if type(_G.QuestInfo_Display) == "function" then
+		ns.HookOnce(nil, "QuestInfo_Display", function(_, parent)
+			if ns.Kit and Usable(parent) and not InQuestWindows(parent) then Guard(QuestTextBack, ns.Kit) end
+		end, KEY)
 	end
 	if Controls() then ns.Walk(Kit, f, nil, function() QuestText(Kit) end) end
 	QuestText(Kit)
@@ -611,7 +607,7 @@ Fallback(Named("MerchantFrame"), VendorOwned, function(f, Kit)
 	Font(Kit, _G.MerchantPageText)
 	MerchantFill(Kit)
 	for _, fn in ipairs({ "MerchantFrame_Update", "MerchantFrame_UpdateCurrencies" }) do
-		if type(_G[fn]) == "function" then hooksecurefunc(fn, function() Refill(f, MerchantFill) end) end
+		if type(_G[fn]) == "function" then ns.HookOnce(nil, fn, function() Refill(f, MerchantFill) end, KEY) end
 	end
 	if Controls() then ns.Walk(Kit, f, nil, function() MerchantFill(Kit) end) end
 end, function(_, Kit) MerchantFill(Kit) end)
@@ -652,7 +648,6 @@ local function TrainerBadge(Kit, f)
 	if Usable(dd) and Usable(dd.ResetButton) and Controls() then Kit.ResetBadge(dd.ResetButton) end
 end
 
-local trainerHooked = false
 Fallback(Named("ClassTrainerFrame"), function() return TrainerOwned() or TrainerSkin() end, function(f, Kit)
 	Kit.Window(f)
 	if Usable(f.bottomInset) then Kit.Inset(f.bottomInset) end
@@ -661,9 +656,8 @@ Fallback(Named("ClassTrainerFrame"), function() return TrainerOwned() or Trainer
 		TrainerBadge(Kit, f)
 		TrainerRow(Kit, f.skillStepButton)
 		Kit.EachRow(f.ScrollBox, function(r) TrainerRow(Kit, r) end, "AddonSkinsTrainer")
-		if not trainerHooked and type(_G.ClassTrainerFrame_InitServiceButton) == "function" then
-			trainerHooked = true
-			hooksecurefunc("ClassTrainerFrame_InitServiceButton", function(b) Kit.RepaintRow(b) end)
+		if type(_G.ClassTrainerFrame_InitServiceButton) == "function" then
+			ns.HookOnce(nil, "ClassTrainerFrame_InitServiceButton", function(b) Kit.RepaintRow(b) end, KEY)
 		end
 		ns.Walk(Kit, f, { rows = false })
 	end
@@ -732,7 +726,7 @@ Fallback(Named("MailFrame"), MailOwned, function(f, Kit)
 			if Usable(inbox.NextPageButton) then Kit.PageButton(inbox.NextPageButton, "right") end
 		end
 		if type(inbox.Update) == "function" then
-			hooksecurefunc(inbox, "Update", function() Refill(f, InboxFill) end)
+			ns.HookOnce(inbox, "Update", function() Refill(f, InboxFill) end, KEY)
 		end
 	end
 	local send = _G.SendMailFrame
@@ -742,7 +736,7 @@ Fallback(Named("MailFrame"), MailOwned, function(f, Kit)
 		if Usable(_G.SendMailMoneyBg) then Kit.Strip(_G.SendMailMoneyBg) end
 		if Usable(_G.SendMailMoneyInset) then Kit.Inset(_G.SendMailMoneyInset) end
 		if type(_G.SendMailFrame_Update) == "function" then
-			hooksecurefunc("SendMailFrame_Update", function() Refill(f, SendFill) end)
+			ns.HookOnce(nil, "SendMailFrame_Update", function() Refill(f, SendFill) end, KEY)
 		end
 		Font(Kit, _G.SendMailBodyEditBox)
 	end
@@ -778,7 +772,7 @@ Fallback(Named("OpenMailFrame"), MailOwned, function(f, Kit)
 	Kit.Window(f)
 	if Usable(_G.OpenMailScrollFrame) then Kit.Inset(_G.OpenMailScrollFrame) end
 	if type(f.Update) == "function" then
-		hooksecurefunc(f, "Update", function() Refill(f, LetterFill) end)
+		ns.HookOnce(f, "Update", function() Refill(f, LetterFill) end, KEY)
 	end
 	LetterFill(Kit)
 	if Controls() then ns.Walk(Kit, f, nil, function() LetterFill(Kit) end) end
@@ -848,7 +842,7 @@ Fallback(Named("SocialUIFrame"), SocialOwned, function(f, Kit)
 	end
 	SocialParts(Kit, f)
 	if type(f.RefreshTabs) == "function" then
-		hooksecurefunc(f, "RefreshTabs", function() Refill(f, function(K) SocialParts(K, f) ns.SideTilesPaintSoon() end) end)
+		ns.HookOnce(f, "RefreshTabs", function() Refill(f, function(K) SocialParts(K, f) ns.SideTilesPaintSoon() end) end, KEY)
 	end
 	if Controls() then ns.Walk(Kit, f, { skip = skip }, function() SocialParts(Kit, f) end) end
 end)
@@ -963,7 +957,7 @@ local function Bag(Kit, f)
 	if Usable(f.MoneyFrame) and Usable(f.MoneyFrame.Border) then Kit.Strip(f.MoneyFrame.Border) end
 	BagItems(Kit, f)
 	if type(f.UpdateItemSlots) == "function" then
-		hooksecurefunc(f, "UpdateItemSlots", function(self)
+		ns.HookOnce(f, "UpdateItemSlots", function(self)
 			if not On() or not ns.Kit or not live[self] then return end
 			if InCombatLockdown() then
 				-- (One wait per bag, however many times it refills in the fight.)
@@ -974,7 +968,7 @@ local function Bag(Kit, f)
 			else
 				BagItems(ns.Kit, self)
 			end
-		end)
+		end, KEY)
 	end
 	if Controls() then
 		if f == _G.ContainerFrame1 and Usable(_G.BagItemAutoSortButton) and Once(_G.BagItemAutoSortButton) then
@@ -1053,12 +1047,12 @@ Fallback(Named("BankFrame"), BagsOwned, function(f, Kit)
 	if Usable(panel) then
 		for _, fn in ipairs({ "GenerateItemSlotsForSelectedTab", "RefreshBankTabs", "SelectTab" }) do
 			if type(panel[fn]) == "function" then
-				hooksecurefunc(panel, fn, function() Refill(f, function(K) BankParts(K, f) end) end)
+				ns.HookOnce(panel, fn, function() Refill(f, function(K) BankParts(K, f) end) end, KEY)
 			end
 		end
 	end
 	if type(f.RefreshPageTabs) == "function" then
-		hooksecurefunc(f, "RefreshPageTabs", function() Refill(f, function(K) BankParts(K, f) end) end)
+		ns.HookOnce(f, "RefreshPageTabs", function() Refill(f, function(K) BankParts(K, f) end) end, KEY)
 	end
 	BankParts(Kit, f)
 	if Controls() then
@@ -1095,7 +1089,7 @@ local function TrackerHeader(Kit, header)
 			local function turn(collapsed) chevron:SetRotation(collapsed and Kit.ROTATION.right or Kit.ROTATION.down) end
 			turn(Collapsed(header:GetParent()))
 			if type(header.SetCollapsed) == "function" then
-				hooksecurefunc(header, "SetCollapsed", function(_, collapsed) turn(collapsed == true) end)
+				ns.HookOnce(header, "SetCollapsed", function(_, collapsed) turn(collapsed == true) end, KEY)
 			end
 		end
 	end
@@ -1115,7 +1109,7 @@ Fallback(Named("ObjectiveTrackerFrame"), TrackerOwned, function(f, Kit)
 	-- Modules are added as the tracker sets itself up and as content appears (a scenario, a
 	-- tracked recipe): looked over after each update, out of combat (each header once).
 	if type(f.Update) == "function" then
-		hooksecurefunc(f, "Update", function() Refill(f, function(K) TrackerHeaders(K, f) end) end)
+		ns.HookOnce(f, "Update", function() Refill(f, function(K) TrackerHeaders(K, f) end) end, KEY)
 	end
 end, function(f, Kit) TrackerHeaders(Kit, f) end)
 

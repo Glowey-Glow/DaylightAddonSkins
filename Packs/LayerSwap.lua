@@ -28,6 +28,8 @@
 --     Its background keeps LayerSwap's own darkness setting. It can fade out like DaylightUI's
 --     minimap buttons (a choice on this addon's page): shown only while the mouse is over the
 --     minimap or the bar, and while you drag it or one of its menus is open.
+--   * Its settings menu gets one row of ours at the bottom, "Layer button: Always / On hover / Off"
+--     (Shift + click, like its own switches): the minimap button's setting on this addon's page.
 --   * Its options page (Options, AddOns, LayerSwap): DaylightUI's switches, buttons and text inks
 --     (through Kit.Auto, its Open the panel and Reset to defaults buttons too), its sliders (two
 --     share a row) as a thin track with the accent fill and a round knob. Its switches' names and
@@ -46,7 +48,7 @@
 -- strength), its LibDBIcon minimap button (DaylightUI's drawer has it), and what's the game's or
 -- DaylightUI's: the tooltips over its rows (the game tooltip), its lines in chat and the chat box
 -- it fills in for a request, the party invite popup, the Who list it reads quietly.
-local _, ns = ...
+local ADDON, ns = ...
 if not ns.ok then return end
 local L = ns.L
 
@@ -56,13 +58,13 @@ ns.Target(KEY, "LayerSwap", { window = true, controls = true, text = true, shado
 	font = "daylight", defaults = { dock = "always", miniFade = "always" }, extraTab = L["Minimap"],
 	extra = function(at)
 		return {
-			{ label = L["Minimap button"], items = {
-				{ type = "dropdown", key = at .. "dock", label = L["Layer button on the minimap"],
-				  values = { always = L["Always"], hover = L["On hover"], off = L["Off"] },
-				  desc = L["A \"Layer: B\" button in the bottom-left corner of DaylightUI's minimap: always shown, only with the mouse over the map (On hover), or off. Left-click opens LayerSwap's panel, right-click its layer menu, shift + right-click its settings. LayerSwap's own mini bar can be turned off in its options (Mini bar)."] },
-				{ type = "dropdown", key = at .. "miniFade", label = L["LayerSwap's mini bar"],
-				  values = { always = L["Always"], hover = L["On hover"] },
-				  desc = L["LayerSwap's own mini bar (its layer and hosting line): always shown, or only while the mouse is over the minimap or the bar (On hover), fading in and out like DaylightUI's minimap buttons."] },
+			{ label = L["Minimap Button"], items = {
+				{ type = "dropdown", key = at .. "dock", label = L["Layer Button on the Minimap"],
+				  values = { always = L["Always"], hover = L["On Hover"], off = L["Off"] },
+				  desc = L["A \"Layer: B\" button in the bottom-left corner of Daylight UI's minimap: always shown, only with the mouse over the map (On Hover), or off. Left-click opens LayerSwap's panel, right-click its layer menu, shift + right-click its settings. LayerSwap's own mini bar can be turned off in its options (Mini bar)."] },
+				{ type = "dropdown", key = at .. "miniFade", label = L["LayerSwap's Mini Bar"],
+				  values = { always = L["Always"], hover = L["On Hover"] },
+				  desc = L["LayerSwap's own mini bar (its layer and hosting line): always shown, or only while the mouse is over the minimap or the bar (On Hover), fading in and out like Daylight UI's minimap buttons."] },
 			} },
 		}
 	end })
@@ -170,10 +172,10 @@ end
 local function PanelButton(b)
 	if not ns.Usable(b) or buttonsDone[b] then return end
 	buttonsDone[b] = true
-	hooksecurefunc(b, "SetDisabledFontObject", ButtonText)
-	hooksecurefunc(b, "SetText", LabelSet)
-	b:HookScript("OnEnable", ButtonText)
-	b:HookScript("OnDisable", ButtonText)
+	ns.HookOnce(b, "SetDisabledFontObject", ButtonText, KEY)
+	ns.HookOnce(b, "SetText", LabelSet, KEY)
+	ns.ScriptOnce(b, "OnEnable", ButtonText, KEY)
+	ns.ScriptOnce(b, "OnDisable", ButtonText, KEY)
 	ButtonText(b)
 	LabelSet(b, b:GetText())
 end
@@ -262,6 +264,7 @@ end
 -- The two menus
 -- ---------------------------------------------------------------------------------------------
 
+local dock, dockText          -- the Layer button on the minimap and its words (made below)
 local rowsDone = setmetatable({}, { __mode = "k" })
 local dockMenu                -- the menu this button opened (kept up while it shows), or nil
 
@@ -282,21 +285,63 @@ local function MenuRows(menu)
 	end
 end
 
+-- A click anywhere else closes its menus (LayerSwap's own only close on Escape or a second
+-- click on what opened them). Listened for only while one is open. A click on the menu, or on
+-- what opens it (the Layer button, its mini bar and logo, its minimap icon), is left to them,
+-- or that click would close the menu and open it again.
+local MENU_NAMES = { "LayerSwapMenu", "LayerSwapSettingsMenu" }
+local OPENERS = { "LayerSwapMini", "LayerSwapMiniLogo", "LibDBIcon10_LayerSwap" }
+local outside = CreateFrame("Frame")
+
+local function Over(f) return f ~= nil and ns.Usable(f) and f:IsShown() and f:IsMouseOver() == true end
+
+local function AnyMenuOpen()
+	for _, name in ipairs(MENU_NAMES) do
+		local m = _G[name]
+		if m and m:IsShown() then return true end
+	end
+	return false
+end
+
+local function OutsideClick()
+	if Over(dock) then return end
+	for _, name in ipairs(OPENERS) do
+		if Over(_G[name]) then return end
+	end
+	for _, name in ipairs(MENU_NAMES) do
+		local m = _G[name]
+		if m and m:IsShown() and not Over(m) then m:Hide() end
+	end
+end
+
+outside:SetScript("OnEvent", function() ns.Guard(OutsideClick) end)
+
+local function OutsideWatch()
+	if AnyMenuOpen() then
+		outside:RegisterEvent("GLOBAL_MOUSE_DOWN")
+	else
+		outside:UnregisterEvent("GLOBAL_MOUSE_DOWN")
+	end
+end
+
 local function MenuShown(menu)
 	if ns.Enabled(KEY) then MenuRows(menu) end
+	OutsideWatch()
 end
 
 local function MenuHidden(menu)
 	if dockMenu == menu then dockMenu = nil end
+	OutsideWatch()
 end
 
 local function Menu(menu)
 	if not ns.Once(menu) then return end
 	KillFlat(menu:GetRegions())
 	ns.Shell(menu, { noBevel = true, borderPx = 2, bgAlpha = 0.95 }, KEY)
-	menu:HookScript("OnShow", MenuShown)
-	menu:HookScript("OnHide", MenuHidden)
+	ns.ScriptOnce(menu, "OnShow", MenuShown, KEY)
+	ns.ScriptOnce(menu, "OnHide", MenuHidden, KEY)
 	MenuRows(menu)
+	OutsideWatch()   -- (dressed while already open: its first opening)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -312,7 +357,10 @@ local function Catch()
 	local p, menu, settings = _G.LayerSwapPanel, _G.LayerSwapMenu, _G.LayerSwapSettingsMenu
 	if ns.Usable(p) then Panel(p, Kit) end
 	if ns.Usable(menu) then Menu(menu) end
-	if ns.Usable(settings) then Menu(settings) end
+	if ns.Usable(settings) then
+		Menu(settings)
+		if ns.DockRowSetup then ns.Guard(ns.DockRowSetup, settings) end
+	end
 	caughtAll = p ~= nil and menu ~= nil and settings ~= nil
 end
 
@@ -327,8 +375,8 @@ local function Mini(m)
 	Font(m.text)
 	Ink(m.text, "TEXT")
 	Font(m.status)
-	m:HookScript("OnClick", Catch)
-	if ns.Usable(m.logo) then m.logo:HookScript("OnClick", Catch) end
+	ns.ScriptOnce(m, "OnClick", Catch, KEY)
+	ns.ScriptOnce(m.logo, "OnClick", Catch, KEY)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -342,7 +390,6 @@ local DOCK_BG = 0.6
 local DOCK_READ = 1
 local function DockBorder(px) return math.max(3, math.floor(px * 0.5 + 0.5)) end
 
-local dock, dockText
 local dockGoal = 1
 local dockLift = 0            -- how far it's raised over the queue eye
 
@@ -560,6 +607,119 @@ local function ApplyDock()
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- The Layer button's row in LayerSwap's settings menu
+-- ---------------------------------------------------------------------------------------------
+-- LayerSwap draws its settings menu's rows itself and sets the menu's height for them on every
+-- drawing (SetHeight in its render): one row of ours goes below its last one, and the height it
+-- sets is raised by one row each time. Shift + click goes Always <-> On hover (Off -> Always),
+-- the same setting as "Layer button on the minimap" on this addon's page.
+local DOCK_PATH = "look." .. KEY .. ".dock"
+local dockRow
+local rowRaising = false
+
+local function DockRowWanted() return ns.Enabled(KEY) and SquareMap() end
+
+local function DockRowText()
+	local v = ns.Setting(DOCK_PATH)
+	local word = (v == "hover" and L["On Hover"]) or (v == "off" and L["Off"]) or L["Always"]
+	local r, g, b = ns.AccentOf(KEY)
+	return string.format(L["Layer Button: %s"],
+		string.format("|cff%02x%02x%02x%s|r", math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5), word))
+end
+
+local function LastRow(menu)
+	local last
+	for _, b in ipairs(type(menu.items) == "table" and menu.items or {}) do
+		if b:IsShown() then last = b end
+	end
+	return last
+end
+
+local function DockRowPlace(menu)
+	if not dockRow then return end
+	local last = LastRow(menu)
+	if not (last and DockRowWanted()) then
+		dockRow:Hide()
+		return
+	end
+	dockRow:ClearAllPoints()
+	dockRow:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, 0)
+	dockRow:SetPoint("TOPRIGHT", last, "BOTTOMRIGHT", 0, 0)
+	dockRow:SetHeight(last:GetHeight())
+	dockRow.label:SetText(DockRowText())
+	Font(dockRow.label)
+	Ink(dockRow.label, "TEXT")
+	dockRow:Show()
+	-- Never cut off: the menu (170 wide, set once by LayerSwap) widens to fit our words.
+	local need = math.ceil(dockRow.label:GetStringWidth() or 0) + 12 + 8
+	if need > (menu:GetWidth() or 0) then menu:SetWidth(need) end
+end
+
+-- LayerSwap's own height (its rows and 8) plus ours, while ours shows.
+local function DockRowRaise(menu, h)
+	if rowRaising or not (dockRow and dockRow:IsShown()) or type(h) ~= "number" then return end
+	rowRaising = true
+	menu:SetHeight(h + dockRow:GetHeight())
+	rowRaising = false
+end
+
+local function DockRowFit(menu)
+	local shown = dockRow and dockRow:IsShown()
+	DockRowPlace(menu)
+	local n = 0
+	for _, b in ipairs(type(menu.items) == "table" and menu.items or {}) do
+		if b:IsShown() then n = n + 1 end
+	end
+	local last = LastRow(menu)
+	if not last then return end
+	local h = n * last:GetHeight() + 8
+	if dockRow:IsShown() then h = h + dockRow:GetHeight() end
+	if shown ~= dockRow:IsShown() or math.abs((menu:GetHeight() or 0) - h) > 0.5 then
+		rowRaising = true
+		menu:SetHeight(h)
+		rowRaising = false
+	end
+end
+
+local function DockRowClick(self)
+	if not IsShiftKeyDown() then return end
+	local v = ns.Setting(DOCK_PATH)
+	local nextV = (v == "always" or v == nil) and "hover" or "always"
+	ns.Guard(function() _G.DaylightUI:Set(ADDON, DOCK_PATH, nextV) end)
+	self.label:SetText(DockRowText())
+end
+
+local function DockRowEnter(self)
+	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+	GameTooltip:SetText(L["Shift + click to switch"], 1, 1, 1)
+	GameTooltip:AddLine(L["The Layer button on Daylight UI's minimap: always shown, or only with the mouse over the map. Off is on this addon's page in Addon Skins."], 0.7, 0.7, 0.7, true)
+	GameTooltip:Show()
+end
+
+local function DockRowSetup(menu)
+	if dockRow then return end
+	dockRow = CreateFrame("Button", nil, menu)
+	dockRow:Hide()
+	local lit = dockRow:CreateTexture(nil, "HIGHLIGHT")
+	lit:SetAllPoints(dockRow)
+	lit:SetColorTexture(1, 1, 1, 0.1)
+	dockRow.label = dockRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	dockRow.label:SetPoint("LEFT", dockRow, "LEFT", 6, 0)
+	dockRow.label:SetPoint("RIGHT", dockRow, "RIGHT", -6, 0)
+	dockRow.label:SetJustifyH("LEFT")
+	dockRow.label:SetWordWrap(false)
+	dockRow:SetScript("OnClick", DockRowClick)
+	dockRow:SetScript("OnEnter", DockRowEnter)
+	dockRow:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	ns.HookOnce(menu, "SetHeight", function(self, h) ns.Guard(DockRowRaise, self, h) end, KEY)
+	-- (A plain HookScript: Menu above already has this menu's OnShow through ns.ScriptOnce.)
+	menu:HookScript("OnShow", function(self) ns.Guard(DockRowFit, self) end)
+	DockRowFit(menu)
+end
+
+ns.DockRowSetup = DockRowSetup
+
+-- ---------------------------------------------------------------------------------------------
 -- The mini bar's fade
 -- ---------------------------------------------------------------------------------------------
 -- On hover, LayerSwap's mini bar shows only while the mouse is over the minimap or the bar (or
@@ -567,7 +727,7 @@ end
 -- buttons do. Looked at when the mouse goes onto or off either one; nothing runs every frame.
 
 local miniGoal = 1
-local miniHooked, mapHooked = false, false
+local mapHooked = false
 
 local function MiniMode()
 	if not ns.Enabled(KEY) then return "always" end
@@ -600,21 +760,20 @@ end
 local function MiniCheckSoon() C_Timer.After(0, function() ns.Guard(MiniCheck) end) end
 
 local function HookMini(mini)
-	if miniHooked or not ns.Usable(mini) then return end
-	miniHooked = true
-	mini:HookScript("OnEnter", MiniCheckSoon)
-	mini:HookScript("OnLeave", MiniCheckSoon)
-	mini:HookScript("OnDragStart", function(self) self.dragging = true; MiniCheckSoon() end)
-	mini:HookScript("OnDragStop", function(self) self.dragging = nil; MiniCheckSoon() end)
-	mini:HookScript("OnShow", function(self)
+	if not ns.Usable(mini) then return end
+	ns.ScriptOnce(mini, "OnEnter", MiniCheckSoon, KEY)
+	ns.ScriptOnce(mini, "OnLeave", MiniCheckSoon, KEY)
+	ns.ScriptOnce(mini, "OnDragStart", function(self) self.dragging = true; MiniCheckSoon() end, KEY)
+	ns.ScriptOnce(mini, "OnDragStop", function(self) self.dragging = nil; MiniCheckSoon() end, KEY)
+	ns.ScriptOnce(mini, "OnShow", function(self)
 		miniGoal = MiniGoal(self)
 		self:SetAlpha(miniGoal)
-	end)
+	end, KEY)
 	for _, name in ipairs({ "LayerSwapMiniLogo" }) do
 		local child = _G[name]
 		if child and ns.Usable(child) then
-			child:HookScript("OnEnter", MiniCheckSoon)
-			child:HookScript("OnLeave", MiniCheckSoon)
+			ns.ScriptOnce(child, "OnEnter", MiniCheckSoon, KEY)
+			ns.ScriptOnce(child, "OnLeave", MiniCheckSoon, KEY)
 		end
 	end
 end
@@ -677,9 +836,9 @@ local function SliderLook(slider)
 	mask:SetAllPoints(s.knob)
 	s.knob:AddMaskTexture(mask)
 	SliderPaint(s)
-	slider:HookScript("OnEnter", function() if ns.Enabled(KEY) then s.knob:SetSize(14, 14) end end)
-	slider:HookScript("OnLeave", function() if ns.Enabled(KEY) then s.knob:SetSize(12, 12) end end)
-	slider:HookScript("OnShow", function() if ns.Enabled(KEY) then SliderPaint(s) end end)
+	ns.ScriptOnce(slider, "OnEnter", function() if ns.Enabled(KEY) then s.knob:SetSize(14, 14) end end, KEY)
+	ns.ScriptOnce(slider, "OnLeave", function() if ns.Enabled(KEY) then s.knob:SetSize(12, 12) end end, KEY)
+	ns.ScriptOnce(slider, "OnShow", function() if ns.Enabled(KEY) then SliderPaint(s) end end, KEY)
 end
 
 local OPTION_GOLD = 0.03
@@ -729,13 +888,13 @@ local function FitOptions(o)
 	if not ns.Enabled(KEY) then return end
 	FitLines(o:GetRegions())
 	-- (Once more a moment later: the game's options window sizes the page as it shows it.)
-	C_Timer.After(0, function() if o:IsVisible() then FitLines(o:GetRegions()) end end)
+	ns.Queue(o, function() if o:IsVisible() then FitLines(o:GetRegions()) end end, KEY)
 end
 
 local function Options(o, Kit)
 	if not ns.Once(o) then return end
 	OptionTexts(o:GetRegions())
-	o:HookScript("OnShow", FitOptions)
+	ns.ScriptOnce(o, "OnShow", FitOptions, KEY)
 	if o:IsVisible() then FitOptions(o) end
 	for _, s in ipairs(type(o.sliders) == "table" and o.sliders or {}) do SliderLook(s) end
 	if ns.Controls(KEY) then
@@ -743,7 +902,7 @@ local function Options(o, Kit)
 	end
 	-- Its "Open the panel" button is one more click that makes the panel.
 	local open = _G.LayerSwapOptionsOpen
-	if ns.Usable(open) and open:GetParent() == o then open:HookScript("OnClick", Catch) end
+	if ns.Usable(open) and open:GetParent() == o then ns.ScriptOnce(open, "OnClick", Catch, KEY) end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -759,14 +918,18 @@ ns.Pack(KEY, nil, function()
 	-- watches stay for the panel LayerSwap opens by itself after a swap).
 	ns.Watch(KEY, "LayerSwapPanel", Panel)
 	ns.Watch(KEY, "LayerSwapMenu", function(menu) Menu(menu) end)
-	ns.Watch(KEY, "LayerSwapSettingsMenu", function(menu) Menu(menu) end)
+	ns.Watch(KEY, "LayerSwapSettingsMenu", function(menu)
+		Menu(menu)
+		ns.Guard(DockRowSetup, menu)
+	end)
 	if type(SlashCmdList) == "table" and type(SlashCmdList.LAYERSWAP) == "function" then
-		hooksecurefunc(SlashCmdList, "LAYERSWAP", Catch)
+		ns.HookOnce(SlashCmdList, "LAYERSWAP", Catch, KEY)
 	end
-	ns.Watch(KEY, "LibDBIcon10_LayerSwap", function(b) b:HookScript("OnClick", Catch) end)
+	ns.Watch(KEY, "LibDBIcon10_LayerSwap", function(b) ns.ScriptOnce(b, "OnClick", Catch, KEY) end)
 	-- The mini bar is made as LayerSwap starts: its fade goes on when it's there.
 	ns.Watch(KEY, "LayerSwapMini", function() ns.Guard(ApplyMiniFade) end)
-	-- A menu of its closing: the bar may fade again.
+	-- A menu of its closing: the bar may fade again. (A plain HookScript: Menu has the menu's
+	-- OnHide through ns.ScriptOnce.)
 	for _, name in ipairs({ "LayerSwapMenu", "LayerSwapSettingsMenu" }) do
 		ns.Watch(KEY, name, function(m) m:HookScript("OnHide", MiniCheckSoon) end)
 	end
@@ -776,12 +939,14 @@ ns.Pack(KEY, nil, function()
 			and (path == "look." .. KEY .. ".dock" or path == KEY) then
 			ns.Guard(ApplyDock)
 			ns.Guard(ApplyMiniFade)
+			local menu = _G.LayerSwapSettingsMenu
+			if dockRow and menu and menu:IsShown() then ns.Guard(DockRowFit, menu) end
 		elseif scope == "DaylightAddonSkins" and path == "look." .. KEY .. ".miniFade" then
 			ns.Guard(ApplyMiniFade)
 		elseif scope == "DaylightAddonSkins" and type(path) == "string"
 			and (path == "followDaylight" or string.sub(path, 1, #KEY + 6) == "look." .. KEY .. ".") then
 			-- Its font, colors or accent picked on its page: the guild entry's title follows.
-			C_Timer.After(0, function() ns.Guard(FillGuildFonts) end)
+			ns.Queue("LayerSwap:guildFonts", FillGuildFonts, KEY)
 		elseif scope == "InfoPanel" then
 			ns.Guard(ApplyDock)
 		end
@@ -800,7 +965,7 @@ ns.Pack(KEY, nil, function()
 	local entering = CreateFrame("Frame")
 	entering:RegisterEvent("PLAYER_ENTERING_WORLD")
 	entering:SetScript("OnEvent", function()
-		C_Timer.After(0, function() ns.Guard(ApplyDock) end)
+		ns.Queue("LayerSwap:dock", ApplyDock, KEY)
 	end)
 	if not dock then C_Timer.After(1, function() ns.Guard(ApplyDock) end) end
 end)
