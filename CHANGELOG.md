@@ -1,5 +1,19 @@
 # DaylightUI Addon Skins
 
+## 1.15.0
+- Checked against today's addon updates, including the addons you may not have installed.
+- No more doubled borders on game windows DaylightUI dresses itself: the Battle.net friend toast, the layering notice and its minimize button, the master looter's item, and the profession window (its side tabs, Create buttons and cards). The Game windows skin now leaves those to DaylightUI while its System skins are on, and still dresses them when they're off.
+- The game's trainer window is dressed again with DaylightUI's NPC module off (neither DaylightUI nor this skin dressed it then).
+- Keep or Toss 2.0: rewritten for its new journal. It switches to Keep or Toss's own Minimal dark look (a new switch on its page; your old look comes back when you turn it off) and gets DaylightUI's window shell and your font. Its tabs, buttons and boxes keep its own colors for now.
+- Polestar 0.4.1: its guide window's own text size works with the skin on. Its new "Completed quest XP" joins the DaylightUI overlaps (DaylightUI's XP bar shows banked quest XP). Its new Arcade window takes the DaylightUI look.
+- Questie 12.10.0: QuestieTrace's consent and export windows are dressed (they took over from Questie's debug offer).
+- Dungeon Journal 2.0.10: the loot filter's slot box, the loot search progress, the resize notes, the Tier Sets page with its Hide menu and the "who drops it" box are dressed.
+- Mastercraft 2.0.5: its new Looking For Crafter banner and panel in the game's Group Finder are dressed.
+- Kerzo Classic Quest Log 6.5.0: its new "classic light parchment" setting no longer draws dark text on the dark skin.
+- Kerzo Quest Expansion 2.1.0: the new Expansion Summary button and language dropdown are dressed.
+- LFG Forever 2.2.0: the new note line on Quests & Zones rows uses your font.
+- LayerSwap: its mini bar can fade like DaylightUI's minimap buttons (LayerSwap's mini bar: Always or On hover, on its page).
+
 ## 1.14.5
 - Looting no longer hitches with addons that mark bag slots (Polestar's upgrade arrows and quest marks, Keep or Toss). Their refresh after each bag change made DaylightUI's bags ask every mark again for every slot of every bag and bank window, closed ones too, in one frame. Now open windows repaint at once and closed ones fill again in the background or as they open, marks included.
 

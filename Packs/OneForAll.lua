@@ -298,7 +298,7 @@ local function C(key, label, daylight, ours, extra)
 end
 local RELOAD = { reload = true }
 
--- (From an audit of OneForAll 6.2.10 against every DaylightUI module. Left out: its NPC tooltip
+-- (From an audit of OneForAll 6.2.10 against every DaylightUI module, checked again for 6.2.11. Left out: its NPC tooltip
 -- quests, which turn themselves off while Questie is loaded; its chat font size, which has no
 -- off to give back.)
 ns.Handover(KEY, {

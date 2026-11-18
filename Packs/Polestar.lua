@@ -135,8 +135,10 @@ end
 
 if type(T.FontSpec) == "function" then
 	local origFontSpec = T.FontSpec
-	T.FontSpec = function(role)
-		local path, size, flags = origFontSpec(role)
+	-- (Its second argument, since 0.4.1: the text size of a window with its own, the guide
+	-- window's ui.guideTextSize through Theme.TextScope. Passed on, or that size is lost.)
+	T.FontSpec = function(role, ...)
+		local path, size, flags = origFontSpec(role, ...)
 		if not ns.PlainText(KEY) and On() then return ns.FontFor(KEY, path, size, flags) end
 		return path, size, flags
 	end
@@ -444,10 +446,11 @@ ns.me.On("SettingChanged", function(scope, path)
 end)
 
 -- ---------------------------------------------------------------------------------------------
--- Hand-over: its quality-of-life switches DaylightUI also has (Polestar 0.4.0.1, QoL/QoL.lua).
+-- Hand-over: its quality-of-life switches DaylightUI also has (Polestar 0.4.1, QoL/QoL.lua).
 -- Its auto accept and turn in of the guide's quests too (DaylightUI's take every quest, the
--- guide's among them). Left out: its other guide-only work (the step's gossip, target list, route
--- vendors, Restock), which DaylightUI has no copy of. Its settings
+-- guide's among them), and (0.4.1) its finished quests' XP on the game's XP bar, which DaylightUI's
+-- own XP bar shows while it hides the game's. Left out: its other guide-only work (the step's
+-- gossip, target list, route vendors, Restock), which DaylightUI has no copy of. Its settings
 -- are per Polestar profile, so a handed-over value follows the profile in use.
 -- ---------------------------------------------------------------------------------------------
 
@@ -456,6 +459,7 @@ if type(P.Get) == "function" and type(P.Set) == "function" then
 	local PATH = {
 		sellJunk = "qol.sellJunk", autoRepair = "qol.autoRepair", fastLoot = "qol.fastLoot",
 		skipGossip = "qol.skipGossip", hideErrors = "qol.hideErrors", flightAutoOpen = "qol.flightAutoOpen",
+		questXPOverlay = "qol.questXPOverlay",
 		autoAccept = "behavior.autoAccept", autoTurnin = "behavior.autoTurnin",
 	}
 	ns.Handover(KEY, {
@@ -484,6 +488,9 @@ if type(P.Get) == "function" and type(P.Set) == "function" then
 			{ key = "flightAutoOpen", label = L["Open the flight map at once"],
 			  daylight = ns.In(L["its NPC window and skip-gossip"], "Quality of Life"),
 			  ours = function() return has("NPC", "enabled") or has("QoL", "skipGossip") end },
+			{ key = "questXPOverlay", label = L["Quest XP on the game's experience bar"],
+			  daylight = ns.In(L["its experience bar with banked quest XP"], "Info Panel"),
+			  ours = function() return has("InfoPanel", "xp.enabled") end },
 		},
 	})
 end

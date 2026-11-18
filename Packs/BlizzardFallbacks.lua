@@ -96,6 +96,8 @@ local function NpcSkin() return ns.DaylightDressesGame("npc") end
 local function NpcOwned() return Flag("npcOwnWindow") or DialogueOwns() or NpcSkin() end
 local function VendorOwned() return Flag("npcOwnVendor") or Flag("vendorMogul") or MogulOwns("Vendor") or NpcSkin() end
 local function TrainerOwned() return Flag("npcOwnTrainer") end
+-- DaylightUI's trainer skin only runs with its NPC module there (DaylightUI.Npc); without it, ours.
+local function TrainerSkin() return NpcSkin() and type(DUI) == "table" and type(DUI.Npc) == "table" end
 local function MailOwned()
 	return Flag("mailOwnWindow") or Flag("mailMogul") or MogulOwns("Mail") or ns.DaylightDressesGame("social")
 end
@@ -651,7 +653,7 @@ local function TrainerBadge(Kit, f)
 end
 
 local trainerHooked = false
-Fallback(Named("ClassTrainerFrame"), function() return TrainerOwned() or NpcSkin() end, function(f, Kit)
+Fallback(Named("ClassTrainerFrame"), function() return TrainerOwned() or TrainerSkin() end, function(f, Kit)
 	Kit.Window(f)
 	if Usable(f.bottomInset) then Kit.Inset(f.bottomInset) end
 	if Controls() then
@@ -670,7 +672,7 @@ end)
 -- Lent by DaylightUI's NPC window for Beast Training (or, from DaylightUI 1.8.4, the game's trainer
 -- picked over DaylightUI's): DaylightUI's Window Skins dress the window, all but the filter's
 -- reset badge.
-Fallback(Named("ClassTrainerFrame"), function() return not (TrainerOwned() or NpcSkin()) end, function(f, Kit)
+Fallback(Named("ClassTrainerFrame"), function() return not (TrainerOwned() or TrainerSkin()) end, function(f, Kit)
 	TrainerBadge(Kit, f)
 end)
 

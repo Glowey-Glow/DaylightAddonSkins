@@ -8,11 +8,11 @@
 --     but only while DaylightUI's own System skins, which dress it, are off.
 --   Color picker (ColorPickerFrame; the wheel, value and alpha bars and the two swatches stay) and
 --     the opacity panel (OpacityFrame: the zone map's and the chat windows' "Opacity").
---   Alert toasts other than DaylightUI's loot and money toasts (and, from DaylightUI 1.8.3, its
---     new recipe toast while its System skins are on): achievements, criteria, recipes,
---     honor, pets / mounts / toys, dungeon and scenario completion, guild and the rest the game
---     sends through AlertFrame_ShowNewAlert. Icons, an item's quality ring, the achievement
---     shield and points, a guild's tabard and a dig site's race stay.
+--   Alert toasts other than DaylightUI's loot and money toasts (and, while its System skins are
+--     on, its new recipe toast (from DaylightUI 1.8.3), the Battle.net toast and the layering
+--     notice): achievements, criteria, recipes, honor, pets / mounts / toys, dungeon and scenario
+--     completion, guild and the rest the game sends through AlertFrame_ShowNewAlert. Icons, an
+--     item's quality ring, the achievement shield and points, a guild's tabard and a dig site's race stay.
 --   Zone map (Shift-M): a DaylightUI border just above the map, its X and its tab. The map, its
 --     pins and whatever other addons draw on it stay.
 --   Chat settings (ChatConfigFrame: its chat-window tabs, category list, every panel's checkbox
@@ -746,6 +746,15 @@ local function DressToast(f)
 	-- (A loot toast without its queue is still a loot toast.)
 	if (f.queue ~= nil and toastSkip[f.queue]) or f.lootItem ~= nil then return end
 	if f.queue ~= nil and toastDaylight[f.queue] and ns.DaylightHas("Skins", "packs.system") then return end
+	-- The Battle.net toast (BNToastFrame, a contained alert shown through AlertFrame_ShowNewAlert):
+	-- DaylightUI's System skins dress it themselves; a second outline here drew a border in a border.
+	if f == _G.BNToastFrame and ns.DaylightDressesGame("system") then return end
+	-- The layering notice and its minimize button (Blizzard_SocialToast: ShardTransferImminentFrame
+	-- and ShardTransferImminentMinimizeButton, both contained alerts shown the same way): DaylightUI's
+	-- System skins dress them too ("layering": the window look, the button a small control with a
+	-- chevron). Ours drew a second box round the notice and a box round the button.
+	if (f == _G.ShardTransferImminentFrame or f == _G.ShardTransferImminentMinimizeButton)
+		and ns.DaylightDressesGame("system") then return end
 	-- Once a show: AddAlertFrame calls AlertFrame_ShowNewAlert, both hooked, in the same moment.
 	-- (Kept in a table of ours: nothing is written on the game's frames.)
 	local now = GetTime()
@@ -1339,10 +1348,16 @@ Entry("MasterLooterFrame", function(f, Kit)
 	Quiet(Kit, f)
 	local item = f.Item
 	if Usable(item) then
-		for _, k in ipairs({ "NameBorderLeft", "NameBorderRight", "NameBorderMid", "IconBorder" }) do
+		for _, k in ipairs({ "NameBorderLeft", "NameBorderRight", "NameBorderMid" }) do
 			if IsTexture(item[k]) then Kit.Hide(item[k]) end
 		end
-		if IsTexture(item.Icon) then Kit.Outline(item.Icon, ICON_PAD, "outline") end
+		-- (This window sits in the loot window, LootFrame, which DaylightUI's System skins walk: their
+		-- walk gives the item, an IconBorder over an Icon, its own quality edge (Kit.Item), and a
+		-- second outline here drew a ring in a ring. Ours only while those skins are off.)
+		if not ns.DaylightDressesGame("system") then
+			if IsTexture(item.IconBorder) then Kit.Hide(item.IconBorder) end
+			if IsTexture(item.Icon) then Kit.Outline(item.Icon, ICON_PAD, "outline") end
+		end
 	end
 end)
 

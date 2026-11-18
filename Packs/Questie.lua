@@ -768,7 +768,8 @@ end)
 -- ---------------------------------------------------------------------------------------------
 -- The debug offer (only with its advanced debug option on): a chat link opens a small window with
 -- the game's dialog backdrop, a panel button and an input box. Each offer makes a new frame under
--- the same name, so each one is dressed as its link opens it.
+-- the same name, so each one is dressed as its link opens it. (Questie 12.10.0 removed it in favor
+-- of QuestieTrace, below; kept for older Questies.)
 -- ---------------------------------------------------------------------------------------------
 
 local DebugOffer = Module("QuestieDebugOffer")
@@ -779,6 +780,54 @@ if DebugOffer and type(DebugOffer.ShowOffer) == "function" then
 		if ns.Usable(frame) and ns.Kit then ns.Guard(ns.PlainWindow, frame, nil, KEY) end
 	end)
 end
+
+-- ---------------------------------------------------------------------------------------------
+-- QuestieTrace (comes with Questie, its own addon; the data sharing that took over from the debug
+-- offer): its consent question, a copy of the game's dialog (diamond border, dark ground, two
+-- dialog-art buttons, made at load and shown once until answered), and its export window (made on
+-- first open: flat color textures, two input boxes, two panel buttons). Both on the DaylightUI
+-- shell; the consent alert icon and the export window's stat icons stay.
+-- ---------------------------------------------------------------------------------------------
+
+-- The consent frame is made as QuestieTrace loads, so it's found at login; its export window is
+-- then looked for right as QuestieTraceCore.ShowExportWindow makes and shows it.
+local traceHooked = false
+ns.Watch(KEY, "QuestieTraceConsentFrame", function(frame)
+	local core = _G.QuestieTraceCore
+	if not traceHooked and type(core) == "table" and type(core.ShowExportWindow) == "function" then
+		traceHooked = true
+		hooksecurefunc(core, "ShowExportWindow", function() ns.WatchNow() end)
+	end
+	if not ns.Once(frame) then return end
+	ns.NoBackdrop(frame)
+	ns.Kill(frame.Background)
+	ns.Kill(frame.Border)
+	ns.Shell(frame, { window = true }, KEY)
+	local Kit = ns.Kit
+	if Kit and ns.Controls(KEY) then
+		for _, b in ipairs({ frame.AcceptButton, frame.DeclineButton }) do
+			if ns.Usable(b) then ns.Guard(Kit.Button, b) end
+		end
+	end
+	ns.DressOnShow(frame, nil, nil, KEY)
+end)
+
+ns.Watch(KEY, "QuestieTraceExportFrame", function(frame)
+	if ns.Usable(frame) and not frame.daylightTrace then
+		frame.daylightTrace = true
+		for _, region in ipairs({ frame:GetRegions() }) do
+			if ns.Usable(region) then
+				local kind = region:GetObjectType()
+				if kind == "Texture" then
+					ns.Kill(region)
+				elseif kind == "FontString" and region:GetFontObject() == GameFontNormal then
+					Ink(region, "VALUE")   -- its title
+				end
+			end
+		end
+	end
+	ns.PlainWindow(frame, nil, KEY)
+end)
 
 -- Loaded: the world map's corner buttons it adds (its Krowi button) lose the gold ring, the same
 -- shared pass the OpenMap and RareScanner packs ask for, now asked for by this pack too.

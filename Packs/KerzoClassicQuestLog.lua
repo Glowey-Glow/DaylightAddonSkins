@@ -1008,6 +1008,17 @@ local function Setup(kql, Kit)
 	if not On() then return end
 	FollowFonts(kql)
 	KeepDark(kql)
+	-- 6.5.0's "light parchment in quest details on dark themes" would paint the detail panel's
+	-- words in its dark parchment inks over our dark well (its parchment is erased here): while
+	-- skinned its test answers "dark" whatever that switch says (the switch itself is left as set,
+	-- so it's back as soon as the skin is off).
+	local darkDetail = kql.EsFondoOscuroDetalle
+	if type(darkDetail) == "function" then
+		kql.EsFondoOscuroDetalle = function(self, ...)
+			if On() then return true end
+			return darkDetail(self, ...)
+		end
+	end
 	-- A theme picked in its settings is remembered as the one to give back (its dropdown reloads
 	-- the UI straight after, so this is the only moment to see it); Dark again after.
 	Hook(kql, "FijarTemaVisual", function(_, theme)

@@ -25,7 +25,9 @@
 --   * Its layer menu and settings menu (LayerSwapMenu, LayerSwapSettingsMenu): DaylightUI's menu
 --     shell, rows in your font and the text ink, ages in the dim ink. Grayed rows stay grayed.
 --   * Its mini bar (LayerSwapMini): a thin DaylightUI edge round it, your font and the text ink.
---     Its background keeps LayerSwap's own darkness setting.
+--     Its background keeps LayerSwap's own darkness setting. It can fade out like DaylightUI's
+--     minimap buttons (a choice on this addon's page): shown only while the mouse is over the
+--     minimap or the bar, and while you drag it or one of its menus is open.
 --   * Its options page (Options, AddOns, LayerSwap): DaylightUI's switches, buttons and text inks
 --     (through Kit.Auto, its Open the panel and Reset to defaults buttons too), its sliders (two
 --     share a row) as a thin track with the accent fill and a round knob. Its switches' names and
@@ -51,13 +53,16 @@ local L = ns.L
 local KEY = "LayerSwap"
 
 ns.Target(KEY, "LayerSwap", { window = true, controls = true, text = true, shadow = true, colors = true,
-	font = "daylight", defaults = { dock = "always" }, extraTab = L["Minimap"],
+	font = "daylight", defaults = { dock = "always", miniFade = "always" }, extraTab = L["Minimap"],
 	extra = function(at)
 		return {
 			{ label = L["Minimap button"], items = {
 				{ type = "dropdown", key = at .. "dock", label = L["Layer button on the minimap"],
 				  values = { always = L["Always"], hover = L["On hover"], off = L["Off"] },
 				  desc = L["A \"Layer: B\" button in the bottom-left corner of DaylightUI's minimap: always shown, only with the mouse over the map (On hover), or off. Left-click opens LayerSwap's panel, right-click its layer menu, shift + right-click its settings. LayerSwap's own mini bar can be turned off in its options (Mini bar)."] },
+				{ type = "dropdown", key = at .. "miniFade", label = L["LayerSwap's mini bar"],
+				  values = { always = L["Always"], hover = L["On hover"] },
+				  desc = L["LayerSwap's own mini bar (its layer and hosting line): always shown, or only while the mouse is over the minimap or the bar (On hover), fading in and out like DaylightUI's minimap buttons."] },
 			} },
 		}
 	end })
@@ -555,6 +560,80 @@ local function ApplyDock()
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- The mini bar's fade
+-- ---------------------------------------------------------------------------------------------
+-- On hover, LayerSwap's mini bar shows only while the mouse is over the minimap or the bar (or
+-- you're dragging it, or one of its menus is open), fading in and out as DaylightUI's minimap
+-- buttons do. Looked at when the mouse goes onto or off either one; nothing runs every frame.
+
+local miniGoal = 1
+local miniHooked, mapHooked = false, false
+
+local function MiniMode()
+	if not ns.Enabled(KEY) then return "always" end
+	local v = ns.Setting("look." .. KEY .. ".miniFade")
+	return v == "hover" and "hover" or "always"
+end
+
+local function MenuOpen()
+	for _, name in ipairs({ "LayerSwapMenu", "LayerSwapSettingsMenu" }) do
+		local m = _G[name]
+		if m and m.IsShown and m:IsShown() then return true end
+	end
+	return false
+end
+
+local function MiniGoal(mini)
+	if MiniMode() == "always" or mini.dragging or MenuOpen() then return 1 end
+	local mm = _G.Minimap
+	return ((mm and mm:IsMouseOver() == true) or mini:IsMouseOver() == true) and 1 or 0
+end
+
+local function MiniCheck()
+	local mini = _G.LayerSwapMini
+	if not (mini and ns.Usable(mini)) then return end
+	local goal = MiniGoal(mini)
+	if goal == miniGoal then return end
+	miniGoal = goal
+	if mini:IsShown() then API.Fade(mini, goal, "FAST") else mini:SetAlpha(goal) end
+end
+local function MiniCheckSoon() C_Timer.After(0, function() ns.Guard(MiniCheck) end) end
+
+local function HookMini(mini)
+	if miniHooked or not ns.Usable(mini) then return end
+	miniHooked = true
+	mini:HookScript("OnEnter", MiniCheckSoon)
+	mini:HookScript("OnLeave", MiniCheckSoon)
+	mini:HookScript("OnDragStart", function(self) self.dragging = true; MiniCheckSoon() end)
+	mini:HookScript("OnDragStop", function(self) self.dragging = nil; MiniCheckSoon() end)
+	mini:HookScript("OnShow", function(self)
+		miniGoal = MiniGoal(self)
+		self:SetAlpha(miniGoal)
+	end)
+	for _, name in ipairs({ "LayerSwapMiniLogo" }) do
+		local child = _G[name]
+		if child and ns.Usable(child) then
+			child:HookScript("OnEnter", MiniCheckSoon)
+			child:HookScript("OnLeave", MiniCheckSoon)
+		end
+	end
+end
+
+local function ApplyMiniFade()
+	local mini = _G.LayerSwapMini
+	if not mini then return end
+	HookMini(mini)
+	local mm = _G.Minimap
+	if mm and not mapHooked and MiniMode() == "hover" then
+		mapHooked = true
+		mm:HookScript("OnEnter", MiniCheckSoon)
+		mm:HookScript("OnLeave", MiniCheckSoon)
+	end
+	miniGoal = MiniGoal(mini)
+	mini:SetAlpha(miniGoal)
+end
+
+-- ---------------------------------------------------------------------------------------------
 -- The options page
 -- ---------------------------------------------------------------------------------------------
 
@@ -685,11 +764,20 @@ ns.Pack(KEY, nil, function()
 		hooksecurefunc(SlashCmdList, "LAYERSWAP", Catch)
 	end
 	ns.Watch(KEY, "LibDBIcon10_LayerSwap", function(b) b:HookScript("OnClick", Catch) end)
+	-- The mini bar is made as LayerSwap starts: its fade goes on when it's there.
+	ns.Watch(KEY, "LayerSwapMini", function() ns.Guard(ApplyMiniFade) end)
+	-- A menu of its closing: the bar may fade again.
+	for _, name in ipairs({ "LayerSwapMenu", "LayerSwapSettingsMenu" }) do
+		ns.Watch(KEY, name, function(m) m:HookScript("OnHide", MiniCheckSoon) end)
+	end
 	-- The button follows its setting as it's changed, and the accent and fonts as they change.
 	ns.me.On("SettingChanged", function(scope, path)
 		if scope == "DaylightAddonSkins" and type(path) == "string"
 			and (path == "look." .. KEY .. ".dock" or path == KEY) then
 			ns.Guard(ApplyDock)
+			ns.Guard(ApplyMiniFade)
+		elseif scope == "DaylightAddonSkins" and path == "look." .. KEY .. ".miniFade" then
+			ns.Guard(ApplyMiniFade)
 		elseif scope == "DaylightAddonSkins" and type(path) == "string"
 			and (path == "followDaylight" or string.sub(path, 1, #KEY + 6) == "look." .. KEY .. ".") then
 			-- Its font, colors or accent picked on its page: the guild entry's title follows.

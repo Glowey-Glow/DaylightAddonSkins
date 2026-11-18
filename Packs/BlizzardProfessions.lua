@@ -27,6 +27,10 @@
 -- Not on this client (its Camelot window has no tab bar): the Specializations and Crafting
 -- Orders tabs, the maximize / minimize button (so the minimized view's search list never shows).
 -- Tooltips, the right-click and filter menus and the unlearn popup are DaylightUI's own skins.
+-- While DaylightUI's System skins are on (1.9.2 and later) they dress this window themselves, so
+-- then only what they pass over is dressed here: the guild's crafters list, the output log, the
+-- minimized search results and the quality picker, plus the reagent picker and the recipe link's
+-- window as always.
 --
 -- Taint: ProfessionsFrame is a UI panel the game shows from secure code, and its OnShow casts a
 -- profession spell (K / the micro menu: ProfessionsMixin:OnShow -> RecastSelectedProfession ->
@@ -1022,11 +1026,34 @@ local function Pass(f)
 	FitTitleSoon(f)
 end
 
+-- DaylightUI's System skins dress this window themselves whenever it shows as itself (their
+-- "professions" skin, there in 1.9.2: the window look, its controls, the side tabs as icon tabs,
+-- Create / Create All / View Crafters as buttons, the book's cards, the output item). Dressed here
+-- too it drew a second outline on every side tab, a second box and hover on those buttons, and so
+-- on. While those skins are on, only the panels they pass over are dressed here.
+local function DaylightDresses()
+	return ns.DaylightAtLeast(1, 9, 2) and ns.DaylightDressesGame("system")
+end
+
+local function DaylightExtras(f)
+	local page = f.CraftingPage
+	if not Usable(page) then return end
+	Guild(page.GuildFrame)
+	OutputLog(page.CraftingOutputLog)
+	Panel(page.MinimizedSearchResults)
+	local form = page.SchematicForm
+	if Usable(form) then Panel(form.QualityDialog) end
+end
+
 local function Dress(f)
 	if not Usable(f) then return end
 	if done[f] then Pass(f) return end
 	-- (Not while it's held out of sight, nor in a fight.)
 	if not On() or InCombatLockdown() or not Really(f) then return end
+	if DaylightDresses() then
+		DaylightExtras(f)
+		return
+	end
 	done[f] = true
 	B.ShellWindow(Kit, f)
 	Kit.Close(f.CloseButton)

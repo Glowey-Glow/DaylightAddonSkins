@@ -20,6 +20,8 @@
 --     plus / minus; the invite, ask-to-join and delist buttons (silver menu buttons) DaylightUI's
 --     buttons, their icons kept. Leader class colors, gray details, the delisted dimming, role
 --     icons and the asked check stay; a name the game left gold (class unknown) in the value ink.
+--     A Quests & Zones listing's details line (2.2.0, after a note icon) stays gray like the
+--     activity line above it, in the window's text look.
 --   * Whisper log rows: the blue hover a faint white wash; class-colored names stay.
 --   * The Player ratings tab (1.5.0): its Recent allies heading and Clear link as the others; its
 --     rows (the blue band and hover) a faint white wash. The stars (the rating itself) and the
@@ -145,6 +147,9 @@ local function ResultRow(row, Kit)
 	Wash(row.Highlight, 0.06)
 	Wash(row.Selected, 0.1)
 	if IsGold(row.Name) then Ink(row.Name, "VALUE") end
+	-- (2.2.0) A Quests & Zones listing's details line, made the first time its row shows one (after
+	-- the window's text look went on): that look (left as is once it has it). Its gray stays.
+	if Kind(row.LFGFNote) == "FontString" and not ns.PlainText(KEY) then ns.FollowFont(row.LFGFNote, KEY) end
 	FlatButton(row.LFGFInvite, Kit)
 	FlatButton(row.LFGFAskToJoin, Kit)
 	if Usable(row.DataDisplay) then FlatButton(row.DataDisplay.DelistButton, Kit) end

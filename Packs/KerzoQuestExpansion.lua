@@ -19,8 +19,8 @@
 --     look with an accent square when on (the game's minimal check art and its additive glow off);
 --     an option's gold name in the label ink (value ink under the mouse, where it went pale gold),
 --     its warm gray line in the text ink; the section headings in the label ink and their bronze
---     rules faint neutral lines; the title's gold color code taken out; its button, the old-style
---     dropdown and the scroll bar DaylightUI's. The dropdown's list is the Game windows pack's.
+--     rules faint neutral lines; the title's gold color code taken out; its two buttons, the
+--     old-style dropdowns (tooltip mode, language) and the scroll bar DaylightUI's. The dropdown's list is the Game windows pack's.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -231,6 +231,9 @@ local function SettingsTexts(panel, Kit)
 	Ink(panel.Subtitulo, "TEXT")
 	Ink(panel.EtiquetaModoTooltip, "LABEL")
 	Ink(panel.DescModoTooltip, "TEXT")
+	-- (2.1.0's language row: its gold label and warm gray line.)
+	Ink(panel.EtiquetaIdioma, "LABEL")
+	Ink(panel.DescIdioma, "TEXT")
 	local content = panel.Contenido
 	if not Usable(content) then return end
 	for _, c in ipairs({ content:GetChildren() }) do
@@ -253,8 +256,13 @@ local function Settings(panel, Kit)
 	if not ns.Once(panel) then return end
 	Quiet(panel.LineaSeparadoraCabecera)
 	if ns.Controls(KEY) then
-		if Usable(panel.BotonConfigTinte) then Kit.Button(panel.BotonConfigTinte) end
-		if ns.OldDropdown and Usable(panel.DropdownModoTooltip) then ns.OldDropdown(panel.DropdownModoTooltip) end
+		-- (2.1.0 added the Expansion Summary button beside the tints one, and the language dropdown.)
+		for _, b in ipairs({ panel.BotonConfigTinte, panel.BotonResumenExp }) do
+			if Usable(b) then Kit.Button(b) end
+		end
+		for _, d in ipairs({ panel.DropdownModoTooltip, panel.DropdownIdioma }) do
+			if ns.OldDropdown and Usable(d) then ns.OldDropdown(d) end
+		end
 		local bar = _G.KQEPanelAjustesScrollScrollBar
 		if Usable(bar) then Kit.ScrollBar(bar) end
 	end
@@ -271,7 +279,8 @@ end
 
 -- Its windows are made, shown and filled in one call: dressed right after it (no undressed first
 -- frames), through its public API, the way Kerzo Classic Quest Log opens them. The watches stay for
--- the settings page's own Tints button, which goes round the API.
+-- the settings page's own Tints and Expansion Summary buttons and its /kqe command, which go round
+-- the API.
 local function OnOpen(name, fn)
 	return function()
 		local f, Kit = _G[name], ns.Kit

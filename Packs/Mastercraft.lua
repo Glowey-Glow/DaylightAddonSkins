@@ -1202,6 +1202,102 @@ local function Profession()
 	if Usable(card) then Piece(card) end
 end
 
+-- Looking For Crafter (2.0.5), in the game's own Group Finder window: only seen when you use the
+-- game's window over DaylightUI's (DaylightUI's Window Skins then dress that window). Its banner
+-- under Custom is made from the game's category banner template, dressed as DaylightUI dresses the
+-- game's own banners there (the cover off, the row outline, its art kept), "BY MASTERCRAFT" in the
+-- label ink. Its panel over the page is made in the game's look (not Mastercraft's paint): its dark
+-- dialog tile and page art off (DaylightUI erases the game's page art there too), its black ground
+-- kept (it hides the game's list under it); the game's buttons and boxes in it DaylightUI's, the
+-- open tab and your crafter status (lit by LockHighlight, whose art is gone) marked by an accent
+-- line, its rows' gold quest-log highlight a soft wash, its gold headings in the label and value
+-- inks. Both are made once, as the Group Finder loads.
+local GAME_GOLD = { GameFontNormal = "LABEL", GameFontNormalLarge = "VALUE" }
+local function GoldInk(fs)
+	if Kind(fs) ~= "FontString" or not Inks() then return end
+	local r, g, b = fs:GetTextColor()
+	if type(r) ~= "number" then return end
+	local role
+	if abs(r - 1) < 0.03 and abs(g - 0.82) < 0.03 and b < 0.05 then
+		role = "LABEL"
+		local obj = fs:GetFontObject()
+		local name = obj and obj.GetName and obj:GetName()
+		if type(name) == "string" then
+			for base, inkRole in pairs(GAME_GOLD) do
+				if name == base or name:find("^MastercraftShopFont" .. base .. "%a*$") then role = inkRole end
+			end
+		end
+	elseif abs(r - 0.78) < 0.02 and abs(g - 0.66) < 0.02 and abs(b - 0.42) < 0.02 then
+		role = "LABEL"   -- (the banner's muted gold "BY MASTERCRAFT")
+	end
+	local c = role and ns.Colors()[role]
+	if c then fs:SetTextColor(c[1], c[2], c[3]) end
+end
+
+local function GoldInks(f, depth)
+	for _, r in ipairs({ f:GetRegions() }) do GoldInk(r) end
+	if depth < 4 then
+		-- (Not into its buttons and boxes: their words are DaylightUI's controls' own.)
+		for _, c in ipairs({ f:GetChildren() }) do
+			local kind = Kind(c)
+			if kind == "Frame" then GoldInks(c, depth + 1) end
+		end
+	end
+end
+
+local function LitMark(b)
+	if not Usable(b) or ours[b] then return end
+	ours[b] = true
+	local line = b:CreateTexture(nil, "OVERLAY")
+	line:SetColorTexture(1, 1, 1, 1)
+	line:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", 3, 1)
+	line:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -3, 1)
+	line:SetHeight(2)
+	line:Hide()
+	hooksecurefunc(b, "LockHighlight", function()
+		if not On() then return end
+		ns.PaintAccent(line, 1, nil, KEY)
+		line:Show()
+	end)
+	hooksecurefunc(b, "UnlockHighlight", function() line:Hide() end)
+end
+
+local function SoftRows(list)
+	if type(list) ~= "table" or type(list.rows) ~= "table" then return end
+	for _, r in ipairs(list.rows) do
+		if Usable(r) and not ours[r] then
+			ours[r] = true
+			local hl = r.GetHighlightTexture and r:GetHighlightTexture()
+			if hl then Kit.Hide(hl) end
+			if Kit.HoverWash then Kit.HoverWash(r, r) end
+		end
+	end
+end
+
+local function LFG()
+	if not On() or not Kit or not ns.Controls(KEY) then return end
+	local banner = _G.MastercraftLFGBanner
+	if Usable(banner) and not ours[banner] then
+		ours[banner] = true
+		Kit.Hide(banner.Cover)
+		local keep = {}
+		if Kind(banner.Icon) == "Texture" then keep[banner.Icon] = true end
+		Kit.Row(banner, keep)
+		Kit.Font(banner.Label)
+		GoldInks(banner, 0)
+	end
+	local p = _G.MastercraftLFGPanel
+	if not Usable(p) or roots[p] or ours[p] then return end
+	ours[p] = true
+	ns.Kill(p.bg)
+	ns.Kill(p.art)
+	for _, b in ipairs(p.tabs or {}) do LitMark(b) end
+	for _, b in ipairs(type(p.prof) == "table" and p.prof.st or {}) do LitMark(b) end
+	SoftRows(type(p.shop) == "table" and p.shop.list)
+	SoftRows(p.list)
+	ns.DressOnShow(p, nil, function(f) GoldInks(f, 0) end, KEY)
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- Wiring
 -- ---------------------------------------------------------------------------------------------
@@ -1239,6 +1335,9 @@ local function Setup(K)
 	events:SetScript("OnEvent", function(_, event, name)
 		if event == "ADDON_LOADED" then
 			if name == "Blizzard_WorldMap" then HookMap() end
+			-- (Its Looking For Crafter banner and panel are made as the Group Finder loads, by its
+			-- own handler of this event, which runs before this one.)
+			if name == "Blizzard_GroupFinder_VanillaStyle" then Guard(LFG) end
 			return
 		end
 		if not On() then return end
@@ -1261,6 +1360,8 @@ local function Setup(K)
 	-- (Both made on a recipe's first pick: looked for by name until then.)
 	ns.Watch(KEY, "MastercraftRecipePanel", function(f) Piece(f) end)
 	ns.Watch(KEY, "MastercraftProfessionButton", function() Profession() end)
+	-- (The Group Finder loaded before this ran: made at its login.)
+	ns.Watch(KEY, "MastercraftLFGPanel", function() LFG() end)
 end
 
 ns.Pack(KEY, "Mastercraft", function(K)
@@ -1280,7 +1381,10 @@ end
 
 -- (From an audit of Mastercraft 2.0.0 against every DaylightUI module, checked again for 2.0.1: its
 -- new Crafters pieces (Notify me, several recipes in one ask, the automatic Busy) have nothing in
--- DaylightUI or the Daylight plugins to overlap. Left out: its fishing
+-- DaylightUI or the Daylight plugins to overlap; checked for 2.0.5: Looking For Crafter sits in
+-- the game's Group Finder, which DaylightUI's own Group Finder window covers by default (nothing
+-- to hand over: it's simply out of sight there), and the next trainer at a profession's cap is
+-- Daylight Recipes' ground. Left out: its fishing
 -- helper's "after the fight" (Daylight Fishing hands that one over itself); its profession window
 -- card, mini guide, shopping list and crafting costs (Daylight Recipes' ground, not DaylightUI's);
 -- its minimap button (DaylightUI's drawer takes it as it is).)

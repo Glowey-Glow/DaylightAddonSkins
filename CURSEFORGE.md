@@ -22,6 +22,12 @@ All pop-up menus (right-click menus and dropdowns, any addon's) and every addon'
 
 ---
 
+## New in 1.15.0
+- **No doubled borders** on game windows DaylightUI now dresses itself (the Battle.net friend toast, the layering notice, the master looter, the profession window). The game's trainer is dressed again with DaylightUI's NPC module off.
+- **Keep or Toss 2.0:** its new journal in its Minimal dark look with DaylightUI's window shell and your font (a switch on its page).
+- **Updates followed:** Polestar 0.4.1 (guide text size, Completed quest XP overlap, Arcade window), Questie 12.10.0 (QuestieTrace's windows), Dungeon Journal 2.0.10, Mastercraft 2.0.5 (Looking For Crafter), Kerzo Classic Quest Log 6.5.0, Kerzo Quest Expansion 2.1.0, LFG Forever 2.2.0.
+- **LayerSwap:** its mini bar can fade in on hover like DaylightUI's minimap buttons.
+
 ## New in 1.14.5
 - **Smoother looting** with addons that mark bag slots (Polestar, Keep or Toss): closed bags and bank no longer repaint every slot after each loot.
 

@@ -49,6 +49,14 @@
 --   * The Loot Filter's "no items match" panel (a popup inside the journal, see Loot Filter): the
 --     window shell, its title in the value ink.
 --   * The one-time update notice it shows after login: the window shell, its button DaylightUI's.
+--   * 2.0.10: the Loot Filter's Armor slot box (beside the armor list) gets the shell like the other
+--     lists, and all of the filter's lists light with a faint white wash, not the gold glow. The
+--     "Searching the loot... 42%" box: the shell, its words in the value ink, its bar DaylightUI's
+--     in the accent. The resize notes (Options > General > Resize): the shell, the text ink, their
+--     glow in the accent, OK DaylightUI's (their yellow arrows stay). The Tier Sets page: its Show
+--     Classes list the shell with a white wash, its Compact view button's glow a wash; the Tier Sets
+--     icon's Hide menu and a piece's "who drops it" box the window shell. The rest of the page
+--     (rows, pieces, quality colors, ticks) is DaylightUI's journal skin's.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -207,13 +215,38 @@ end
 
 local MENUS = { "armor", "weapon", "schoolArrow", "resist" }
 
+-- Its list and menu buttons light up in the game's gold quest-title glow: a faint white wash.
+local washed = setmetatable({}, { __mode = "k" })
+local function WhiteHovers(frame)
+	for _, child in ipairs({ frame:GetChildren() }) do
+		if ns.Usable(child) and child:GetObjectType() == "Button" then
+			local hl = child.GetHighlightTexture and child:GetHighlightTexture()
+			if ns.Usable(hl) and not washed[hl] then
+				washed[hl] = true
+				hl:SetColorTexture(1, 1, 1, 0.06)
+			end
+		end
+	end
+end
+
+-- One of its tick lists (a backdrop box under a button): the shell, its rows' gold glow a wash.
+local function TickMenu(menu)
+	if not ns.Usable(menu) then return end
+	Popup(menu)
+	WhiteHovers(menu)
+end
+
 local function LootFilter(win)
 	if not ns.Usable(win) or not ns.Once(win) then return end
 	local function menus()
 		if not ns.Enabled(KEY) then return end
 		for _, key in ipairs(MENUS) do
 			local b = win[key]
-			if type(b) == "table" and ns.Usable(b.menu) then Popup(b.menu) end
+			if type(b) == "table" then
+				TickMenu(b.menu)
+				-- The Armor list's slot box beside it (2.0.10: Head, Shoulder ... Feet).
+				TickMenu(b.slotMenu)
+			end
 		end
 		if ns.Usable(win.fdjTip) then Popup(win.fdjTip) end
 	end
@@ -237,6 +270,39 @@ local function NoMatch(panel)
 	end)
 end
 
+-- The "Searching the loot... 42%" box over the journal (2.0.10, made the first time a filter with
+-- stats or resistances ticked is shown): the shell like the filter's popup, its gold words in the
+-- value ink, its gold bar DaylightUI's in the accent.
+local function Loading(box, Kit)
+	Popup(box)
+	local bar = box.bar
+	if ns.Controls(KEY) and ns.Usable(bar) and bar:GetObjectType() == "StatusBar" then
+		if ns.Once(bar) then ns.Guard(Kit.StatusBar, bar) end
+		bar:SetStatusBarColor(ns.AccentOf(KEY))
+	end
+	Settle(function()
+		if ns.Enabled(KEY) then Ink(box.text, "VALUE") end
+	end)
+end
+
+-- The "Drag the corners to resize" notes (2.0.10, Options > General > Resize), one by each corner
+-- of the journal and inside it, so DaylightUI's skin walks them and leaves them see-through: the
+-- shell, their white words in the text ink, their OK DaylightUI's. Their flashing gold glow in the
+-- accent; their yellow arrows stay. (Told apart from the journal's other children by the corner and
+-- handle it keeps on each.)
+local function ResizeNotes(frame, Kit)
+	if not ns.Usable(frame) then return end
+	for _, n in ipairs({ frame:GetChildren() }) do
+		if ns.Usable(n) and type(n.corner) == "table" and n.handle and ns.Usable(n.ok) then
+			Popup(n)
+			Ink(n.text, "TEXT")
+			-- (Its OnUpdate sets the glow's alpha every frame, never its color.)
+			if ns.Usable(n.glow) then ns.PaintAccent(n.glow, 1, nil, KEY) end
+			if ns.Controls(KEY) and ns.Once(n.ok) then ns.Guard(Kit.Button, n.ok) end
+		end
+	end
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- Its windows, notes and menus out on the screen: DaylightUI's journal skin never walks them.
 -- Each is dressed once, the first time it's seen.
@@ -258,16 +324,6 @@ local function GoldText(frame)
 		if r:GetObjectType() == "FontString" then
 			local cr, cg, cb = r:GetTextColor()
 			if type(cr) == "number" and cr > 0.95 and cg > 0.74 and cg < 0.86 and cb < 0.4 then Ink(r, "LABEL") end
-		end
-	end
-end
-
--- Its list and menu buttons light up in the game's gold quest-title glow: a faint white wash.
-local function WhiteHovers(frame)
-	for _, child in ipairs({ frame:GetChildren() }) do
-		if ns.Usable(child) and child:GetObjectType() == "Button" then
-			local hl = child.GetHighlightTexture and child:GetHighlightTexture()
-			if ns.Usable(hl) and First(hl) then hl:SetColorTexture(1, 1, 1, 0.06) end
 		end
 	end
 end
@@ -550,9 +606,19 @@ local function SetStrip(strip, owner)
 	end
 end
 
+-- The Tier Sets page (2.0.10, on the journal's home page): its Show Classes tick list drops over the
+-- page and DaylightUI's skin walks it like a panel (see-through): the shell, its rows' gold glow a
+-- wash; its Compact view button's blue glow a wash too.
+local function TierPage(panel)
+	if not ns.Enabled(KEY) or not ns.Usable(panel) then return end
+	local classes = panel.classes
+	if type(classes) == "table" then TickMenu(classes.menu) end
+	WhiteGlow(panel.compact)
+end
+
 local MENU_NAMES = { "ForeverDungeonJournalRunLogMenu", "ForeverDungeonJournalTrackerMenu",
 	"ForeverDungeonJournalOnyxiaMenu", "ForeverDungeonJournalSleepingBagMenu", "ForeverDungeonJournalLFGMenu",
-	"ForeverDungeonJournalFavouriteContextMenu" }
+	"ForeverDungeonJournalFavouriteContextMenu", "ForeverDungeonJournalTierMenu" }
 
 -- ---------------------------------------------------------------------------------------------
 -- Its own fonts: since 2.0.8 the journal draws its words with copies of the game's font objects
@@ -653,6 +719,25 @@ ns.Pack(KEY, nil, function(Kit)
 			if ns.Enabled(KEY) and ns.Usable(win) then ns.Guard(LootFilter, win) end
 		end)
 	end
+	-- Its loot search box shows with the first step of a search, inside this call.
+	if type(FDJ.ShowLootFilterResults) == "function" then
+		hooksecurefunc(FDJ, "ShowLootFilterResults", function(frame)
+			local box = type(frame) == "table" and frame.lootFilterLoading
+			if ns.Enabled(KEY) and ns.Usable(box) then ns.Guard(Loading, box, Kit) end
+		end)
+	end
+	-- The resize notes are made and shown inside this call.
+	if type(FDJ.StartResizeMode) == "function" then
+		hooksecurefunc(FDJ, "StartResizeMode", function()
+			if ns.Enabled(KEY) then ns.Guard(ResizeNotes, _G.ForeverDungeonJournalFrame, Kit) end
+		end)
+	end
+	-- The Tier Sets page is made the first time it opens (its icon, a piece's Back to Tiers).
+	if type(FDJ.OpenTierPage) == "function" then
+		hooksecurefunc(FDJ, "OpenTierPage", function()
+			ns.Guard(TierPage, _G.ForeverDungeonJournalTierPanel)
+		end)
+	end
 	if type(FDJ.ShowLootFilterList) == "function" then
 		hooksecurefunc(FDJ, "ShowLootFilterList", function(frame)
 			local panel = type(frame) == "table" and frame.lootFilterResults
@@ -737,6 +822,8 @@ ns.Pack(KEY, nil, function(Kit)
 		AfterClick(frame.sleepingBagButton, "OnClick", Global("ForeverDungeonJournalSleepingBagMenu"), Menu)
 		AfterClick(frame.onyxiaButton, "OnClick", Global("ForeverDungeonJournalOnyxiaMenu"), Menu)
 		AfterClick(frame.foreverFilterButton, "OnClick", Field("foreverHint"), Window)
+		-- (2.0.10: a right-click on the Tier Sets icon opens its Hide menu.)
+		AfterClick(frame.tierButton, "OnClick", Global("ForeverDungeonJournalTierMenu"), Menu)
 	end
 	-- The tracker's own openers: a right-click on it or its top opens its menu, its X the "tracker
 	-- closed" notice. (A right-click on a rare's portrait opens the menu too; those are left to the
@@ -764,6 +851,8 @@ ns.Pack(KEY, nil, function(Kit)
 	After("ShowProgressExport", Global("FDJProgressExportFrame"), Export)
 	After("ShowProgressImport", Global("FDJProgressImportFrame"), Export)
 	After("ShowCopyBox", Field("copyBox"), Window)
+	-- A Tier Sets piece's "who drops it" box (2.0.10): the shell, its gold boss names in the label ink.
+	After("ShowTierSourceTip", Global("ForeverDungeonJournalTierSourceTip"), Window)
 	After("ToggleBugReportWindow", function(frame) return type(frame) == "table" and frame.bugReportWindow or nil end, Popup)
 	After("UpdateMapQuestToggle", function(panel) return type(panel) == "table" and panel.fdjQuestToggle or nil end, QuestToggle)
 	-- The home page header is laid out again after every home refresh; the RPG Mode note is made
@@ -837,6 +926,7 @@ ns.Pack(KEY, nil, function(Kit)
 	-- that can be hooked: found by name in the frame it's made.)
 	ns.Watch(KEY, "ForeverDungeonJournalNotice", Window)
 	ns.Watch(KEY, function() return FDJ.foreverHint end, Window)
+	ns.Watch(KEY, "ForeverDungeonJournalTierPanel", TierPage)
 	ns.Watch(KEY, "ForeverDungeonJournalRPGIntro", function()
 		JournalPopups(_G.ForeverDungeonJournalFrame)
 	end)
