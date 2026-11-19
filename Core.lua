@@ -1662,6 +1662,137 @@ local function IsPanelButton(b)
 	return b.Left and b.Middle and b.Right and true or false
 end
 
+-- What a button's art is (its atlas lower-cased, else the file it reports: a number on this
+-- client, or a lower-cased path), for telling the game's standard pieces from an addon's own.
+-- (Files and atlases checked against the Forever source, wow-ui-source branch "forever".)
+local Art = {}
+function Art.Of(tex)
+	if not Usable(tex) or tex:GetObjectType() ~= "Texture" then return nil end
+	local ok, atlas = pcall(tex.GetAtlas, tex)
+	if ok and type(atlas) == "string" and atlas ~= "" then return string.lower(atlas), true end
+	local ok2, file = pcall(tex.GetTexture, tex)
+	if not ok2 or file == nil or (issecretvalue and issecretvalue(file)) then return nil end
+	if type(file) == "string" then file = string.lower(file) end
+	return file, false
+end
+function Art.Normal(btn)
+	if not btn.GetNormalTexture then return nil end
+	local ok, tex = pcall(btn.GetNormalTexture, btn)
+	if ok then return Art.Of(tex) end
+end
+function Art.Ids(kind)
+	local ids = Art[kind]
+	if ids then return ids end
+	local paths = Art.PATHS[kind]
+	ids = ns.FileIDs(paths)
+	Art[kind] = ids
+	return ids
+end
+Art.PATHS = {
+	-- UIRadioButtonTemplate (and SendMailRadioButtonTemplate, which inherits it).
+	radio = { ["Interface\\Buttons\\UI-RadioButton"] = true },
+	-- UICheckButtonArtTemplate (UICheckButtonTemplate, ChatConfig, Options check buttons).
+	check = { ["Interface\\Buttons\\UI-CheckBox-Up"] = true },
+	-- PanelResizeButtonTemplate and the chat windows' size grabber.
+	grip = { ["Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up"] = true },
+	-- The old close X (UIPanelCloseButton before the red one; addons still set it by hand).
+	close = { ["Interface\\Buttons\\UI-Panel-MinimizeButton-Up"] = true },
+}
+
+-- A round radio button: UIRadioButtonTemplate's file, UIRadialButtonTemplate's
+-- common-dropdown-tickradial, the common-radiobutton-circle atlas, or "Radio" in its name.
+-- DaylightUI has no radio look (its own skins keep the game's dots), and its switch reads as an
+-- on/off of its own rather than one choice of a set, so radios keep the game's art.
+-- (Worked out once per check button: its art is set when it's made. A button with no art yet
+-- isn't remembered.)
+local checkKind = setmetatable({}, { __mode = "k" })   -- check button -> "radio" / "game" / "own"
+local function CheckKind(cb)
+	local k = checkKind[cb]
+	if k then return k end
+	if not Usable(cb) or cb:GetObjectType() ~= "CheckButton" then return "own" end
+	local art, atlas = Art.Normal(cb)
+	local name = cb.GetName and cb:GetName()
+	-- (Atlas names "radio" or "tickradial" only: "radi" alone is in "gradient" too.)
+	if (atlas and (string.find(art, "radio", 1, true) or string.find(art, "tickradial", 1, true)))
+		or (not atlas and art ~= nil and Art.Ids("radio")[art])
+		or (type(name) == "string" and string.find(string.lower(name), "radio", 1, true)) then
+		k = "radio"
+	elseif (atlas and string.find(art, "checkbox", 1, true)) or (not atlas and art ~= nil and Art.Ids("check")[art]) then
+		k = "game"
+	else
+		k = "own"
+	end
+	if art ~= nil then checkKind[cb] = k end
+	return k
+end
+function ns.IsRadio(cb) return CheckKind(cb) == "radio" end
+
+-- A check button in the game's own checkbox art (UICheckButtonArtTemplate's UI-CheckBox-Up, or a
+-- checkbox atlas: MinimalCheckboxArtTemplate's checkbox-minimal), not a radio. An addon's own
+-- (toggle tabs, its own boxes and dots) answers false.
+function ns.GameCheck(cb) return CheckKind(cb) == "game" end
+
+-- The game's size grabber (PanelResizeButtonTemplate, UI-ChatIM-SizeGrabber) in DaylightUI's
+-- grip look (its Win.Grip: ui-grip.png in the label ink, the accent on hover). The game's
+-- clicks and scripts stay; only its three textures are redrawn.
+-- (Worked out once per button, as check buttons are above.)
+local buttonKind = setmetatable({}, { __mode = "k" })   -- button -> "close" / "grip" / "other"
+local function ButtonKind(btn)
+	local k = buttonKind[btn]
+	if k then return k end
+	if not Usable(btn) or btn:GetObjectType() ~= "Button" then return "other" end
+	local art, atlas = Art.Normal(btn)
+	if atlas then
+		k = art == "redbutton-exit" and "close" or "other"
+	elseif art ~= nil and Art.Ids("close")[art] then
+		k = "close"
+	elseif art ~= nil and Art.Ids("grip")[art] then
+		k = "grip"
+	else
+		k = "other"
+	end
+	if art ~= nil then buttonKind[btn] = k end
+	return k
+end
+function ns.IsGrip(btn) return ButtonKind(btn) == "grip" end
+local gripped = setmetatable({}, { __mode = "k" })
+local GRIP_FILE = "Interface\\AddOns\\DaylightUI\\Media\\ui-grip.png"
+function ns.Grip(btn)
+	if not ns.IsGrip(btn) or gripped[btn] then return end
+	gripped[btn] = true
+	local label = ns.Colors().LABEL
+	for _, get in ipairs({ "GetNormalTexture", "GetPushedTexture" }) do
+		local tex = btn[get] and btn[get](btn)
+		if Usable(tex) then
+			tex:SetTexture(GRIP_FILE)
+			tex:SetTexCoord(0, 1, 0, 1)
+			if type(label) == "table" then tex:SetVertexColor(label[1], label[2], label[3], 0.6) end
+		end
+	end
+	local lit = btn.GetHighlightTexture and btn:GetHighlightTexture()
+	if Usable(lit) then
+		lit:SetTexture(GRIP_FILE)
+		lit:SetTexCoord(0, 1, 0, 1)
+		lit:SetBlendMode("BLEND")
+		ns.PaintAccent(lit, 1)
+	end
+end
+
+-- A close X in the game's art (UIPanelCloseButton's RedButton-Exit atlas, or the old
+-- UI-Panel-MinimizeButton-Up file), whatever its name or place.
+function ns.IsGameClose(btn) return ButtonKind(btn) == "close" end
+
+-- A modern scroll bar (MinimalScrollBar, WowTrimScrollBar, WowClassicScrollBar: an EventFrame
+-- with a Track and Back / Forward steppers) or an old one made bare (UIPanelScrollBarTemplate
+-- as a Slider of its own, not under a ScrollFrame: its ScrollUpButton / ScrollDownButton).
+function ns.IsScrollBar(bar)
+	if not Usable(bar) then return false end
+	if type(rawget(bar, "Track")) == "table" and (type(rawget(bar, "Back")) == "table" or type(rawget(bar, "Forward")) == "table") then
+		return true
+	end
+	return type(rawget(bar, "ScrollUpButton")) == "table" or type(rawget(bar, "ScrollDownButton")) == "table"
+end
+
 -- The walk behind ns.Dress. The look is read once at the top and handed down, and children and
 -- regions are gone through as they come (no table made of them): it runs on every show.
 local Walk
@@ -1759,12 +1890,24 @@ local function WalkChildren(Kit, opts, depth, key, controls, fonts, ...)
 				if IsPanelButton(child) then
 					if controls and Once(child) then Guard(Kit.Button, child) end
 					walk = false
+				elseif opts.closes and controls and ns.IsGameClose(child) then
+					if Once(child) then Guard(Kit.Close, child) end
+					walk = false
+				elseif opts.grips and controls and ns.IsGrip(child) then
+					Guard(ns.Grip, child)
+					walk = false
 				elseif soften and not done[child] and child.GetBackdrop and child:GetBackdrop() then
 					done[child] = true
 					ns.Soften(child, 0.35)
 				end
 			elseif kind == "CheckButton" then
-				if controls and opts.checks ~= false and Once(child) then Guard(Kit.Check, child) end
+				-- Radios keep the game's dots (ns.IsRadio); with gameChecks, only check buttons in the
+				-- game's checkbox art become switches (an addon's own toggles and dots stay its own).
+				if ns.IsRadio(child) or (opts.gameChecks and not ns.GameCheck(child)) then
+					if fonts then WalkRegions(key, child:GetRegions()) end
+				elseif controls and opts.checks ~= false and Once(child) then
+					Guard(Kit.Check, child)
+				end
 				walk = false
 			elseif kind == "EditBox" then
 				if IsPanelButton(child) then
@@ -1781,12 +1924,35 @@ local function WalkChildren(Kit, opts, depth, key, controls, fonts, ...)
 					Guard(Kit.ScrollBar, bar)
 				end
 			elseif kind == "Slider" then
+				-- (opts.sliders: a bare scroll bar in DaylightUI's scroll look, any other slider through
+				-- ns.Slider. A ScrollFrame's own bar was done above and Kit.ScrollBar does each bar once.)
+				if opts.sliders and controls then
+					if ns.IsScrollBar(child) then
+						if opts.scrollBars ~= false and not done[child] then
+							done[child] = true
+							Guard(Kit.ScrollBar, child)
+						end
+					elseif ns.Slider then
+						Guard(ns.Slider, child)
+					end
+				end
+				walk = false
+			elseif kind == "EventFrame" then
+				-- (opts.modernBars: MinimalScrollBar / WowTrimScrollBar, which an addon may put beside
+				-- a ScrollBox or a scrolling edit box.)
+				if opts.modernBars and controls and opts.scrollBars ~= false and not done[child] and ns.IsScrollBar(child) then
+					done[child] = true
+					Guard(Kit.ScrollBar, child)
+				end
 				walk = false
 			elseif kind == "Frame" then
 				if soften and not done[child] and child.GetBackdrop and child:GetBackdrop() then
 					done[child] = true
 					ns.Soften(child)
 				end
+				-- (opts.oldDropdowns: UIDropDownMenuTemplate and its copies, Left / Middle / Right art,
+				-- Text and an arrow Button: ns.OldDropdown, which passes over any other frame at once.)
+				if opts.oldDropdowns and controls and ns.OldDropdown then Guard(ns.OldDropdown, child) end
 			else
 				walk = false   -- models, cooldowns, status bars, tooltips: not ours to open up
 			end
@@ -1804,9 +1970,14 @@ end
 -- Walks a custom-drawn window and dresses the controls made from the game's templates, one by one:
 -- UIPanelButtonTemplate, InputBoxTemplate / SearchBoxTemplate, check buttons, template scroll bars.
 -- Buttons an addon drew itself (rows, tiles, icons) are left as they are.
+-- Radio buttons (ns.IsRadio) keep the game's dots for every pack: DaylightUI has no radio look.
 -- opts: skip (a set of frames left alone, their children too), checks = false, scrollBars = false
 -- (the addon draws its own and they are left as they are), soften = true
 -- (flat backdrop boxes become quiet wells), fonts = true (the player's font on every string).
+-- More controls, asked for by the Auto Skinner (any pack may): sliders = true (bare scroll bars
+-- and sliders), modernBars = true (MinimalScrollBar / WowTrimScrollBar), oldDropdowns = true,
+-- closes = true (a close X in the game's art anywhere), grips = true (the game's size grabber),
+-- gameChecks = true (only check buttons in the game's checkbox art become switches).
 -- key = the addon whose look it follows (left out: the one being dressed right now): its text look
 -- goes on the strings when it has one, and its controls are left alone when it says so.
 local NO_OPTS = {}

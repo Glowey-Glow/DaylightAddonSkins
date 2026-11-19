@@ -1,5 +1,11 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.0
+- New skins: ALL THE THINGS (its list windows, mini list and popouts, the report box, its side tabs on the auction house and profession windows, and its settings pages), Auctionator (its tabs, result lists, shopping lists, selling bag, dialogs and pop-ups, and its panel on the profession window), Altoholic (its window and all seven tabs, lists, sort headers, dropdowns, calendar and grids) and Leatrix Plus (its options window, every settings panel, its dropdown lists and its own small windows).
+- New overlaps, asked once (switch any back): ALL THE THINGS' Skip Cutscenes; Altoholic's item counts and item IDs in tooltips; and 21 Leatrix Plus options Daylight UI also has (quest automation, sell junk, repair, faster looting, error messages, camera zoom, Train All, the minimap, tooltips, chat buttons, fading, history and arrow keys, action bar text and range coloring, and more). Leatrix Plus reads its settings only as it loads, so its hand-overs take effect after a reload.
+- Auto Skinner (BETA): sliders, old-style dropdowns and the newer slim scroll bars are dressed now, backdrop windows get the Daylight UI close button and resize grip, and dialogs on the tooltip layer are found. Round radio buttons keep their dots instead of turning into square boxes, and an addon's own custom checkboxes and toggle tabs keep their look.
+- Radio buttons keep the game's round dots in every skin, instead of becoming switches.
+
 ## 1.17.0
 - Checked against today's updates, including the addons you may not have installed: Polestar 0.4.1.1, Keep or Toss 2.2.0, Dungeon Journal 2.0.12, LayerSwap 1.14.35, Questie 12.11.0, RareScanner 1.60.1.9, Mastercraft 2.0.7, LootTriage 1.2.0.1, Shortest Path Forever 1.43.2, Kerzo Classic Quest Log 6.5.2, Kerzo Quest Expansion 2.1.1, Forever Leveling BiS 1.3.5, AtlasLoot Continued and Dialogue UI.
 - LootTriage 1.2: its new settings window (/lt) is dressed: its page list, headings, checkboxes, sliders, dropdowns, buttons and What's New link. What's New is dressed again (it moved to a higher layer), and the new Delete button on the loot window gets the Daylight UI button look.

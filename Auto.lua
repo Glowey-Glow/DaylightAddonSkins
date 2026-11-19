@@ -11,20 +11,31 @@
 --
 -- Which windows: the screen's top-level frames (UIParent's children), looked at once the world is
 -- up and again whenever their count grows (a look every 2 seconds at a number; nothing every
--- frame). A window is a plain frame, not protected or forbidden, not a tooltip, that wears a
+-- frame). A window is a plain frame, not protected or forbidden, not built like a tooltip
+-- (GameTooltip's NumLines and SetOwner both, or a tooltip-layout NineSlice), that wears a
 -- window: the game's frame template parts (NineSlice, Bg, TitleBg, PortraitContainer,
--- TitleContainer) or a backdrop. Nothing under the world map is touched (frames under it with
--- scripts of ours taint the gamepad's interact key), and nothing is scripted: hooks only.
+-- TitleContainer) or a backdrop. On the tooltip layer only a dialog counts (it takes the mouse
+-- and holds a button: VuhDo's yes / no box). Nothing under the world map is touched (frames under
+-- it with scripts of ours taint the gamepad's interact key), and nothing is scripted: hooks only.
 --
 -- Which addons: not the game's (Blizzard_), not DaylightUI's or its plugins' (Daylight*, or
 -- anything that needs DaylightUI: it is drawn in DaylightUI's look already), not one with a pack
--- here or in DaylightUI's own Window Skins.
+-- here (or one of a pack's other folders: Altoholic's AddonFactory and DataStore) or in
+-- DaylightUI's own Window Skins.
 --
 -- The dressing, on each show of a window big enough to be one (a frame not laid out yet is left
 -- for its next show): a template window gets Kit.Window (its art off, DaylightUI's window, title
--- and close button); a backdrop window its backdrop hidden and DaylightUI's shell. Then the walk
--- every pack uses (ns.Dress): the game's standard buttons, input boxes, check buttons and scroll
--- bars, flat backdrop boxes softened, and the player's font on every string. Art the addon drew
+-- and close button); a backdrop window its backdrop hidden, DaylightUI's shell and its X (its
+-- CloseButton key, or the button in its top right corner). Then the walk every pack uses
+-- (ns.Dress), with the Auto Skinner's extras (DRESS below): the game's standard buttons and
+-- input boxes; template scroll bars, bare ones (UIPanelScrollBarTemplate as a Slider of its own)
+-- and the modern ones (MinimalScrollBar, WowTrimScrollBar); sliders (OptionsSliderTemplate and
+-- its kin, through ns.Slider); old dropdowns (UIDropDownMenuTemplate and copies with Left /
+-- Middle / Right art, through ns.OldDropdown); a close X in the game's art anywhere; the game's
+-- size grabber in DaylightUI's grip look (ns.Grip); check buttons in the game's checkbox art as
+-- switches. Radio buttons keep the game's dots (DaylightUI has no radio look), and check buttons
+-- an addon drew itself (toggle tabs, its own boxes and dots: VuhDo's) keep their look. Flat
+-- backdrop boxes are softened and the player's font goes on every string. Art the addon drew
 -- itself (its own buttons, rows, icons, colors) stays as it is. In a fight, waits for its end.
 local _, ns = ...
 if not ns.ok then return end
@@ -96,6 +107,19 @@ local function Eligible(folder)
 				break
 			end
 		end
+		-- (A pack's other folders, caps.folders: Altoholic's AddonFactory and DataStore, and their
+		-- own _ / - parts.)
+		if e then
+			for _, list in pairs(ns.folders) do
+				for _, f in ipairs(list) do
+					if folder == f or StartsWith(folder, f .. "_") or StartsWith(folder, f .. "-") then
+						e = false
+						break
+					end
+				end
+				if not e then break end
+			end
+		end
 		if e then
 			for _, prefix in ipairs(DUI_PACKS) do
 				if StartsWith(folder, prefix) then
@@ -127,10 +151,30 @@ ns.AutoKey = Key
 local BETA = "|cffffb000BETA|r"
 function ns.AutoTitle() return string.format(L["Auto Skinner (%s)"], BETA) end
 
+-- Anything built like a tooltip: GameTooltip's own NumLines and SetOwner both (an addon's copy of
+-- the template), or a NineSlice in a tooltip layout (TooltipBackdropTemplate). (Not one method
+-- alone or "Tooltip" in its name: a log window with an AddLine, a XTooltipOptions window.)
+local function Tooltipish(frame)
+	if type(frame.NumLines) == "function" and type(frame.SetOwner) == "function" then return true end
+	local nine = rawget(frame, "NineSlice")
+	local layout = type(nine) == "table" and rawget(nine, "layoutType")
+	return type(layout) == "string" and string.find(string.lower(layout), "tooltip", 1, true) ~= nil
+end
+
+-- A frame on the tooltip layer is a window only when it's a dialog: it takes the mouse and holds
+-- a button of its own (VuhDo's yes / no and share dialogs). A tooltip-like box there doesn't.
+local function Dialog(frame)
+	if not Call(frame, "IsMouseEnabled") then return false end
+	for _, child in ipairs({ frame:GetChildren() }) do
+		if Call(child, "GetObjectType") == "Button" and not Call(child, "IsProtected") then return true end
+	end
+	return false
+end
+
 local function IsWindow(frame)
 	if Call(frame, "GetObjectType") ~= "Frame" then return false end
-	if Call(frame, "IsProtected") then return false end
-	if Call(frame, "GetFrameStrata") == "TOOLTIP" then return false end
+	if Call(frame, "IsProtected") or Tooltipish(frame) then return false end
+	if Call(frame, "GetFrameStrata") == "TOOLTIP" and not Dialog(frame) then return false end
 	for _, part in ipairs(TEMPLATE_PARTS) do
 		if rawget(frame, part) ~= nil then return true end
 	end
@@ -155,7 +199,11 @@ local function Templated(frame)
 	return false
 end
 
-local DRESS = { fonts = true, soften = true }
+-- The walk's extra controls (ns.Dress in Core.lua): bare scroll bars and sliders, the modern
+-- scroll bars, old dropdowns, a close X and size grabber in the game's art anywhere, and only
+-- the game's own checkboxes made switches (an addon's own toggles keep their look).
+local DRESS = { fonts = true, soften = true, sliders = true, modernBars = true, oldDropdowns = true, closes = true,
+	grips = true, gameChecks = true }
 
 -- The game's gold (GameFontNormal's 1, 0.82, 0), the color of most addons' headings: DaylightUI's
 -- label ink in its place, as every pack here gives it. Any other color an addon set stays.
@@ -281,6 +329,11 @@ local function Dress(frame)
 			else
 				ns.Guard(Kit.Backdrop, frame)
 				ns.Shell(frame, { window = true })
+				-- Its X, where Kit.Window would look for it or in the top right corner (one in the
+				-- game's art anywhere else is found by the walk below). Not a "Close" text button.
+				local close = rawget(frame, "CloseButton")
+				if not (ns.Usable(close) and Call(close, "GetObjectType") == "Button") then close = ns.FindClose(frame) end
+				if close and not (ns.TextButton and ns.TextButton(close)) and ns.Once(close) then ns.Guard(Kit.Close, close) end
 			end
 		end
 		ns.Dress(frame, DRESS)

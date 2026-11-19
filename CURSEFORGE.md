@@ -8,7 +8,7 @@ A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its 
 
 ## Addons it skins
 
-BugSack · Camping Kit · Dialogue UI · DoesItDie · Dungeon Journal · Forever Fishing · Forever Leveling BiS · Guildy · High Fidelity World Map · Journey Guides · Keep or Toss · Kerzo Classic Quest Log · Kerzo Quest Expansion · LayerSwap · LFG Forever · LootTriage · Mastercraft · OneForAll · OpenMap · Polestar · Questie · RareScanner · Shortest Path Forever · Spoken · Total RP 3 · TrueshotLodge
+ALL THE THINGS · Altoholic · Auctionator · BugSack · Camping Kit · Dialogue UI · DoesItDie · Dungeon Journal · Forever Fishing · Forever Leveling BiS · Guildy · High Fidelity World Map · Journey Guides · Keep or Toss · Kerzo Classic Quest Log · Kerzo Quest Expansion · LayerSwap · Leatrix Plus · LFG Forever · LootTriage · Mastercraft · OneForAll · OpenMap · Polestar · Questie · RareScanner · Shortest Path Forever · Spoken · Total RP 3 · TrueshotLodge
 
 Only the ones you have installed are skinned; the rest are skipped. Nothing to set up: each takes the Daylight UI look the next time you open its windows.
 
@@ -21,6 +21,11 @@ The game windows Daylight UI's Window Skins leave bare get the same look: the re
 All pop-up menus (right-click menus and dropdowns, any addon's) and every addon's AceConfig settings lose the game's gold.
 
 ---
+
+## New in 1.18.0
+- **New skins:** ALL THE THINGS, Auctionator, Altoholic and Leatrix Plus.
+- **New overlaps handed to Daylight UI** (asked once, switch any back): ALL THE THINGS' Skip Cutscenes, Altoholic's tooltip item counts and IDs, and the Leatrix Plus options Daylight UI also has (after a reload).
+- **Auto Skinner (BETA):** dresses sliders, old dropdowns and slim scroll bars, gives backdrop windows the Daylight UI close button and grip, finds tooltip-layer dialogs, and leaves radio buttons and addons' own custom checkboxes as they are.
 
 ## New in 1.17.0
 - **Ready for today's addon updates:** LootTriage 1.2 (its new settings window, What's New and Delete button), Keep or Toss 2.2 (the settings page's sample item), Shortest Path Forever 1.43 (the Forever column docks flush again), Mastercraft 2.0.7 (network report, Chinese guides), Kerzo Classic Quest Log 6.5.2, Forever Leveling BiS 1.3.5, LayerSwap 1.14.35, plus Polestar, Questie, RareScanner, Dungeon Journal and more checked.

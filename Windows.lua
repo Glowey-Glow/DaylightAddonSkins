@@ -15,7 +15,10 @@ local L = ns.L
 
 -- CurseForge pages, by addon key (a link is only shown for an addon that isn't installed).
 ns.LINKS = {
+	["AllTheThings"] = "https://www.curseforge.com/wow/addons/all-the-things",
+	["Altoholic"] = "https://www.curseforge.com/wow/addons/altoholic",
 	["AtlasLootContinued"] = "https://www.curseforge.com/wow/addons/atlasloot-continued",
+	["Auctionator"] = "https://www.curseforge.com/wow/addons/auctionator",
 	["BugSack"] = "https://www.curseforge.com/wow/addons/bugsack",
 	["CampingKit"] = "https://www.curseforge.com/wow/addons/camping-kit",
 	["Details"] = "https://www.curseforge.com/wow/addons/details",
@@ -31,6 +34,7 @@ ns.LINKS = {
 	["Kerzo Classic Quest Log"] = "https://www.curseforge.com/wow/addons/kerzo-classic-quest-log",
 	["Kerzo Quest Expansion"] = "https://www.curseforge.com/wow/addons/kerzo-quest-expansion",
 	["LayerSwap"] = "https://www.curseforge.com/wow/addons/layer",
+	["Leatrix_Plus"] = "https://www.curseforge.com/wow/addons/leatrix-plus",
 	["LFGForever"] = "https://www.curseforge.com/wow/addons/lfg-forever",
 	["LootTriage"] = "https://www.curseforge.com/wow/addons/loot-triage",
 	["Mastercraft"] = "https://www.curseforge.com/wow/addons/mastercraft",
