@@ -1,9 +1,10 @@
 -- Shortest Path Forever: its Nearby services panel in the world map's quest log (its paper ground
 -- and border gone, DaylightUI's look on its search box, scroll bar, rows, section heads, map
 -- switches and side tab), its Journey stops and Farming tour windows, the windows ForeverCore
--- opens for it (report, issue, thanks, the Forever addons link, your Forever profile),
--- ForeverCore's right-click menu (the tracker's header and lines) and its "Journey" button under
--- the minimap (off unless turned on in its settings).
+-- opens for it (report, issue, thanks; before ForeverCore 1.15 also the Forever addons link and
+-- your Forever profile), ForeverCore's right-click menu (the tracker's header and lines) and, before
+-- Shortest Path 1.42 (which dropped it), its "Journey" button under the minimap.
+-- (Checked against Shortest Path 1.43.2 / ForeverCore 1.15.1.)
 -- Left alone: everything it draws on the world map and minimap (route lines, pins, docks,
 -- portals), the direction arrow and compass (on-screen guides with settings of their own), its
 -- settings (the game's Settings window). Its tracker sections: docked under DaylightUI's quest
@@ -14,8 +15,9 @@
 -- DaylightUI's marker. While DaylightUI's marker is on, both are kept at nothing again after it.
 --
 -- "Hand over to DaylightUI" (off until turned on on its page): its flight master, boat and
--- zeppelin pins on the world map step aside while DaylightUI's map pins show the same, and
--- ForeverCore's own quest list in the Forever column while DaylightUI's quest tracker is on.
+-- zeppelin pins on the world map step aside while DaylightUI's map pins show the same, and (before
+-- ForeverCore 1.15, which removed it) ForeverCore's own quest list in the Forever column while
+-- DaylightUI's quest tracker is on.
 local _, ns = ...
 if not ns.ok then return end
 local L = ns.L
@@ -680,8 +682,16 @@ local GAP = 8            -- between the tracker's box and the column's
 local PAD = { 8, 6 }     -- the box past the list (DaylightUI's tracker uses the same)
 local GRIP = 24          -- ForeverCore's grip strip along the column's top (empty while locked)
 
--- ForeverCore's grip: a button along the column's top holding one label ("Forever tracker", shown
--- while unlocked or under the mouse). Kept at nothing while docked, put back after.
+-- ForeverCore's grip (before 1.15): a button along the column's top holding one label ("Forever
+-- tracker", shown while unlocked or under the mouse). Kept at nothing while docked, put back after.
+-- From 1.15 there is none (a section's header drags the column) and the first section starts at the
+-- column's top.
+local function HasGrip(host)
+	for _, child in ipairs({ host:GetChildren() }) do
+		if ns.Usable(child) and child:GetObjectType() == "Button" and not child.Header then return true end
+	end
+	return false
+end
 local function GripLabel(host, alpha)
 	for _, child in ipairs({ host:GetChildren() }) do
 		if ns.Usable(child) and child:GetObjectType() == "Button" and not child.Header then
@@ -707,6 +717,16 @@ local function Column()
 	local db = _G.DaylightAddonSkinsDB
 	if type(db) ~= "table" then db = {} _G.DaylightAddonSkinsDB = db end
 	local uiScale = function() return UIParent:GetEffectiveScale() end
+	-- (The grip is made with the column, before this runs: looked for once.)
+	local gripH = HasGrip(host) and GRIP or 0
+	-- ForeverCore 1.15 dropped attaching (SetAttached does nothing): the column sits at its saved
+	-- spot, or pinned beside the game's tracker when it has none. The spot it had before docking
+	-- (none = the pin) is kept and given back on undocking.
+	local function Spot()
+		if type(api.GetSettings) ~= "function" then return nil end
+		local ok, s = pcall(api.GetSettings)
+		return ok and type(s) == "table" and s or nil
+	end
 
 	-- The box behind the sections, like the tracker's (Quests > box), on a frame of ours under them.
 	local box = CreateFrame("Frame", nil, host)
@@ -746,6 +766,16 @@ local function Column()
 		if db.foreverDocked then
 			db.foreverDocked = nil
 			pcall(api.SetAttached, true)
+			local s = Spot()
+			if s then
+				if type(db.foreverX) == "number" and type(db.foreverY) == "number" then
+					pcall(api.SavePosition, db.foreverX, db.foreverY)
+				else
+					s.x, s.y = nil, nil
+					if type(host.MarkDirty) == "function" then pcall(host.MarkDirty, host) end
+				end
+			end
+			db.foreverX, db.foreverY = nil, nil
 			if type(api.SetScale) == "function" and type(db.foreverScale) == "number" then pcall(api.SetScale, db.foreverScale) end
 			if type(api.SetLocked) == "function" and db.foreverLocked ~= nil then pcall(api.SetLocked, db.foreverLocked) end
 			if type(api.SetBackdropOpacity) == "function" and type(db.foreverBackdrop) == "number" then
@@ -788,6 +818,8 @@ local function Column()
 		if not db.foreverDocked then
 			db.foreverDocked = true
 			if type(api.GetScale) == "function" then db.foreverScale = api.GetScale() end
+			local s = Spot()
+			if s then db.foreverX, db.foreverY = s.x, s.y end
 			pcall(api.SetAttached, false)
 		end
 		-- Locked while docked: nothing to drag, and its grip's "Forever tracker" label goes with it.
@@ -824,7 +856,7 @@ local function Column()
 
 		-- Under the tracker's box (or over it, with a list that grows upward), box to box.
 		local pad = PAD[2] * le
-		local grip = GRIP * he
+		local grip = gripH * he
 		local contentH = math.max(0, hh * he - grip)
 		local contentTop
 		if Quests("growUp") == true then
@@ -843,7 +875,7 @@ local function Column()
 		if px ~= boxX or py ~= boxY then
 			boxX, boxY = px, py
 			box:ClearAllPoints()
-			box:SetPoint("TOPLEFT", host, "TOPLEFT", -px, -GRIP + py)
+			box:SetPoint("TOPLEFT", host, "TOPLEFT", -px, -gripH + py)
 			box:SetPoint("BOTTOMRIGHT", host, "BOTTOMRIGHT", px, -py)
 		end
 		if not box:IsShown() and Quests("box") == true then PaintBox() end
@@ -935,7 +967,8 @@ end)
 
 -- ForeverCore's own quest list ("Forever quest list", ForeverCoreDB.questList): its quests drawn
 -- in the Forever column, the same quests DaylightUI's tracker lists right above it. Read and set
--- through ForeverCore's own calls, which redraw the column.
+-- through ForeverCore's own calls, which redraw the column. ForeverCore 1.15 removed the list (and
+-- TrackerQuests with it): there the entry is marked gone.
 local QUEST_LIST = "questList"
 local function ForeverQuests()
 	local core = _G.ForeverCore
@@ -982,8 +1015,9 @@ ns.Handover(KEY, {
 		  daylight = string.format(L["the quest arrow (%s); with Shortest Path's off, routes no longer steer the marker"],
 			string.format(L["%s, %s"], ns.Module("Quests"), ns.Module("Navigation"))),
 		  ours = function() return ns.DaylightHas("Quests", "nav.arrow") end },
+		-- (Gone from ForeverCore 1.15: never asked about there, only given back if it was handed over.)
 		{ key = QUEST_LIST, label = L["Forever Quest List"],
-		  daylight = ns.In(L["your quest list"], "Quests"),
-		  ours = function() return ns.ModuleOn("Quests") end },
+		  daylight = ns.In(L["your quest list"], "Quests"), gone = ForeverQuests() == nil,
+		  ours = function() return ForeverQuests() ~= nil and ns.ModuleOn("Quests") end },
 	},
 })

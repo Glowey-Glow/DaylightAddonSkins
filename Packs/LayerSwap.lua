@@ -424,7 +424,8 @@ local function LayerWord()
 	line = string.gsub(line, "%s%s%s.*$", "")          -- " Host on" after three spaces
 	local rest = string.match(line, "^Layer%s+(.+)$")
 	if rest then return string.format(L["Layer: %s"], rest) end
-	if line == "Detecting..." then return string.format(L["Layer: %s"], "...") end
+	-- (Not read yet; 1.14.34 says "In flight" there on a flight path with the layer unread.)
+	if line == "Detecting..." or line == "In flight" then return string.format(L["Layer: %s"], "...") end
 	return string.format(L["Layer: %s"], "?")
 end
 

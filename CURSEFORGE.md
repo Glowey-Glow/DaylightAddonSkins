@@ -22,6 +22,10 @@ All pop-up menus (right-click menus and dropdowns, any addon's) and every addon'
 
 ---
 
+## New in 1.17.0
+- **Ready for today's addon updates:** LootTriage 1.2 (its new settings window, What's New and Delete button), Keep or Toss 2.2 (the settings page's sample item), Shortest Path Forever 1.43 (the Forever column docks flush again), Mastercraft 2.0.7 (network report, Chinese guides), Kerzo Classic Quest Log 6.5.2, Forever Leveling BiS 1.3.5, LayerSwap 1.14.35, plus Polestar, Questie, RareScanner, Dungeon Journal and more checked.
+- **New overlap handed to Daylight UI** (asked once, switch it back any time): Polestar's zone level ranges on the world map, now that Daylight UI shows its own.
+
 ## New in 1.16.0
 - **New skins:** Details! (meter windows in Daylight UI's meter look), AtlasLoot Continued and Pawn.
 - **Overlap window:** on = the addon keeps its own, off = Daylight UI (still the default; your choices are kept).

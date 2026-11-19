@@ -708,6 +708,22 @@ local function Settings(kql, Kit)
 			end
 		end
 	end
+	-- (6.5.1+: Kerzo Quest Expansion's pick-one settings, e.g. the tooltip display mode, as
+	-- old-style dropdown rows "KQL_KQEDropdown_<setting>" under the Expansion section.)
+	if type(content.DropdownsKQE) == "table" then
+		for _, row in pairs(content.DropdownsKQE) do
+			local dd = Usable(row) and row.Dropdown
+			if Usable(dd) then
+				if ns.OldDropdown then ns.OldDropdown(dd) end
+				local name = dd:GetName()
+				for _, k in ipairs({ "Left", "Middle", "Right" }) do
+					Erase(dd[k])
+					if name then Erase(_G[name .. k]) end
+				end
+				if Kind(row.Label) == "FontString" then Ink(row.Label, "LABEL") end
+			end
+		end
+	end
 	for _, k in ipairs(LABELS) do
 		local fs = content[k]
 		-- (A label it grays because its control is off stays gray.)

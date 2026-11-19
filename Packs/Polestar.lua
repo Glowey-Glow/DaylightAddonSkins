@@ -447,7 +447,9 @@ end)
 -- Hand-over: its quality-of-life switches DaylightUI also has (Polestar 0.4.1, QoL/QoL.lua).
 -- Its auto accept and turn in of the guide's quests too (DaylightUI's take every quest, the
 -- guide's among them), and (0.4.1) its finished quests' XP on the game's XP bar, which DaylightUI's
--- own XP bar shows while it hides the game's. Left out: its other guide-only work (the step's
+-- own XP bar shows while it hides the game's. (0.4.1.1, DUI 1.9.4) Its zone level ranges on the world map too:
+-- DaylightUI's Zone Levels show the hovered zone's range by its name, from other numbers; handing
+-- them over also takes Polestar's labels on continent maps, which DaylightUI has no copy of. Left out: its other guide-only work (the step's
 -- gossip, target list, route vendors, Restock), which DaylightUI has no copy of. Its settings
 -- are per Polestar profile, so a handed-over value follows the profile in use.
 -- ---------------------------------------------------------------------------------------------
@@ -458,6 +460,7 @@ if type(P.Get) == "function" and type(P.Set) == "function" then
 		sellJunk = "qol.sellJunk", autoRepair = "qol.autoRepair", fastLoot = "qol.fastLoot",
 		skipGossip = "qol.skipGossip", hideErrors = "qol.hideErrors", flightAutoOpen = "qol.flightAutoOpen",
 		questXPOverlay = "qol.questXPOverlay",
+		zoneLevels = "maps.zoneLevels",
 		autoAccept = "behavior.autoAccept", autoTurnin = "behavior.autoTurnin",
 	}
 	ns.Handover(KEY, {
@@ -489,6 +492,9 @@ if type(P.Get) == "function" and type(P.Set) == "function" then
 			{ key = "questXPOverlay", label = L["Quest XP on the Game's Experience Bar"],
 			  daylight = ns.In(L["its experience bar with banked quest XP"], "Info Panel"),
 			  ours = function() return has("InfoPanel", "xp.enabled") end },
+			{ key = "zoneLevels", label = L["Zone Level Ranges on the World Map"],
+			  daylight = ns.In(L["zone levels"], "Window Skins"),
+			  ours = function() return has("Skins", "mapLevels") end },
 		},
 	})
 end

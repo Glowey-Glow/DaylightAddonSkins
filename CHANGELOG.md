@@ -1,5 +1,16 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.17.0
+- Checked against today's updates, including the addons you may not have installed: Polestar 0.4.1.1, Keep or Toss 2.2.0, Dungeon Journal 2.0.12, LayerSwap 1.14.35, Questie 12.11.0, RareScanner 1.60.1.9, Mastercraft 2.0.7, LootTriage 1.2.0.1, Shortest Path Forever 1.43.2, Kerzo Classic Quest Log 6.5.2, Kerzo Quest Expansion 2.1.1, Forever Leveling BiS 1.3.5, AtlasLoot Continued and Dialogue UI.
+- LootTriage 1.2: its new settings window (/lt) is dressed: its page list, headings, checkboxes, sliders, dropdowns, buttons and What's New link. What's New is dressed again (it moved to a higher layer), and the new Delete button on the loot window gets the Daylight UI button look.
+- Keep or Toss 2.2: the sample item on its settings page takes Daylight UI's tooltip look instead of the game's blue tooltip art.
+- Shortest Path Forever 1.43: the Forever column docks flush under Daylight UI's quest tracker again (its grip bar is gone), and goes back to its own spot when you turn the dock off. ForeverCore's quest list is gone, so it's no longer asked about.
+- Mastercraft 2.0.7: its network report window (/mc report) and its Chinese What's New and setup guide are dressed.
+- Kerzo Classic Quest Log 6.5.2: the Expansion section's new dropdowns are dressed.
+- Forever Leveling BiS 1.3.5: window titles in its Modern theme take Daylight UI's title color instead of gold.
+- LayerSwap 1.14.35: the map button reads "Layer: ..." in flight instead of "Layer: ?".
+- New overlap, asked once: Polestar's zone level ranges on the world map. Daylight UI 1.9.4 shows the hovered zone's range by its name, from different numbers, so both showed and disagreed. Daylight UI's is the default; switch it back on the overlap window (Polestar's continent map labels go with it).
+
 ## 1.16.1
 - Renamed to Addon Skins (DaylightUI Plugin) in the AddOns list and on CurseForge, so it's clear it's a plugin and not part of Daylight UI. Inside Daylight UI it's still Addon Skins. Your settings are kept.
 

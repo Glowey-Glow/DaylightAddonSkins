@@ -114,6 +114,18 @@ end
 
 -- The title band W.TitleBand draws: a dark square strip a pixel inside the top, which would show
 -- its corners on DaylightUI's rounded shell. The shell's own band takes its place.
+-- Its titles: since 1.3.4 the band's title is painted its own soft gold (T.TITLE), once, as it is
+-- made. They take DaylightUI's title ink instead, again when the look changes.
+local titles = setmetatable({}, { __mode = "k" })
+local function InkTitle(fs)
+	local c = ns.Colors().VALUE
+	if c and ns.Usable(fs) then fs:SetTextColor(c[1], c[2], c[3]) end
+end
+local function InkTitles()
+	if not On() then return end
+	for fs in pairs(titles) do InkTitle(fs) end
+end
+
 local function FadeBand(f)
 	for _, region in ipairs({ f:GetRegions() }) do
 		if ns.Usable(region) and region:GetObjectType() == "Texture" and region:GetDrawLayer() == "BORDER"
@@ -123,11 +135,20 @@ local function FadeBand(f)
 			if point == "TOPLEFT" and rel == f and relPoint == "TOPLEFT" and x == 1 and y == -1
 				and h and abs(h - 30) < 1 then
 				region:SetAlpha(0)
-				-- (Since 1.3.2 a faint rule runs under the band: it goes too.)
-				for _, rule in ipairs({ f:GetRegions() }) do
-					if ns.Usable(rule) and rule:GetObjectType() == "Texture" and rule:GetNumPoints() >= 1
-						and select(2, rule:GetPoint(1)) == region then
-						rule:SetAlpha(0)
+				-- (Since 1.3.2 a faint rule runs under the band: it goes too. The title sits on the
+				-- band, or on the icon W.TitleIcon puts at the band's start.)
+				for _, r in ipairs({ f:GetRegions() }) do
+					if ns.Usable(r) and r:GetNumPoints() >= 1 then
+						local on = select(2, r:GetPoint(1))
+						local kind = r:GetObjectType()
+						if kind == "Texture" and on == region then
+							r:SetAlpha(0)
+						elseif kind == "FontString" and (on == region or (ns.Usable(on) and on.GetObjectType
+							and on:GetObjectType() == "Texture" and on:GetNumPoints() >= 1
+							and select(2, on:GetPoint(1)) == region)) then
+							titles[r] = true
+							InkTitle(r)
+						end
 					end
 				end
 			end
@@ -322,6 +343,7 @@ end)
 -- Its text follows the DaylightUI font, and this plugin's page for it.
 ns.me.On("Login", Guarded(RestyleAll))
 ns.me.On("StyleChanged", Guarded(RestyleAll))
+ns.me.On("StyleChanged", Guarded(InkTitles))
 ns.me.On("SettingChanged", function(scope, path)
 	if scope ~= "DaylightAddonSkins" or type(path) ~= "string" then return end
 	if path == KEY or path == "followDaylight" or string.sub(path, 1, 24) == "look.ForeverLevelingBiS." then

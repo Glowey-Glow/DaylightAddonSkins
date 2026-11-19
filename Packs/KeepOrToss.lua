@@ -14,10 +14,15 @@
 --     window; its look and dark mode as they were are kept and put back when that's turned off.
 --     A look picked in Keep or Toss afterwards (its settings, its sun / moon switch) is left as
 --     picked: the book and Minimal light stay exactly as it draws them.
+--   * The sample item on its settings page (2.1.0 and later): a card of its own in the game's
+--     tooltip frame (TooltipBackdropTemplate), not a tooltip, so DaylightUI's tooltip skin never
+--     sees it. It gets DaylightUI's tooltip look here, as a real tooltip would (only while
+--     DaylightUI's Tooltip module is on, in every journal look).
 -- Left as it is: the book looks (paper, wax seal, tabs, fleurons), the addon's icon on the corner,
 -- the item rims and names in their quality colors, its marks' and meanings' colors, its own
--- tooltip lines (DaylightUI's tooltip), the sample tooltips on its settings page (the game's
--- tooltip, DaylightUI's look), its minimap button (DaylightUI's addon drawer).
+-- tooltip lines (DaylightUI's tooltip), the item page's sample tooltips (the game's tooltip,
+-- DaylightUI's look), its minimap button (DaylightUI's addon drawer), What's new's version tabs
+-- (2.2.0; its own inks, like its other tabs).
 -- (Before 2.0.0 its windows were ButtonFrameTemplate frames: KeepOrTossDetailFrame,
 -- KeepOrTossIntroFrame and a KeepOrTossDeleteNotice tooltip. Those are gone.)
 local _, ns = ...
@@ -150,6 +155,72 @@ local function Cover()
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- The settings page's sample item: DaylightUI's tooltip look
+-- ---------------------------------------------------------------------------------------------
+-- The card (a TooltipBackdropTemplate frame, kept as .card on its part) is made, private to it,
+-- the first time the settings page is built, inside the call that opens the page: nothing of it
+-- can be hooked. It is looked for once, the frame after the journal or one of its pages opens or
+-- after a click while the journal is open, until found; from then on it is settled each time it
+-- is filled (SetHeight) or shown. The game's tooltip art stays out of sight under the shell.
+
+local API = ns.API
+local card, cardShell
+
+local function TipLook()
+	return { borderPx = 3, flat = true, noBevel = true, bgAlpha = ns.TipAlpha() }
+end
+
+local function Settle()
+	if not ns.Usable(card) then return end
+	local dress = On() and ns.ModuleOn("Tooltip")
+	if dress and not cardShell then
+		cardShell = CreateFrame("Frame", nil, card)
+		cardShell:SetAllPoints(card)
+		ns.Guard(API.Skin, cardShell, TipLook())
+	end
+	if cardShell then
+		cardShell:SetShown(dress)
+		-- (A level under the card's own, so its words stay in front: put back after every change
+		-- of the card's level, which takes its children up with it.)
+		cardShell:SetFrameLevel(math.max(0, card:GetFrameLevel() - 1))
+	end
+	if ns.Usable(card.NineSlice) then card.NineSlice:SetAlpha(dress and 0 or 1) end
+end
+
+local function FindCard(f, depth)
+	if card or depth > 8 or not ns.Usable(f) then return end
+	local c = rawget(f, "card")
+	if type(c) == "table" and ns.Usable(c) and c.NineSlice and c.AddDoubleLine then
+		card = c
+		ns.HookOnce(card, "SetHeight", Settle, KEY)
+		ns.ScriptOnce(card, "OnShow", Settle, KEY)
+		Settle()
+		return
+	end
+	for _, child in ipairs({ f:GetChildren() }) do
+		FindCard(child, depth + 1)
+		if card then return end
+	end
+end
+
+local clicks
+local function LookForCard()
+	if card then
+		if clicks then clicks:UnregisterAllEvents() end
+		return
+	end
+	ns.Queue("KeepOrToss.card", function() FindCard(_G.KeepOrTossFrame, 0) end, KEY)
+end
+
+-- DaylightUI's tooltip opacity changed: the card follows; this skin or DaylightUI's Tooltip
+-- module switched: it's dressed or given back.
+ns.me.On("SettingChanged", function(scope, path)
+	if not card then return end
+	if cardShell and ns.TipAlphaChanged(scope, path) then ns.Guard(API.Skin, cardShell, TipLook()) end
+	ns.Guard(Settle)
+end)
+
+-- ---------------------------------------------------------------------------------------------
 -- The look: Minimal, dark (a plain option of this addon's page; what it was is kept)
 -- ---------------------------------------------------------------------------------------------
 
@@ -186,6 +257,25 @@ ns.Pack(KEY, nil, function()
 		ns.ScriptOnce(news, "OnShow", function() ns.Guard(Cover) end, KEY)
 		ns.Guard(Cover)
 	end)
+	-- The settings page's sample card, once it's made (see above).
+	if API and type(API.Skin) == "function" then
+		if not clicks then
+			clicks = CreateFrame("Frame")
+			clicks:SetScript("OnEvent", LookForCard)
+		end
+		ns.ScriptOnce(frame, "OnShow", function()
+			if not card then clicks:RegisterEvent("GLOBAL_MOUSE_UP") end
+			LookForCard()
+		end, KEY)
+		ns.ScriptOnce(frame, "OnHide", function() clicks:UnregisterAllEvents() end, KEY)
+		-- (Shown with every page laid over the journal, just before the page is built.)
+		local sheet = _G.KeepOrTossSheet
+		if ns.Usable(sheet) then ns.ScriptOnce(sheet, "OnShow", LookForCard, KEY) end
+		if frame:IsShown() and not card then
+			clicks:RegisterEvent("GLOBAL_MOUSE_UP")
+			LookForCard()
+		end
+	end
 	-- Its words follow a new DaylightUI font, and this addon's text look.
 	ns.me.On("StyleChanged", function() ns.Guard(Words) end)
 	ns.me.On("SettingChanged", function(scope, path)

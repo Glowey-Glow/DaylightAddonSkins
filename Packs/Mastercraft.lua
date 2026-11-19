@@ -31,7 +31,7 @@
 --   * The windows: the main window (MastercraftFrame), the compact view, the item tracker, the
 --     farming HUD, the fishing bar and catch card, the mini guide, the never-bank list, the alt
 --     view, the recipe details, the Trade board, Share my crafts, Map icons, What's New, the setup
---     guide, the error report, the question box (Mastercraft's own; it never uses the game's
+--     guide, the error report, the "/mc report" Crafters report (2.0.7), the question box (Mastercraft's own; it never uses the game's
 --     popups), the Crafters request pop-up, its toasts, the mailbox helper and the bank pop-up: the
 --     DaylightUI window shell in place of its box (its own opacity, border and bevel when it has a
 --     look of its own), DaylightUI's X, the accent line along the top in the accent. The fishing bar
@@ -51,8 +51,8 @@
 --     tab looks.
 --   * Its recipe card in the profession window and the Nodes button on the world map: colors and
 --     font as above (no shell: they sit inside the game's windows).
---   * Text: DaylightUI's font on every word of it (its sizes kept; its own Greek / Korean font
---     where its language needs one). Its sub-tabs are laid out again in that font, and a label
+--   * Text: DaylightUI's font on every word of it (its sizes kept; its own Greek / Korean / Chinese
+--     font where its language needs one). Its sub-tabs are laid out again in that font, and a label
 --     wider than its button (or cut short in its box) shrinks to fit.
 -- Not here: its map and minimap node pins, the bobber mark and the profession art (its content);
 -- 3D models and the character scene; the minimap button (DaylightUI's addon button drawer, or
@@ -1008,12 +1008,12 @@ end
 local NAMED = { "MastercraftFrame", "MastercraftCompact", "MastercraftGoals", "MastercraftFarmHUD",
 	"MastercraftFishBar", "MastercraftFishRecap", "MastercraftMiniGuide", "MastercraftNeverBank",
 	"MastercraftAltView", "MastercraftDetails", "MastercraftTradeBoard", "MastercraftConfirm",
-	"MastercraftShareCrafts", "MastercraftNodeIcons", "MastercraftErrorReport" }
+	"MastercraftShareCrafts", "MastercraftNodeIcons", "MastercraftErrorReport", "MastercraftNetReport" }
 local BY_EVENT = { "MastercraftCompact", "MastercraftGoals", "MastercraftFarmHUD", "MastercraftFishBar",
 	"MastercraftFishRecap", "MastercraftMiniGuide" }
 -- (What's New and the setup guide are made once per language, named after it.)
 local FAMILIES = { "MastercraftSetup", "MastercraftWhatsNew" }
-local LANGS = { "", "_de", "_el", "_es", "_fr", "_ko", "_pl", "_pt", "_ru" }
+local LANGS = { "", "_de", "_el", "_es", "_fr", "_ko", "_pl", "_pt", "_ru", "_zh" }
 
 Names = function()
 	if not On() then return end
@@ -1381,7 +1381,8 @@ end
 -- DaylightUI or the Daylight plugins to overlap; checked for 2.0.5: Looking For Crafter sits in
 -- the game's Group Finder, which DaylightUI's own Group Finder window covers by default (nothing
 -- to hand over: it's simply out of sight there), and the next trainer at a profession's cap is
--- Glowey's Recipes' ground. Left out: its fishing
+-- Glowey's Recipes' ground; checked for 2.0.7: its new "Only my faction's characters" (tipFactionOnly)
+-- only narrows its own tooltip counts, nothing of DaylightUI's. Left out: its fishing
 -- helper's "after the fight" (Glowey's Fishing hands that one over itself); its profession window
 -- card, mini guide, shopping list and crafting costs (Glowey's Recipes' ground, not DaylightUI's);
 -- its minimap button (DaylightUI's drawer takes it as it is).)
