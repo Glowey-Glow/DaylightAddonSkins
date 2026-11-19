@@ -1,7 +1,7 @@
 ## Interface: 16001
-## Title: Addon Skins for |cffa335eeDaylightUI|r
+## Title: Addon |cffa335eeSkins|r (DaylightUI Plugin)
 ## IconTexture: Interface\AddOns\DaylightAddonSkins\Media\icon.png
-## Notes: A Daylight UI plugin: dresses the windows of your other addons (Keep or Toss, DoesItDie, Camping Kit, LootTriage, OpenMap, Spoken, Forever Fishing, Polestar, Forever Leveling BiS, Journey Guides, OneForAll, Questie, Dialogue UI, Shortest Path Forever, Dungeon Journal, Total RP 3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFG Forever, Guildy, Mastercraft, High Fidelity World Map, Details!, AtlasLoot Continued, Pawn), and the game windows Daylight UI leaves bare, in the Daylight UI look. Needs Daylight UI and its Window Skins module.
+## Notes: A plugin for Daylight UI: dresses the windows of your other addons (Keep or Toss, DoesItDie, Camping Kit, LootTriage, OpenMap, Spoken, Forever Fishing, Polestar, Forever Leveling BiS, Journey Guides, OneForAll, Questie, Dialogue UI, Shortest Path Forever, Dungeon Journal, Total RP 3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFG Forever, Guildy, Mastercraft, High Fidelity World Map, Details!, AtlasLoot Continued, Pawn), and the game windows Daylight UI leaves bare, in the Daylight UI look. Needs Daylight UI and its Window Skins module.
 ## Author: Glowey
 ## X-License: All Rights Reserved
 ## X-Curse-Project-ID: 1799579

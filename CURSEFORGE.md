@@ -1,8 +1,8 @@
-# DaylightUI Addon Skins
+# Addon Skins (DaylightUI Plugin)
 
 **Your other addons' windows in the Daylight UI look:** the window shell, your font, text colors and accent, and Daylight UI's buttons, boxes and scroll bars.
 
-Requires **Daylight UI** with its **Window Skins** module on.
+A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its bugs here, not to Daylight UI). Requires **Daylight UI** with its **Window Skins** module on.
 
 ---
 

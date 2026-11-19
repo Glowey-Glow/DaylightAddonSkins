@@ -1,4 +1,7 @@
-# DaylightUI Addon Skins
+# Addon Skins (DaylightUI Plugin)
+
+## 1.16.1
+- Renamed to Addon Skins (DaylightUI Plugin) in the AddOns list and on CurseForge, so it's clear it's a plugin and not part of Daylight UI. Inside Daylight UI it's still Addon Skins. Your settings are kept.
 
 ## 1.16.0
 - New skins: Details! (its meter windows follow Daylight UI's own meter look: bars, track, font, rows; plus its options, breakdown, report windows, menus and tooltips), AtlasLoot Continued and Pawn. Details' meter windows join the Daylight UI overlaps (Daylight UI's damage meter by default).

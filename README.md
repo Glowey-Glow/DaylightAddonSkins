@@ -1,4 +1,4 @@
-# DaylightUI Addon Skins
+# Addon Skins (DaylightUI Plugin)
 
 A plugin for Daylight UI on WoW: Forever. It gives your other addons' windows the Daylight UI look: the window shell, your font, text colors and accent, and Daylight UI's buttons, boxes and scroll bars.
 

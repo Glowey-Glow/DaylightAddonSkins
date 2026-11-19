@@ -1381,9 +1381,9 @@ end
 -- DaylightUI or the Daylight plugins to overlap; checked for 2.0.5: Looking For Crafter sits in
 -- the game's Group Finder, which DaylightUI's own Group Finder window covers by default (nothing
 -- to hand over: it's simply out of sight there), and the next trainer at a profession's cap is
--- Daylight Recipes' ground. Left out: its fishing
--- helper's "after the fight" (Daylight Fishing hands that one over itself); its profession window
--- card, mini guide, shopping list and crafting costs (Daylight Recipes' ground, not DaylightUI's);
+-- Glowey's Recipes' ground. Left out: its fishing
+-- helper's "after the fight" (Glowey's Fishing hands that one over itself); its profession window
+-- card, mini guide, shopping list and crafting costs (Glowey's Recipes' ground, not DaylightUI's);
 -- its minimap button (DaylightUI's drawer takes it as it is).)
 ns.Handover(KEY, {
 	ready = function() return MSettings() ~= nil end,

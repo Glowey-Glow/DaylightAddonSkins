@@ -1,5 +1,5 @@
 -- Game windows: the game's profession window (ProfessionsFrame, Blizzard_Professions), the one
--- DaylightUI's own profession window (and Daylight Recipes' "The game's window" mode) leaves as the
+-- DaylightUI's own profession window (and Glowey's Recipes' "The game's window" mode) leaves as the
 -- game draws it. Built against this client's own interface code (wow-ui-source, branch "forever":
 -- the Mainline Blizzard_Professions / Blizzard_ProfessionsTemplates / Blizzard_ProfessionsBook
 -- files plus their Camelot overrides), so every name and key below is the game's. Follows the
@@ -44,7 +44,7 @@
 -- called, no size or place of the window set, no field of the game's written. The book's spell
 -- buttons are secure: nothing is hooked or made on them (their edges are frames of ours on the
 -- card).
--- Parked: DaylightUI (Win.Follow's veil) and Daylight Recipes (Take.lua's veil) hold this window
+-- Parked: DaylightUI (Win.Follow's veil) and Glowey's Recipes (Take.lua's veil) hold this window
 -- shown but see-through under a frame of theirs. Nothing is dressed or passed over while it's
 -- held there (Really); it's dressed the first time it really shows, from the game's own refresh as
 -- it opens or when it's handed to the screen (a post-hook on SetParent), out of combat. Its parent
@@ -83,7 +83,7 @@ local function IsTexture(x) return Kind(x) == "Texture" end
 local function Secret(v) return issecretvalue ~= nil and issecretvalue(v) end
 
 -- Whether a window is really on screen: shown, and neither it nor what holds it see-through
--- (DaylightUI's and Daylight Recipes' veils are shown frames at alpha 0).
+-- (DaylightUI's and Glowey's Recipes' veils are shown frames at alpha 0).
 local function Really(f)
 	if not Usable(f) or not f:IsVisible() then return false end
 	local own = f:GetAlpha()
@@ -938,7 +938,7 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 -- Beside the X other addons put their own controls in a row, each anchored to the one on its
--- right: DaylightUI 1.8.4's "Daylight UI window" link, Daylight Recipes' swap button (20 px, left of
+-- right: DaylightUI 1.8.4's "Daylight UI window" link, Glowey's Recipes' swap button (20 px, left of
 -- the link when that shows). The title stops short of the leftmost one shown, measured each time
 -- the window opens (and again once those addons have placed theirs). Nothing of theirs touched.
 local SWAP_ROOM = 26   -- before the window has a size: room for Recipes' button
@@ -981,7 +981,7 @@ end
 
 local function FitTitleSoon(f)
 	FitTitle(f)
-	-- (Daylight Recipes places its button a frame after the window opens, and again at 0.3 s.)
+	-- (Glowey's Recipes places its button a frame after the window opens, and again at 0.3 s.)
 	C_Timer.After(0, function() Guard(FitTitle, f) end)
 	C_Timer.After(0.35, function() Guard(FitTitle, f) end)
 end
@@ -1083,7 +1083,7 @@ end
 -- ---------------------------------------------------------------------------------------------
 -- When: Blizzard_Professions loads (on demand: the first profession or K). The window is dressed
 -- the first time it really shows: from the game's own RefreshRightTabs (its OnShow calls it, and
--- a profession's opening or closing) and from SetParent (DaylightUI or Daylight Recipes handing
+-- a profession's opening or closing) and from SetParent (DaylightUI or Glowey's Recipes handing
 -- it to the screen), next frame and out of combat. The reagent picker in the frame it opens.
 -- ---------------------------------------------------------------------------------------------
 

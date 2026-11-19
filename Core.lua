@@ -1,4 +1,4 @@
--- Addon Skins for DaylightUI
+-- Addon Skins: a DaylightUI plugin
 -- A plugin: it runs on top of DaylightUI through DaylightUI.API only (see DaylightUI's API.md) and
 -- holds none of DaylightUI's code or art. Every look comes from API.Skin and the skin Kit that
 -- DaylightUI hands to a registered skin, so the player's font, accent and opacity are followed.
@@ -2296,6 +2296,7 @@ function ns.RegisterSettings(pages)
 	end
 	Guard(function()
 		DUI:RegisterPlugin(ADDON, {
+			title = ns.L["Addon Skins"],
 			icon = "Interface\\AddOns\\" .. ADDON .. "\\Media\\icon-glyph.png",
 			needs = { 1, 1 },
 			short = ns.L["Addons"],
