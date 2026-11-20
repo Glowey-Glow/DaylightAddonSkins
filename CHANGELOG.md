@@ -1,5 +1,8 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.4
+- Fixed: with Daylight UI's Bags off, opening the game's own bags raised an error ("BlizzardFallbacks.lua:952: attempt to call a nil value") and the bags were left undressed. The game's bags, separate or combined, are dressed again.
+
 ## 1.18.3
 - Checked against Daylight UI 2.1.1. Its game windows now follow the Daylight UI scale; dressed windows follow along.
 - Checked against today's updates of the addons you have installed: Keep or Toss 2.3.0 and LayerSwap 1.14.40. Nothing to change for either.

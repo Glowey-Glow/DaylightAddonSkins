@@ -979,9 +979,9 @@ local function Bag(Kit, f)
 end
 
 for i = 1, 7 do
-	Fallback(Named("ContainerFrame" .. i), BagsOwned, Bag, function(f, Kit) BagItems(Kit, f) end)
+	Fallback(Named("ContainerFrame" .. i), BagsOwned, function(f, Kit) Bag(Kit, f) end, function(f, Kit) BagItems(Kit, f) end)
 end
-Fallback(Named("ContainerFrameCombinedBags"), BagsOwned, Bag, function(f, Kit) BagItems(Kit, f) end)
+Fallback(Named("ContainerFrameCombinedBags"), BagsOwned, function(f, Kit) Bag(Kit, f) end, function(f, Kit) BagItems(Kit, f) end)
 
 -- ---------------------------------------------------------------------------------------------
 -- The bank while DaylightUI's Bags module is off
