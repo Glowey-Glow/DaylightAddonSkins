@@ -22,6 +22,9 @@ All pop-up menus (right-click menus and dropdowns, any addon's) and every addon'
 
 ---
 
+## New in 1.18.3
+Checked against Daylight UI 2.1.1. **Shortest Path Forever 1.43.9:** the skin works again (since 1.43.6 it starts at login, so the skin no longer found it), its submenus are dressed, and docking under Daylight UI's quest tracker keeps your Tracker Position choice. **Kerzo Classic Quest Log 6.6.0:** the new Quest Details window, the reorganized settings and the difficulty color buttons are dressed. Also checked: Keep or Toss 2.3.0, LayerSwap 1.14.40, ALL THE THINGS 5.4.15, AtlasLoot Continued 12981, Forever Leveling BiS 1.4.2, RareScanner 1.60.1.10 and Camping Kit 1.11.
+
 ## New in 1.18.2
 Ready for Daylight UI 2.0. The overlap window waits for Daylight UI's welcome instead of opening over it. Tooltips dressed by a skin (ALL THE THINGS, Keep or Toss, Questie, RareScanner, Total RP 3, Details) follow Daylight UI 2.0's tooltip border and opacity. With Daylight UI's new Auction House window in use, Auctionator's and Mastercraft's pages on the game's hidden window are left alone until you switch back.
 
