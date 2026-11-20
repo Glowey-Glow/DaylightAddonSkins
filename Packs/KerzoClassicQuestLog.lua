@@ -45,7 +45,11 @@
 --     labels in the label ink; the header's gold color code taken out. The mascot watermark stays.
 --   * Dialogs (abandon, About, Forever notice, reset, difficulty colors, the KQE download window):
 --     the window shell, their buttons, boxes and scroll bars DaylightUI's, titles in the value ink;
---     logos, alert icons and the difficulty swatches and preview colors stay.
+--     logos, alert icons and the difficulty swatches and preview colors stay (6.6.0: a swatch is a
+--     button that opens the game's color picker; its gold edge neutral, the accent under the mouse).
+--   * The quest details window (6.6.0, the tracker's "Open Quest Details Only" click mode): the
+--     window shell, its portrait and stone ground off, its four buttons DaylightUI's; the detail
+--     panel it borrows is the one dressed above.
 --   * What's New: the window shell; the parchment cards flat dark boxes with light words; the
 --     notice and scroll boxes quiet; buttons, box, X and scroll bar DaylightUI's. The mascot, its
 --     speech bubble and the green NEW badge stay.
@@ -761,15 +765,27 @@ local function Settings(kql, Kit)
 		Ink(banner.Titulo, "VALUE")
 		Ink(banner.Desc, "TEXT")
 	end
-	local third = _G.KQLSeccion_THIRD_PARTY
-	if Usable(third) and type(third.SubCabeceras) == "table" then
+	-- The sub-headings inside a section. Since 6.6.0 every section has them, closed until clicked
+	-- and remembered under "<section>:<sub-heading>"; before, only the add-ons section did, open
+	-- unless closed and remembered under the sub-heading's own id.
+	if type(content.PanelesCategorias) == "table" then
 		local opened = type(content.SubSeccionesAbiertas) == "table" and content.SubSeccionesAbiertas or {}
-		for id, sub in pairs(third.SubCabeceras) do
-			if Usable(sub) then
-				FlatBox(sub, 0.25)
-				local open = opened[id] ~= false
-				Ink(sub.Texto, open and "VALUE" or "TEXT")
-				Tint(sub.Icono, open and "VALUE" or "TEXT")
+		local keyed = type(panel.ExpandirTodasSecciones) == "function"
+		for catId, sec in pairs(content.PanelesCategorias) do
+			if Usable(sec) and type(sec.SubCabeceras) == "table" then
+				for id, sub in pairs(sec.SubCabeceras) do
+					if Usable(sub) then
+						FlatBox(sub, 0.25)
+						local open
+						if keyed then
+							open = opened[tostring(catId) .. ":" .. tostring(id)] == true
+						else
+							open = opened[id] ~= false
+						end
+						Ink(sub.Texto, open and "VALUE" or "TEXT")
+						Tint(sub.Icono, open and "VALUE" or "TEXT")
+					end
+				end
 			end
 		end
 	end
@@ -881,11 +897,39 @@ local function Download(f)
 	Recode(f.FeaturesList, "|cffd4af37", "LABEL")
 end
 
+-- The difficulty colors' swatches (6.6.0): each a button with a gold edge of its own, brighter
+-- under the mouse, that opens the game's color picker. A neutral edge, the accent under the
+-- mouse; the swatch's color is the setting and stays.
+local SWATCH_ROWS = { "FilaRojo", "FilaNaranja", "FilaAmarillo", "FilaVerde", "FilaGris" }
+local function PaintSwatch(b, over)
+	if not Usable(b) or not b.SetBackdropBorderColor or not On() then return end
+	if over then
+		local r, g, bl = ns.AccentOf(KEY)
+		b:SetBackdropBorderColor(r, g, bl, 1)
+	else
+		b:SetBackdropBorderColor(1, 1, 1, 0.25)
+	end
+end
+local function Swatches(f)
+	for _, k in ipairs(SWATCH_ROWS) do
+		local row = f[k]
+		local tex = Usable(row) and row.CuadritoTex
+		local b = IsTexture(tex) and tex:GetParent()
+		if Usable(b) and b ~= row and Kind(b) == "Button" then
+			-- (After its own scripts, which set the gold again.)
+			ns.ScriptOnce(b, "OnEnter", function(self) PaintSwatch(self, true) end, KEY)
+			ns.ScriptOnce(b, "OnLeave", function(self) PaintSwatch(self, false) end, KEY)
+			PaintSwatch(b, b:IsMouseOver())
+		end
+	end
+end
+
 local function Colors(f)
 	if not On() then return end
 	Ink(f.Desc, "TEXT")
 	Ink(f.TextoTituloPreview, "LABEL")
 	QuietBoxes(f)
+	Swatches(f)
 end
 
 local function News(f)
@@ -921,6 +965,37 @@ local function News(f)
 			end
 		end
 	end
+end
+
+-- The quest details window (6.6.0: KQLVentanaDetalleAislada, a ButtonFrameTemplate window the
+-- tracker's "Open Quest Details Only" click mode opens instead of the quest log). It is made on
+-- its first opening and borrows the detail panel while it is up; the addon skins it again on
+-- every opening (its frame art back to 0.35, its ground painted again), so that art is erased,
+-- not just faded.
+local DETAIL_BUTTONS = { "BtnAbrirLog", "BtnAbandonar", "BtnCompartir", "BtnSeguir" }
+local function DetailWindow(kql, Kit)
+	local f = _G.KQLVentanaDetalleAislada
+	if not Usable(f) or not On() then return end
+	if ns.Once(f) then
+		Kit.Window(f)
+		FollowWindowFonts(f)
+	end
+	EraseNine(f)
+	Erase(f.Bg)
+	Erase(f.TopTileStreaks)
+	local pc = f.PortraitContainer
+	if Usable(pc) then
+		EraseAll(pc)
+		for _, c in ipairs({ pc:GetChildren() }) do EraseAll(c) end
+	end
+	for _, k in ipairs(DETAIL_BUTTONS) do TextButton(f[k], Kit) end
+	-- The panel's well: DaylightUI draws an inset's shade on the inset itself, or, for one raised
+	-- above its window (the stacked layout raises this panel), on the window under it. That one
+	-- stays behind on the hidden quest log, so the panel's holder here gets a well of its own then.
+	local v, hold = kql.VisorDetalle, f.Contenedor
+	local shade = Usable(v) and type(Kit.ShadeOf) == "function" and Kit.ShadeOf(v)
+	if Usable(hold) and not (Usable(shade) and shade:GetParent() == v) then Kit.Inset(hold) end
+	Detail(kql, Kit)
 end
 
 local function Menu()
@@ -1176,6 +1251,10 @@ local function Setup(kql, Kit)
 			if On() and Usable(f) then BackdropWindow(f, Kit, Download) Download(f) end
 		end)
 	end
+
+	-- The quest details window (6.6.0): made and shown in one call, dressed right after, and
+	-- again on every opening (its own skin pass runs each time).
+	Hook(kql, "AbrirVentanaDetalleAislada", function() DetailWindow(kql, Kit) end)
 
 	-- The menu.
 	Hook(kql, "MostrarMenuContextual", Menu)

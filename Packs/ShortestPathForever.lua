@@ -4,7 +4,7 @@
 -- opens for it (report, issue, thanks; before ForeverCore 1.15 also the Forever addons link and
 -- your Forever profile), ForeverCore's right-click menu (the tracker's header and lines) and, before
 -- Shortest Path 1.42 (which dropped it), its "Journey" button under the minimap.
--- (Checked against Shortest Path 1.43.2 / ForeverCore 1.15.1.)
+-- (Checked against Shortest Path 1.43.9, which carries ForeverCore 1.15.4 inside itself.)
 -- Left alone: everything it draws on the world map and minimap (route lines, pins, docks,
 -- portals), the direction arrow and compass (on-screen guides with settings of their own), its
 -- settings (the game's Settings window). Its tracker sections: docked under DaylightUI's quest
@@ -40,7 +40,35 @@ ns.Target(KEY, "Shortest Path Forever", { window = true, controls = true, text =
 		}
 	end })
 
-if type(_G.ShortestPathForever) ~= "table" then return end
+-- From 1.43.6 Shortest Path carries ForeverCore inside itself and runs its own files only once that
+-- core starts, at login (its ForeverCoreRun.lua; after the fight, for a reload made in one). Before,
+-- its files ran as it loaded and its global was there as this file loads. So this file goes by the
+-- addon being loaded, and what reads Shortest Path's or ForeverCore's globals waits for them
+-- (WhenCore below).
+if type(_G.ShortestPathForever) ~= "table" and not ns.AddonLoaded(KEY) then return end
+
+-- fn(core) once ForeverCore and Shortest Path are both up: now (a ForeverCore addon of its own
+-- that ran as it loaded), or a frame at most after they start.
+local coreWaiting
+local function WhenCore(fn)
+	local core = _G.ForeverCore
+	if type(core) == "table" and type(_G.ShortestPathForever) == "table" then
+		ns.Guard(fn, core)
+		return
+	end
+	if coreWaiting then
+		coreWaiting[#coreWaiting + 1] = fn
+		return
+	end
+	coreWaiting = { fn }
+	ns.Watch(KEY, function()
+		return type(_G.ShortestPathForever) == "table" and type(_G.ForeverCore) == "table" and _G.ForeverCore or nil
+	end, function(found)
+		local list = coreWaiting
+		coreWaiting = nil
+		for _, f in ipairs(list) do ns.Guard(f, found) end
+	end)
+end
 
 -- ---------------------------------------------------------------------------------------------
 -- Nearby services panel (made when the world map loads)
@@ -184,8 +212,9 @@ end)
 
 -- Its side tab and the quest log's own are checked from code (ForeverCore's QuestLogTabs: picking
 -- a tab, or the quest log asking for its quests back), so the tabs' look is read again after.
-local LogTabs = type(_G.ForeverCore) == "table" and _G.ForeverCore.QuestLogTabs
-if type(LogTabs) == "table" then
+WhenCore(function(core)
+	local LogTabs = core.QuestLogTabs
+	if type(LogTabs) ~= "table" then return end
 	local function Repaint()
 		local Kit = ns.Kit
 		if Kit and type(Kit.RepaintSoon) == "function" and ns.Enabled(KEY) then ns.Guard(Kit.RepaintSoon) end
@@ -195,7 +224,7 @@ if type(LogTabs) == "table" then
 			ns.HookOnce(LogTabs, method, function() C_Timer.After(0, Repaint) end, KEY)
 		end
 	end
-end
+end)
 
 -- ---------------------------------------------------------------------------------------------
 -- ForeverCore's windows (the game's portrait window template) and its menu
@@ -304,12 +333,32 @@ end
 -- arrow) drawn in frames of its own. Drawn again for each submenu while it stays open, and that
 -- ends in its SetSize: repainted there, ticks in the accent, the game's gold and gray in
 -- DaylightUI's inks, new rows in the player's font.
+-- ForeverCore 1.15.4 (UI/ContextMenu.lua) draws it after the game's own menus: a row's hover is the
+-- quest log's blue highlight art, added on (kept lit while the row's submenu is open), here a wash
+-- in the accent, fainter on a row that can't be clicked and none on a title or a divider, as it
+-- has them; and a submenu is a menu frame of its own beside its row (below).
+local function Opened() ns.WatchNow() end
+
 local function MenuRows(menu, Kit)
 	local rows = menu.rows
 	if type(rows) ~= "table" then return end
 	local ink = Kit.DIM
 	for _, row in ipairs(rows) do
 		if ns.Usable(row) and row:IsShown() then
+			local hover = row.highlight
+			if ns.Usable(hover) and hover.SetBlendMode then
+				-- (It sets the art's alpha again on every draw: 1, 0.4 for a row that's off, 0 for a
+				-- title or a divider. Told here by the row itself.)
+				local passive = (ns.Usable(row.divider) and row.divider:IsShown())
+					or (row.GetDisabledFontObject and row:GetDisabledFontObject() == _G.GameFontNormal)
+				local alpha = 0.18
+				if not row:IsEnabled() then alpha = passive and 0 or 0.08 end
+				ns.FillAccent(hover, alpha, nil, KEY)
+				hover:SetBlendMode("BLEND")
+				-- A row lights its hover for good right after it has made and drawn its submenu, and
+				-- before it shows it: that level is looked for there, so it's dressed before it's drawn.
+				ns.HookOnce(row, "LockHighlight", Opened, KEY)
+			end
 			if ns.Usable(row.tick) then
 				row.tick:SetDesaturated(true)
 				ns.PaintAccent(row.tick, 1, nil, KEY)
@@ -324,7 +373,8 @@ local function MenuRows(menu, Kit)
 	ns.Dress(menu, { scrollBars = false, fonts = true }, 0, KEY)
 end
 
-ns.Watch(KEY, "ForeverCoreContextMenu", function(menu, Kit)
+local DressMenu
+DressMenu = function(menu, Kit)
 	if not ns.Once(menu) then return end
 	for _, region in ipairs({ menu:GetRegions() }) do
 		if ns.Usable(region) and region:GetObjectType() == "Texture" and region:GetDrawLayer() == "BACKGROUND" then
@@ -338,20 +388,28 @@ ns.Watch(KEY, "ForeverCoreContextMenu", function(menu, Kit)
 	ns.HookOnce(menu, "SetSize", function() ns.Guard(MenuRows, menu, Kit) end, KEY)
 	-- (Its first opening made it and drew it in one call: drawn already.)
 	ns.Guard(MenuRows, menu, Kit)
-end)
+	-- ForeverCore 1.15.4: each submenu level is a frame of its own ("ForeverCoreContextMenu2",
+	-- "...3"), made by a call it keeps to itself the first time a row opens one: the next level
+	-- down is watched for from here (and looked for at once from the row's LockHighlight, above).
+	if type(menu.depth) == "number" then
+		ns.Watch(KEY, "ForeverCoreContextMenu" .. (menu.depth + 1), DressMenu)
+	end
+end
+ns.Watch(KEY, "ForeverCoreContextMenu", DressMenu)
 
 -- The menu is made on its first opening, and the windows on theirs: looked for right after the
 -- calls that open them from outside (Shortest Path's map pins, flight pins and tracker lines open
 -- the menu through ForeverCore.ContextMenu; /path stops, /path farm and /forever profile open the
 -- windows), so they're dressed before they're drawn. The rest (ForeverCore's own tracker menu,
 -- Shortest Path's map menu) are found by the watches, a frame late at most.
-local function Opened() ns.WatchNow() end
-if type(_G.ForeverCore) == "table" and type(_G.ForeverCore.ContextMenu) == "function" then
-	ns.HookOnce(_G.ForeverCore, "ContextMenu", Opened, KEY)
-end
-ns.me.On("Login", function()
+WhenCore(function(core)
+	if type(core.ContextMenu) == "function" then ns.HookOnce(core, "ContextMenu", Opened, KEY) end
+end)
+-- (Its slash commands are set as its settings are made, after it starts: looked for until then.)
+ns.Watch(KEY, function()
 	local slash = _G.SlashCmdList
-	if type(slash) ~= "table" then return end
+	return type(slash) == "table" and type(slash.SHORTESTPATHFOREVER) == "function" and slash or nil
+end, function(slash)
 	for _, name in ipairs({ "SHORTESTPATHFOREVER", "FOREVERCORE" }) do
 		if type(slash[name]) == "function" then ns.HookOnce(slash, name, Opened, KEY) end
 	end
@@ -669,10 +727,12 @@ local function Restyle(host)
 	if host.MarkDirty then pcall(host.MarkDirty, host) end
 end
 -- Its text changes on a timer (departures counting down) through ForeverCore's own function.
-local section = type(_G.ForeverCore) == "table" and _G.ForeverCore.TrackerSection
-if type(section) == "table" and type(section.UpdateText) == "function" then
-	ns.HookOnce(section, "UpdateText", Styled, KEY)
-end
+WhenCore(function(core)
+	local section = core.TrackerSection
+	if type(section) == "table" and type(section.UpdateText) == "function" then
+		ns.HookOnce(section, "UpdateText", Styled, KEY)
+	end
+end)
 
 -- ---------------------------------------------------------------------------------------------
 -- Docking
@@ -727,6 +787,11 @@ local function Column()
 		local ok, s = pcall(api.GetSettings)
 		return ok and type(s) == "table" and s or nil
 	end
+	-- ForeverCore 1.15.4 gave the column a place again (Under or Left of the game's tracker, the
+	-- player's pick: GetPlacement / SetPlacement), and its SetAttached now picks one of the two and
+	-- forgets the dragged spot. The player's place is left as it is there: the spot saved while
+	-- docked takes the column off it, and letting go of that spot gives it back.
+	local placed = type(api.GetPlacement) == "function" and type(api.SetPlacement) == "function"
 
 	-- The box behind the sections, like the tracker's (Quests > box), on a frame of ours under them.
 	local box = CreateFrame("Frame", nil, host)
@@ -765,14 +830,25 @@ local function Column()
 		settled, boxX, boxY = nil, nil, nil
 		if db.foreverDocked then
 			db.foreverDocked = nil
-			pcall(api.SetAttached, true)
-			local s = Spot()
-			if s then
+			if placed then
+				-- (1.15.4: back to the spot it was dragged to, or to its place, Under or Left of the
+				-- game's tracker: picking the place it has again lets go of the spot saved here.)
 				if type(db.foreverX) == "number" and type(db.foreverY) == "number" then
 					pcall(api.SavePosition, db.foreverX, db.foreverY)
 				else
-					s.x, s.y = nil, nil
-					if type(host.MarkDirty) == "function" then pcall(host.MarkDirty, host) end
+					local ok, place = pcall(api.GetPlacement)
+					if ok then pcall(api.SetPlacement, place) end
+				end
+			else
+				pcall(api.SetAttached, true)
+				local s = Spot()
+				if s then
+					if type(db.foreverX) == "number" and type(db.foreverY) == "number" then
+						pcall(api.SavePosition, db.foreverX, db.foreverY)
+					else
+						s.x, s.y = nil, nil
+						if type(host.MarkDirty) == "function" then pcall(host.MarkDirty, host) end
+					end
 				end
 			end
 			db.foreverX, db.foreverY = nil, nil
@@ -820,7 +896,7 @@ local function Column()
 			if type(api.GetScale) == "function" then db.foreverScale = api.GetScale() end
 			local s = Spot()
 			if s then db.foreverX, db.foreverY = s.x, s.y end
-			pcall(api.SetAttached, false)
+			if not placed then pcall(api.SetAttached, false) end
 		end
 		-- Locked while docked: nothing to drag, and its grip's "Forever tracker" label goes with it.
 		-- (Once a session: a column docked before this was added was never locked.)
@@ -902,7 +978,22 @@ local function Column()
 	end)
 end
 
-ns.me.On("Login", function() C_Timer.After(1, function() ns.Guard(Column) end) end)
+-- A second after login, as ever. From Shortest Path 1.43.6 the column is made when its ForeverCore
+-- starts (at login; after the fight, for a reload made in one): looked for once a second until it
+-- is there, ten minutes at most. (Not a watch: this runs with the skin switched off too, to give
+-- the column back.)
+ns.me.On("Login", function()
+	local tries = 0
+	local function look()
+		if ns.Usable(_G.ForeverTrackerCompanion) and type(_G.ForeverTrackerHost) == "table" then
+			ns.Guard(Column)
+			return
+		end
+		tries = tries + 1
+		if tries < 600 then C_Timer.After(1, look) end
+	end
+	C_Timer.After(1, look)
+end)
 
 
 ns.Pack(KEY)

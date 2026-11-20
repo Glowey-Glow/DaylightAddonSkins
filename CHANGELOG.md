@@ -1,5 +1,17 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.3
+- Checked against Daylight UI 2.1.1. Its game windows now follow the Daylight UI scale; dressed windows follow along.
+- Checked against today's updates of the addons you have installed: Keep or Toss 2.3.0 and LayerSwap 1.14.40. Nothing to change for either.
+- Keep or Toss 2.3.0: its new Lookup page (the "Item name, link, or ID" field above the journal) sits on Daylight UI's window in the Minimal dark look like the rest of the journal, with its words in your font. Its result rows, scroll bar and colors stay its own, as on its other pages.
+- LayerSwap 1.14.40: only its timing changed (it leaves the host's group 4 seconds after joining), so its panel, mini bar, menus and the Layer button look and work as before.
+- Checked against today's releases of the addons you may not have installed: ALL THE THINGS 5.4.15, AtlasLoot Continued 12981, Forever Leveling BiS 1.4.2, Kerzo Classic Quest Log 6.6.0, RareScanner 1.60.1.10, Shortest Path Forever 1.43.9 and Camping Kit 1.11. Nothing to change for ALL THE THINGS, AtlasLoot Continued, Forever Leveling BiS, RareScanner and Camping Kit; the other supported addons have no new release.
+- Shortest Path Forever 1.43.9: the skin works again. Since 1.43.6 Shortest Path carries ForeverCore inside itself and starts at login instead of while the game loads, so the skin no longer found it: nothing of it was dressed, the Forever sections were not put under Daylight UI's quest tracker, and its overlaps were not offered. All of that is back, with or without a separate ForeverCore installed.
+- Shortest Path Forever 1.43.9: its right-click menu's submenus, which now open beside the menu as windows of their own, take the Daylight UI look too, and a row under the mouse is lit in your accent instead of the game's blue.
+- Shortest Path Forever 1.43.9: turning the dock under Daylight UI's quest tracker on or off keeps your Tracker Position choice (Under or Left of the quest tracker) instead of resetting it.
+- Kerzo Classic Quest Log 6.6.0: its new Quest Details window (the tracker's "Open Quest Details Only" click mode) is dressed: the Daylight UI window, its Open Quest Log, Abandon, Share and Track buttons, and the quest's details as in the quest log.
+- Kerzo Classic Quest Log 6.6.0: in its reorganized settings, every group's sub-headings are flat Daylight UI boxes (bright when open) and the new Expand All button is a Daylight UI button. In the difficulty colors window, the new color buttons have a quiet edge that turns your accent color under the mouse; the colors themselves stay yours.
+
 ## 1.18.2
 - Checked against Daylight UI 2.0, released today: its new Auction House window, Rich tooltips, loot roll cards, portraits, nameplate options and welcome window. Nothing is dressed twice, and everything works as before on Daylight UI 1.9.
 - The overlap window (the one that asks who handles a feature both an addon and Daylight UI have) no longer opens on top of Daylight UI's "Welcome to Daylight UI 2.0" window. It now waits for that window, Daylight UI's setup guide, tour and questions, and the welcome of any other Glowey plugin, and opens once the screen is free. If you log out first, it asks at your next login.
