@@ -57,6 +57,15 @@
 --     Classes list the shell with a white wash, its Compact view button's glow a wash; the Tier Sets
 --     icon's Hide menu and a piece's "who drops it" box the window shell. The rest of the page
 --     (rows, pieces, quality colors, ticks) is DaylightUI's journal skin's.
+--   * 2.1.0, on a quest's page (DaylightUI's journal skin writes every line there in its text ink):
+--     the red lines keep a warning color (the "must be summoned" line, the warning at the top, the
+--     chain notice, and 2.1.0's line under the objective), "Requires Neutral with ..." is green or
+--     red by whether you have the standing, the reputation bar under it is DaylightUI's (its standing
+--     color kept), and the mark round a required item from this dungeon is the accent, not a plain
+--     edge. None of it is touched while DaylightUI's journal skin is off.
+--   * The two buttons under its arrow ("Not found? Next spot", and 2.1.0's "Skip for now"):
+--     DaylightUI's, made wider when its font needs it. The arrow, its words and its item button are
+--     its own.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -614,6 +623,108 @@ local function TierPage(panel)
 	WhiteGlow(panel.compact)
 end
 
+-- ---------------------------------------------------------------------------------------------
+-- A quest's page. DaylightUI's journal skin writes every line of it in its text ink on each of its
+-- passes (a click anywhere in the journal, item data coming in, the page drawn again), which takes
+-- the meaning out of the lines the journal colors: its dark red warnings, and (2.1.0) the green or
+-- red "Requires <standing> with <faction>". Those are held in DaylightUI's warning and done inks:
+-- each time one is colored, by the journal (its own dark red or green, which says which it is) or
+-- by DaylightUI's skin (anything else), it's put back. While DaylightUI's journal skin is off only
+-- the journal colors them, and they stay as it draws them.
+-- ---------------------------------------------------------------------------------------------
+
+local kept = setmetatable({}, { __mode = "k" })   -- font string -> the ink it's held in
+local keeping = false
+
+local function Rekeep(fs, r, g, b)
+	if keeping or type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then return end
+	-- The journal's own: 0.05, 0.42, 0.05 (you have the standing) and 0.62, 0.10, 0.05 (a warning).
+	if r < 0.2 and g > 0.3 and b < 0.2 then
+		kept[fs] = "GOOD"
+		return
+	elseif r > 0.5 and g < 0.2 and b < 0.2 then
+		kept[fs] = "BAD"
+		return
+	end
+	local c = ns.Colors()[kept[fs] or "BAD"]
+	if not c or (r == c[1] and g == c[2] and b == c[3]) then return end
+	keeping = true
+	fs:SetTextColor(c[1], c[2], c[3])
+	keeping = false
+end
+
+local function KeepInk(fs)
+	if not ns.Usable(fs) or fs:GetObjectType() ~= "FontString" then return end
+	if kept[fs] == nil then
+		kept[fs] = "BAD"
+		ns.HookOnce(fs, "SetTextColor", Rekeep, KEY)
+	end
+	Rekeep(fs, fs:GetTextColor())
+end
+
+-- The page's red lines, by the keys the journal keeps them under.
+local WARNINGS = { "questSummonNote", "questWarningText", "questChainNotice", "questObjectiveNoteText" }
+
+-- (2.1.0) A required item that comes from the dungeon whose page this is has a gold edge round its
+-- card. DaylightUI's journal skin swaps that for one of its plain outlines, like any box: lit in
+-- the accent, so the mark still reads. (The outline is DaylightUI's skin's; without it the gold
+-- stays.)
+local function HereMarks(Kit)
+	local f = _G.ForeverDungeonJournalFrame
+	if not ns.Usable(f) or type(Kit.ShellOf) ~= "function" then return end
+	local accent
+	for _, b in ipairs(type(f.questStepItemButtons) == "table" and f.questStepItemButtons or {}) do
+		local glow = type(b) == "table" and b.fdjHereGlow
+		if ns.Usable(glow) and glow:IsShown() then
+			local s = Kit.ShellOf(glow)
+			if s then
+				-- (A new table each time: the shell keeps the one it was painted with.)
+				accent = accent or { ns.AccentOf(KEY) }
+				ns.LightShell(s, accent, KEY)
+			end
+		end
+	end
+end
+
+-- (2.1.0) A quest that needs a reputation: its "Requires ..." line held like the warnings, its
+-- bar (a plain status bar in the game's bar art with a dark edge) DaylightUI's. The journal colors
+-- the bar by standing on every draw, which stays.
+local function RepNeeds(Kit)
+	local f = _G.ForeverDungeonJournalFrame
+	if not ns.Usable(f) or type(f.fdjRepRows) ~= "table" then return end
+	for _, row in ipairs(f.fdjRepRows) do
+		if type(row) == "table" then
+			KeepInk(row.text)
+			local bar = row.bar
+			if ns.Controls(KEY) and ns.Usable(bar) and bar:GetObjectType() == "StatusBar" and First(bar) then
+				ns.Guard(Kit.StatusBar, bar)
+			end
+		end
+	end
+end
+
+-- The buttons under its arrow (ForeverDungeonJournalArrow, out on the screen): "Not found? Next
+-- spot (2/3)" and (2.1.0) "Skip for now", the game's red buttons: DaylightUI's. It sizes them for
+-- the game's font; one DaylightUI's font outgrows is widened (they hang centered under the arrow).
+local function FitButton(b)
+	local fs = b.GetFontString and b:GetFontString()
+	local need = fs and math.ceil((fs:GetStringWidth() or 0) + 24) or 0
+	if need > (b:GetWidth() or 0) then b:SetWidth(need) end
+end
+
+local function Arrow(f, Kit)
+	if not ns.Usable(f) or not ns.Controls(KEY) then return end
+	for _, key in ipairs({ "nextSpawn", "skipNow" }) do
+		local b = f[key]
+		if ns.Usable(b) and b:GetObjectType() == "Button" and First(b) then
+			ns.Guard(Kit.Button, b)
+			ns.ScriptOnce(b, "OnShow", FitButton, KEY)
+			ns.HookOnce(b, "SetText", FitButton, KEY)
+			FitButton(b)
+		end
+	end
+end
+
 local MENU_NAMES = { "ForeverDungeonJournalRunLogMenu", "ForeverDungeonJournalTrackerMenu",
 	"ForeverDungeonJournalOnyxiaMenu", "ForeverDungeonJournalSleepingBagMenu", "ForeverDungeonJournalLFGMenu",
 	"ForeverDungeonJournalFavouriteContextMenu", "ForeverDungeonJournalTierMenu" }
@@ -683,16 +794,22 @@ ns.Pack(KEY, nil, function(Kit)
 			if ns.Enabled(KEY) and ns.Usable(win) then ns.Guard(RunLog, win, Kit) end
 		end, KEY)
 	end
-	-- A summoned boss's quest (2.0.9, Gahz'rilla): its red "must be summoned" line, which
-	-- DaylightUI's quest page pass makes plain white, back in the warning ink after that pass.
-	if type(FDJ.PlaceSummonHelp) == "function" then
-		ns.HookOnce(FDJ, "PlaceSummonHelp", function()
-			ns.Queue("ForeverDungeonJournal:summon", function()
-				local f = _G.ForeverDungeonJournalFrame
-				local note = ns.Enabled(KEY) and ns.Usable(f) and f.questSummonNote
-				if note and note:IsShown() then Ink(note, "BAD") end
-			end, KEY)
+	-- A quest's page ends in ApplyQuestDetailScroll, with every line of it placed: its red lines
+	-- (2.0.9's "must be summoned", 2.1.0's line under the objective, the older warnings) are held in
+	-- the warning ink from there on (see KeepInk), and the mark round this dungeon's items is lit a
+	-- frame later, once DaylightUI's skin has put its outline there.
+	if type(FDJ.ApplyQuestDetailScroll) == "function" then
+		local function marks() HereMarks(Kit) end
+		ns.HookOnce(FDJ, "ApplyQuestDetailScroll", function()
+			local f = _G.ForeverDungeonJournalFrame
+			if not ns.Usable(f) then return end
+			for _, key in ipairs(WARNINGS) do KeepInk(f[key]) end
+			ns.Queue("ForeverDungeonJournal:here", marks, KEY)
 		end, KEY)
+	end
+	-- (2.1.0) A quest's reputation needs are placed (and colored) inside this call.
+	if type(FDJ.PlaceRepNeeds) == "function" then
+		ns.HookOnce(FDJ, "PlaceRepNeeds", function() RepNeeds(Kit) end, KEY)
 	end
 	-- The boss icon size control on its dungeon maps (the journal's, and the world map's in a
 	-- dungeon): a flat box, DaylightUI's - and + buttons, its label in the label ink.
@@ -853,6 +970,10 @@ ns.Pack(KEY, nil, function(Kit)
 	After("ShowCopyBox", Field("copyBox"), Window)
 	-- A Tier Sets piece's "who drops it" box (2.0.10): the shell, its gold boss names in the label ink.
 	After("ShowTierSourceTip", Global("ForeverDungeonJournalTierSourceTip"), Window)
+	-- Its arrow is made the first time it has somewhere to point (a click on a quest's Show on Map,
+	-- a Route step), its buttons with it.
+	After("FollowWaypoint", Global("ForeverDungeonJournalArrow"), Arrow)
+	After("SetWaypointArrow", Global("ForeverDungeonJournalArrow"), Arrow)
 	After("ToggleBugReportWindow", function(frame) return type(frame) == "table" and frame.bugReportWindow or nil end, Popup)
 	After("UpdateMapQuestToggle", function(panel) return type(panel) == "table" and panel.fdjQuestToggle or nil end, QuestToggle)
 	-- The home page header is laid out again after every home refresh; the RPG Mode note is made
@@ -927,6 +1048,7 @@ ns.Pack(KEY, nil, function(Kit)
 	ns.Watch(KEY, "ForeverDungeonJournalNotice", Window)
 	ns.Watch(KEY, function() return FDJ.foreverHint end, Window)
 	ns.Watch(KEY, "ForeverDungeonJournalTierPanel", TierPage)
+	ns.Watch(KEY, "ForeverDungeonJournalArrow", Arrow)
 	ns.Watch(KEY, "ForeverDungeonJournalRPGIntro", function()
 		JournalPopups(_G.ForeverDungeonJournalFrame)
 	end)

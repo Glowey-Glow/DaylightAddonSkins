@@ -27,7 +27,10 @@
 --   * Its mini bar (LayerSwapMini): a thin DaylightUI edge round it, your font and the text ink.
 --     Its background keeps LayerSwap's own darkness setting. It can fade out like DaylightUI's
 --     minimap buttons (a choice on this addon's page): shown only while the mouse is over the
---     minimap or the bar, and while you drag it or one of its menus is open.
+--     minimap or the bar, and while you drag it or one of its menus is open. Its Swap field
+--     (1.14.39, LayerSwapMiniSwap: two arrows, or a square while a press would stop) is in
+--     LayerSwap's gold, white under the mouse: the label ink and the accent here, the dim ink
+--     while it's off. LayerSwap paints the sign again every second, so ours goes on after each.
 --   * Its settings menu gets one row of ours at the bottom, "Layer button: Always / On hover / Off"
 --     (Shift + click, like its own switches): the minimap button's setting on this addon's page.
 --   * Its options page (Options, AddOns, LayerSwap): DaylightUI's switches, buttons and text inks
@@ -40,8 +43,9 @@
 -- as they're first needed and dressed each time the menu shows.
 -- Hooked (post-hooks only): each menu's OnShow and OnHide; the Swap / Host / Mini bar buttons'
 -- SetDisabledFontObject, SetText, OnEnable and OnDisable; the options page's OnShow; the clicks
--- of the mini bar, its logo and LayerSwap's minimap button, and its /ls command (to dress what
--- they open at once).
+-- of the mini bar, its logo, its Swap field and LayerSwap's minimap button, its /ls command and
+-- its two key bindings' functions (1.14.39: LayerSwap_SwapKey, LayerSwap_PanelKey), to dress what
+-- they open or make at once; the Swap field's sign's SetVertexColor.
 -- Left as it is: its logo and the logo's light, the guild entry's emblem (the guild's own tabard)
 -- and its faint 0.08 hover light, the green / gray ON and OFF words and the orange
 -- world refresh line (they mean something), its rows' faint hover light (DaylightUI's own
@@ -368,6 +372,31 @@ end
 -- The mini bar
 -- ---------------------------------------------------------------------------------------------
 
+-- The Swap field's sign (1.14.39). LayerSwap colors it at every refresh of the bar (once a
+-- second, and as the mouse goes onto or off the field): gray while a press would do nothing,
+-- white under the mouse, its gold otherwise. Ours goes on after each: the dim ink, the accent,
+-- the label ink. (cell.on and cell.over are LayerSwap's own, only read.)
+local signPainting = false
+local function SwapSign(cell)
+	local icon = cell.icon
+	if not ns.Usable(icon) or not icon.SetVertexColor then return end
+	local function Paint()
+		if signPainting or ns.Look(KEY, "daylightColors") == false then return end
+		signPainting = true
+		if cell.on == false then
+			local c = ns.Colors().OFF
+			if type(c) == "table" then icon:SetVertexColor(c[1], c[2], c[3]) end
+		elseif cell.over then
+			icon:SetVertexColor(ns.AccentOf(KEY))
+		else
+			local c = ns.Colors().LABEL
+			if type(c) == "table" then icon:SetVertexColor(c[1], c[2], c[3]) end
+		end
+		signPainting = false
+	end
+	if ns.HookOnce(icon, "SetVertexColor", Paint, KEY) then Paint() end
+end
+
 local function Mini(m)
 	if not ns.Once(m) then return end
 	-- Its ground is its own darkness setting: kept, with a thin edge round it.
@@ -377,6 +406,13 @@ local function Mini(m)
 	Font(m.status)
 	ns.ScriptOnce(m, "OnClick", Catch, KEY)
 	ns.ScriptOnce(m.logo, "OnClick", Catch, KEY)
+	-- Its Swap field (1.14.39): a press makes the panel (hidden) to press its Swap button, and a
+	-- right-click drops the layer menu.
+	local cell = m.swapCell
+	if ns.Usable(cell) then
+		ns.ScriptOnce(cell, "OnClick", Catch, KEY)
+		SwapSign(cell)
+	end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -729,6 +765,7 @@ ns.DockRowSetup = DockRowSetup
 
 local miniGoal = 1
 local mapHooked = false
+local miniDragging = false    -- (kept here: no field of ours on LayerSwap's bar)
 
 local function MiniMode()
 	if not ns.Enabled(KEY) then return "always" end
@@ -745,7 +782,7 @@ local function MenuOpen()
 end
 
 local function MiniGoal(mini)
-	if MiniMode() == "always" or mini.dragging or MenuOpen() then return 1 end
+	if MiniMode() == "always" or miniDragging or MenuOpen() then return 1 end
 	local mm = _G.Minimap
 	return ((mm and mm:IsMouseOver() == true) or mini:IsMouseOver() == true) and 1 or 0
 end
@@ -764,17 +801,23 @@ local function HookMini(mini)
 	if not ns.Usable(mini) then return end
 	ns.ScriptOnce(mini, "OnEnter", MiniCheckSoon, KEY)
 	ns.ScriptOnce(mini, "OnLeave", MiniCheckSoon, KEY)
-	ns.ScriptOnce(mini, "OnDragStart", function(self) self.dragging = true; MiniCheckSoon() end, KEY)
-	ns.ScriptOnce(mini, "OnDragStop", function(self) self.dragging = nil; MiniCheckSoon() end, KEY)
+	local function DragStart() miniDragging = true; MiniCheckSoon() end
+	local function DragStop() miniDragging = false; MiniCheckSoon() end
+	ns.ScriptOnce(mini, "OnDragStart", DragStart, KEY)
+	ns.ScriptOnce(mini, "OnDragStop", DragStop, KEY)
 	ns.ScriptOnce(mini, "OnShow", function(self)
 		miniGoal = MiniGoal(self)
 		self:SetAlpha(miniGoal)
 	end, KEY)
-	for _, name in ipairs({ "LayerSwapMiniLogo" }) do
+	-- Its logo and (1.14.39) its Swap field take the mouse from the bar: leaving the bar through
+	-- one of them (the field is its right end) tells only that one. The field moves the bar too.
+	for _, name in ipairs({ "LayerSwapMiniLogo", "LayerSwapMiniSwap" }) do
 		local child = _G[name]
 		if child and ns.Usable(child) then
 			ns.ScriptOnce(child, "OnEnter", MiniCheckSoon, KEY)
 			ns.ScriptOnce(child, "OnLeave", MiniCheckSoon, KEY)
+			ns.ScriptOnce(child, "OnDragStart", DragStart, KEY)
+			ns.ScriptOnce(child, "OnDragStop", DragStop, KEY)
 		end
 	end
 end
@@ -927,6 +970,10 @@ ns.Pack(KEY, nil, function()
 		ns.HookOnce(SlashCmdList, "LAYERSWAP", Catch, KEY)
 	end
 	ns.Watch(KEY, "LibDBIcon10_LayerSwap", function(b) ns.ScriptOnce(b, "OnClick", Catch, KEY) end)
+	-- Its two key bindings (1.14.39, Bindings.xml): Swap Layer makes the panel (hidden) and presses
+	-- its Swap button, the other shows or hides the panel. LayerSwap's own globals, plain functions.
+	ns.HookOnce(nil, "LayerSwap_SwapKey", Catch, KEY)
+	ns.HookOnce(nil, "LayerSwap_PanelKey", Catch, KEY)
 	-- The mini bar is made as LayerSwap starts: its fade goes on when it's there.
 	ns.Watch(KEY, "LayerSwapMini", function() ns.Guard(ApplyMiniFade) end)
 	-- A menu of its closing: the bar may fade again. (A plain HookScript: Menu has the menu's

@@ -1,7 +1,7 @@
 -- OneForAll: its main window and every popup (confirmations, bug report, Discord, craft list,
 -- trainer list, low ranks, quest chain, weight editor, profiles, talent code, Library Books,
 -- welcome, what's new, nearby alerts, copy chat, bags full, flight timer, the world map menu,
--- the dropdown menu). It draws them all through two helpers of its kit (OneForAll.UI.FramedPanel:
+-- the dropdown menu, and since 6.2.12 Guild Games with its invite and "your turn" popups). It draws them all through two helpers of its kit (OneForAll.UI.FramedPanel:
 -- the dark rounded ground and its line; OneForAll.UI.WindowFrame: the gold ring and corner
 -- glows), so those two are followed here and what they drew is swapped for DaylightUI's shell.
 -- The main window draws its own ground (decorateWindow, kept private): found by name.
@@ -122,13 +122,30 @@ local plateKind = ns.FileIDs({ [ASSETS .. "btn_m_normal"] = "rest", [ASSETS .. "
 
 local plates = setmetatable({}, { __mode = "k" })   -- texture -> its kind, once painted
 
+local painting = false
 local function PaintPlate(tex, kind)
+	painting = true
 	tex:SetDesaturated(true)
 	if kind == "picked" then
 		tex:SetVertexColor(AccentAt(0.85))
 	else
 		tex:SetVertexColor(0.42, 0.42, 0.45)
 	end
+	painting = false
+end
+
+-- Since 6.2.12 it can tint a plate (the green "Open guide" button of the Skill-Up Helper) and
+-- puts white back to end the tint. A tint means something and is kept, over the grayed art; white
+-- is this pack's paint again.
+local function White(r, g, b)
+	return type(r) == "number" and type(g) == "number" and type(b) == "number" and r > 0.99 and g > 0.99 and b > 0.99
+end
+
+local function FollowPlate(tex, kind)
+	if White(tex:GetVertexColor()) then PaintPlate(tex, kind) else tex:SetDesaturated(true) end
+	ns.HookOnce(tex, "SetVertexColor", function(self, r, g, b)
+		if not painting and White(r, g, b) then PaintPlate(self, kind) end
+	end, KEY)
 end
 
 -- A color it set straight on a piece (not through SkinC: its side lists' headings, some lines
@@ -150,7 +167,7 @@ local function Plates(root, depth)
 				local plate = ok and id ~= nil and plateKind[id]
 				if plate then
 					plates[region] = plate
-					PaintPlate(region, plate)
+					FollowPlate(region, plate)
 				else
 					local r, g, b, a = region:GetVertexColor()
 					local nr, ng, nb = Regold(r, g, b)
@@ -218,6 +235,33 @@ end
 -- Popups: FramedPanel's ground and line, WindowFrame's ring and glows
 -- ---------------------------------------------------------------------------------------------
 
+-- Guild Games (6.2.12, OneForAllGuildGames): a FramedPanel popup like the rest, with a tiled wood
+-- ground of its own laid over the panel right after (the game's garrison background); that goes
+-- too, so DaylightUI's shell is its ground. Its card table, seats, chips and marks are the game
+-- and stay. Looked for on each show (it is added after FramedPanel returns).
+local GAMES = "OneForAllGuildGames"
+local woodKind
+local woodGone = setmetatable({}, { __mode = "k" })
+local function GamesGround(frame)
+	if woodGone[frame] or not ns.Enabled(KEY) or not frame.GetName or frame:GetName() ~= GAMES then return end
+	woodKind = woodKind or ns.FileIDs({ ["Interface\\Garrison\\GarrisonUIBackground"] = true })
+	for _, region in ipairs({ frame:GetRegions() }) do
+		if ns.Usable(region) and region:GetObjectType() == "Texture" and region:GetDrawLayer() == "BACKGROUND" then
+			local ok, id = pcall(region.GetTexture, region)
+			if ok and type(id) == "string" then id = string.lower(id) end
+			if ok and id ~= nil and woodKind[id] then
+				ns.Kill(region)
+				woodGone[frame] = true
+			end
+		end
+	end
+end
+
+local function PopupExtra(frame)
+	PlatesIn(frame)
+	GamesGround(frame)
+end
+
 local origFramed, origWindowFrame = UI.FramedPanel, UI.WindowFrame
 
 UI.FramedPanel = function(f, ...)
@@ -230,7 +274,10 @@ UI.FramedPanel = function(f, ...)
 		local onScreen = f.GetParent and f:GetParent() == UIParent
 		ns.Shell(f, onScreen and { window = true } or nil, KEY)
 		if ns.Once(f) and f.HookScript then
-			ns.WithKit(function() ns.DressOnShow(f, DRESS, PlatesIn, KEY) end)
+			ns.WithKit(function() ns.DressOnShow(f, DRESS, PopupExtra, KEY) end)
+			-- Guild Games builds its tables, invite rows and pages as they're clicked, like the main
+			-- window: its plates are looked for again after a click inside it.
+			if onScreen and f.GetName and f:GetName() == GAMES then Watched(f) end
 		end
 	end)
 	if not ok then geterrorhandler()(err) end
@@ -298,8 +345,9 @@ local function C(key, label, daylight, ours, extra)
 end
 local RELOAD = { reload = true }
 
--- (From an audit of OneForAll 6.2.10 against every DaylightUI module, checked again for 6.2.11. Left out: its NPC tooltip
--- quests, which turn themselves off while Questie is loaded; its chat font size, which has no
+-- (From an audit of OneForAll 6.2.10 against every DaylightUI module, checked again for 6.2.11 and
+-- 6.2.12: its new junk list key, gray map quests, walking routes and Guild Games have no
+-- DaylightUI twin. Left out: its NPC tooltip quests, which turn themselves off while Questie is loaded; its chat font size, which has no
 -- off to give back.)
 ns.Handover(KEY, {
 	ready = function() return type(_G.OneForAllDB) == "table" end,

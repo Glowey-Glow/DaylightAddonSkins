@@ -1,4 +1,4 @@
--- AtlasLoot Continued (the Forever build, 12970): every window it draws in the DaylightUI look.
+-- AtlasLoot Continued (the Forever build, 12978): every window it draws in the DaylightUI look.
 -- It draws everything itself from a handful of builders of its own (GUI:Create, its DropDown and
 -- Select lists, its item buttons, the model and sound pages, Favourites' window), on the flat
 -- tooltip backdrop; those builders are followed here and what they drew is dressed in the same
@@ -38,6 +38,10 @@
 --   * Favourites (AtlasLoot_GUI-FavouritesFrame): the window shell, its four wells as insets, the
 --     list dropdown, the Global lists switch, its buttons, the Add ItemID box, the scroll bar, the
 --     slot and list buttons' hover a wash, the model's buttons.
+--   * What's New (AtlasLootChangelogFrame, new in 12978; /al changelog): the window shell in place
+--     of its teal ground, header art and footer band, the title in the value ink, the list well an
+--     inset, the scroll bar, the "Show this window after an update" checkbox and Close DaylightUI's,
+--     its section bands a faint wash and its rules hairlines (item links keep their quality colors).
 --   * Text: DaylightUI's font on every word (sizes kept; the item counts keep their narrow number
 --     face), its gold words in DaylightUI's inks.
 -- Not here: the options window (AceConfig: DaylightUI's Ace3 skin and this plugin's Ace3 pack),
@@ -746,6 +750,74 @@ local function FollowFavourites()
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- What's New (AtlasLootChangelogFrame, 12978): made on its first show, three seconds after the
+-- first login following an update, or by /al changelog
+-- ---------------------------------------------------------------------------------------------
+
+-- Its lines (pooled, filled again on every show): the section band's gold-tabbed art a faint wash,
+-- the rule under an entry's title a hairline. (Their words: WordsIn, after every fill.)
+local function ChangelogRows(content)
+	if not Usable(content) then return end
+	for i = 1, select("#", content:GetChildren()) do
+		local row = select(i, content:GetChildren())
+		if Kind(row) == "Button" and Once(row) then
+			if IsTexture(row.bg) then
+				row.bg:SetTexCoord(0, 1, 0, 1)
+				row.bg:SetColorTexture(1, 1, 1, 0.05)
+			end
+			if IsTexture(row.line) then
+				row.line:SetTexCoord(0, 1, 0, 1)
+				row.line:SetColorTexture(1, 1, 1, 0.08)
+				row.line:SetHeight(1)
+				row.line:ClearAllPoints()
+				row.line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
+				row.line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
+			end
+		end
+	end
+end
+
+local function ChangelogWindow(f)
+	local Kit = ns.Kit
+	if not Kit or not Usable(f) or not On() then return end
+	if Once(f) then
+		NoBack(f)
+		-- Its teal ground, header art (with its badge) and footer band give way to the window shell.
+		for _, k in ipairs({ "ground", "titleBar", "footerBar", "footerLine" }) do
+			if IsTexture(f[k]) then Kit.Hide(f[k]) end
+		end
+		ns.Shell(f, { window = true }, KEY)
+		if Kind(f.title) == "FontString" then
+			-- (It sat 46 px in, clear of the badge.)
+			if IsTexture(f.titleBar) then
+				f.title:ClearAllPoints()
+				f.title:SetPoint("LEFT", f.titleBar, "LEFT", 12, 0)
+			end
+			Ink(f.title, "VALUE")
+		end
+		if Usable(f.panel) then
+			NoBack(f.panel)
+			Guard(Kit.Inset, f.panel)
+		end
+		TextButton(f.okButton)
+		if Controls() and Kind(f.autoShow) == "CheckButton" and Once(f.autoShow) then Guard(Kit.Check, f.autoShow) end
+		local scroll = f.scroll
+		if Usable(scroll) then
+			local name = scroll.GetName and scroll:GetName()
+			ScrollBar(scroll.ScrollBar or (name and _G[name .. "ScrollBar"]))
+		end
+	end
+	local content = Usable(f.scroll) and f.scroll.GetScrollChild and f.scroll:GetScrollChild()
+	ChangelogRows(content)
+	WordsIn(f)
+end
+
+local function ChangelogNow()
+	local f = _G.AtlasLootChangelogFrame
+	if Usable(f) then Calm(ChangelogWindow, f) end
+end
+
+-- ---------------------------------------------------------------------------------------------
 -- Hooks: each builder and refresh of its own, followed where it's called (table fields, looked up
 -- at call time)
 -- ---------------------------------------------------------------------------------------------
@@ -797,8 +869,11 @@ local function FollowAll()
 		local set = typeOf("Set")
 		Hook(set, "ShowToolTipFrame", function() if On() and set then Calm(PreviewBox, set.tooltipFrame) end end)
 	end
+	-- What's New: its window is made in its Show (and its lines filled there, on every show).
+	Hook(A.Changelog, "Show", ChangelogNow)
 	-- Already made (this ran after its load): dressed now.
 	MainNow()
+	ChangelogNow()
 	if MF and Usable(MF.frame) then Calm(ModelPage) end
 	if SF and Usable(SF.frame) then Calm(SoundPage) end
 end

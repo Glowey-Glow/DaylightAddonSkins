@@ -449,7 +449,8 @@ end)
 -- guide's among them), and (0.4.1) its finished quests' XP on the game's XP bar, which DaylightUI's
 -- own XP bar shows while it hides the game's. (0.4.1.1, DUI 1.9.4) Its zone level ranges on the world map too:
 -- DaylightUI's Zone Levels show the hovered zone's range by its name, from other numbers; handing
--- them over also takes Polestar's labels on continent maps, which DaylightUI has no copy of. Left out: its other guide-only work (the step's
+-- them over also takes Polestar's labels on continent maps, which DaylightUI has no copy of. Its flight
+-- timer too (checked against Polestar 0.4.1.1 and DUI 1.9.6: both showed on a flight). Left out: its other guide-only work (the step's
 -- gossip, target list, route vendors, Restock), which DaylightUI has no copy of. Its settings
 -- are per Polestar profile, so a handed-over value follows the profile in use.
 -- ---------------------------------------------------------------------------------------------
@@ -461,6 +462,7 @@ if type(P.Get) == "function" and type(P.Set) == "function" then
 		skipGossip = "qol.skipGossip", hideErrors = "qol.hideErrors", flightAutoOpen = "qol.flightAutoOpen",
 		questXPOverlay = "qol.questXPOverlay",
 		zoneLevels = "maps.zoneLevels",
+		flightTimer = "maps.flightTimer",
 		autoAccept = "behavior.autoAccept", autoTurnin = "behavior.autoTurnin",
 	}
 	ns.Handover(KEY, {
@@ -495,6 +497,11 @@ if type(P.Get) == "function" and type(P.Set) == "function" then
 			{ key = "zoneLevels", label = L["Zone Level Ranges on the World Map"],
 			  daylight = ns.In(L["zone levels"], "Window Skins"),
 			  ours = function() return has("Skins", "mapLevels") end },
+			-- (Daylight UI 1.9.6: its flight timer is a banner over the world with the route and a welcome
+			-- on landing; Polestar's own (Maps/FlightTimer.lua, maps.flightTimer, read on every tick)
+			-- showed with it on every flight.)
+			{ key = "flightTimer", label = L["Flight Timer"], daylight = ns.In(L["the flight timer"], "Quality of Life"),
+			  ours = function() return has("QoL", "flightTimer") end },
 		},
 	})
 end

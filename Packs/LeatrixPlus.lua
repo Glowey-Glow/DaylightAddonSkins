@@ -1,6 +1,6 @@
 -- Leatrix Plus: its options window, its 31 configuration panels and its own windows in the
 -- DaylightUI look, and its switches DaylightUI also has handed over. Built against Leatrix Plus
--- 1.60.33 (Forever build: Leatrix_Plus.toc, Leatrix_Plus.lua, Leatrix_Plus.xml).
+-- 1.60.35 (Forever build: Leatrix_Plus.toc, Leatrix_Plus.lua, Leatrix_Plus.xml).
 -- How its windows are found: Leatrix Plus keeps everything in file locals (LeaPlusLC, LeaPlusCB),
 -- so nothing of it can be hooked, and its windows are frames on UIParent with a new random name
 -- every session. It puts every window of its own in UISpecialFrames (so Escape closes it), and
