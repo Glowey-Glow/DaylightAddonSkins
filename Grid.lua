@@ -398,6 +398,23 @@ function ns.SkinGrid(kind)
 	local function update(row)
 		local cells = row.skinCells
 		if not cells then return end
+		-- (The Auto Skinner's list grows as addons' windows are found: a card for each new one,
+		-- the cards kept in the list's order. DaylightUI measures the row after this.)
+		if kind == "auto" then
+			local have = {}
+			for _, c in ipairs(cells) do have[c.item.key] = c end
+			local list, grew = AutoList(), false
+			for _, item in ipairs(list) do
+				if not have[item.key] then
+					have[item.key] = MakeCell(row, item)
+					grew = true
+				end
+			end
+			if grew then
+				for i = #cells, 1, -1 do cells[i] = nil end
+				for i, item in ipairs(list) do cells[i] = have[item.key] end
+			end
+		end
 		for _, c in ipairs(cells) do PaintCell(c) end
 	end
 	local labels = { addons = L["Addons"], auto = ns.AutoTitle and ns.AutoTitle() or "", blizzard = L["Blizzard"] }

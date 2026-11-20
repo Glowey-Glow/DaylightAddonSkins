@@ -509,12 +509,39 @@ function ns.Colors()
 	return c
 end
 
--- DaylightUI's tooltip background opacity: its own (Tooltip bgAlpha) while "Separate tooltip
--- background opacity" is on, else the shared window opacity (General windowAlpha), as its Tooltip
--- module reads it (Style.BackAlpha, since 1.9.1). nil when neither can be read.
--- which == "rich": the ground of its Rich tooltip cards instead (2.0: Tooltip richAlpha in place
--- of bgAlpha, under the same switch; 2.0 DaylightUI_Tooltip\Tooltip.lua:53-56, Defaults.lua:20).
+-- Daylight UI 2.1.2 gave every window and panel a look of its own ("Use Daylight UI global style"),
+-- and the tooltips' opacity and border moved into theirs: Tooltip bgAlpha, bgAlphaOwn, borderPx and
+-- richAlpha are gone (cleared from saved profiles too, 2.1.2 DB.lua:588-598), Tooltip frameStyle is
+-- in their place (DaylightUI_Tooltip\Defaults.lua:38), read through Style.LookOf("Tooltip")
+-- (Style.lua:361). Its Style when it has those looks, else nil.
+local function LookStyle()
+	local Style = type(DUI) == "table" and DUI.Style
+	if type(Style) == "table" and type(Style.LookOf) == "function" and type(Style.LookOwn) == "function"
+		and type(Style.BackAlpha) == "function" then
+		return Style
+	end
+	return nil
+end
+
+-- DaylightUI's tooltip background opacity. From 2.1.2 the tooltips' look says (Style.BackAlpha
+-- ("Tooltip"), Style.lua:394: their own, or on the global style the 0.92 they have by design), as
+-- its Tooltip module reads it (Tooltip.lua:49). Before: its own (Tooltip bgAlpha) while "Separate
+-- tooltip background opacity" is on, else the shared window opacity (General windowAlpha). nil
+-- when it can't be read.
+-- which == "rich": the ground of its Rich tooltip cards instead (2.1.2 Tooltip.lua:56-62: 0.95 on
+-- the global style, the look's own opacity otherwise; 2.0 and 2.1: Tooltip richAlpha in place of
+-- bgAlpha, under the same switch).
+local RICH_ALPHA = 0.95
 function ns.TipAlpha(which)
+	local Style = LookStyle()
+	if Style then
+		if which == "rich" then
+			local okOwn, own = pcall(Style.LookOwn, "Tooltip")
+			if okOwn and own ~= true then return RICH_ALPHA end
+		end
+		local ok, alpha = pcall(Style.BackAlpha, "Tooltip")
+		return ok and type(alpha) == "number" and alpha or nil
+	end
 	local okOwn, own = pcall(API.GetSetting, "Tooltip", "bgAlphaOwn")
 	local scope, path = "Tooltip", which == "rich" and "richAlpha" or "bgAlpha"
 	if okOwn and own == false then scope, path = "general", "windowAlpha" end
@@ -525,12 +552,18 @@ end
 -- The border size DaylightUI's tooltips have of their own, in screen pixels, or nil when they
 -- take General's (leave borderPx out of the shell's opts then: the shell reads General's itself
 -- and follows it). DaylightUI 2.0 dropped the fixed 3 px tooltip border (1.9.6
--- DaylightUI_Tooltip\Tooltip.lua:28, Tip.BORDER = 3, used at :129): every tooltip shell now takes
--- Tooltip borderPx while "Own border and background" (Tooltip bgAlphaOwn) is on, else General's
--- (2.0 DaylightUI_Tooltip\Tooltip.lua:61-64 Tip.BorderPx, used at :144; Defaults.lua:40-41;
--- Options.lua:7-13). Read the supported way, API.GetSetting (2.0 API.lua:892). nil before 2.0.
+-- DaylightUI_Tooltip\Tooltip.lua:28, Tip.BORDER = 3, used at :129). 2.0 and 2.1: Tooltip borderPx
+-- while "Own border and background" (Tooltip bgAlphaOwn) is on, else General's. From 2.1.2: the
+-- tooltip look's borderPx while its global style is off (Tooltip frameStyle.global == false). Read
+-- the supported way, API.GetSetting (API.lua:892). nil before 2.0.
 function ns.TipBorder()
 	if not ns.DaylightAtLeast(2, 0) then return nil end
+	if LookStyle() then
+		local okOwn, global = pcall(API.GetSetting, "Tooltip", "frameStyle.global")
+		if not okOwn or global ~= false then return nil end
+		local ok, px = pcall(API.GetSetting, "Tooltip", "frameStyle.borderPx")
+		return ok and tonumber(px) or nil
+	end
 	local okOwn, own = pcall(API.GetSetting, "Tooltip", "bgAlphaOwn")
 	if not okOwn or own ~= true then return nil end
 	local ok, px = pcall(API.GetSetting, "Tooltip", "borderPx")
@@ -539,15 +572,19 @@ function ns.TipBorder()
 end
 
 -- DaylightUI's tooltip look as API.Skin opts, for an addon's tooltip a pack dresses: the shell
--- its Tooltip module puts on every tooltip that isn't one of its own cards (2.0 Tooltip.lua:144:
--- flat, no bevel, the tooltip opacity, the tooltip border). Before 2.0 the border is the fixed
--- 3 px. A fresh table each call. The same in the Simple and the Rich look: DaylightUI draws its
--- Rich cards over the game's main and compare tooltips only (2.0 Rich\Rich.lua:18-22) and gives
--- every other tooltip, addons' included, this shell in both (Tooltip.lua:1758-1769, 1940-1944).
+-- its Tooltip module puts on every tooltip that isn't one of its own cards. From 2.1.2 that is
+-- { look = "Tooltip", flat, noBevel } (Tooltip.lua:146): the shell reads the tooltips' border,
+-- corners, shadow, background color and opacity itself and DaylightUI lays it out again as any of
+-- them changes (Style.lua:3301-3321); API.Skin hands the opts on as they are (API.lua:957-964).
+-- 2.0 and 2.1: flat, no bevel, the tooltip opacity, the tooltip border. Before 2.0 the border is
+-- the fixed 3 px. A fresh table each call. The same in the Simple and the Rich look: DaylightUI
+-- draws its Rich cards over the game's main and compare tooltips only and gives every other
+-- tooltip, addons' included, this shell in both.
 -- Titles, text and small text need nothing here: an addon tooltip made from the game's tooltip
 -- template draws with the game's three tooltip fonts, which DaylightUI sets to the Tooltip
--- sizes and fonts itself (2.0 Tooltip.lua:303-326).
+-- sizes and fonts itself.
 function ns.TipLook()
+	if LookStyle() then return { flat = true, noBevel = true, look = "Tooltip" } end
 	local look = { flat = true, noBevel = true, bgAlpha = ns.TipAlpha() }
 	if ns.DaylightAtLeast(2, 0) then
 		look.borderPx = ns.TipBorder()
@@ -570,9 +607,14 @@ end
 -- tooltip opacity, or from 2.0 the tooltips' own border size, the Rich / Simple pick and the
 -- cards' opacity (for what sits against a card). (General's border needs no word here: a shell
 -- with no borderPx of its own is laid out again by DaylightUI as General changes.)
-local TIP_PATHS = { bgAlpha = true, bgAlphaOwn = true, borderPx = true, style = true, richAlpha = true }
+-- From 2.1.2 the opacity and border are in the tooltips' look table: Tooltip frameStyle, or a key
+-- under it ("frameStyle.windowAlpha"; a reset writes the table itself).
+local TIP_PATHS = { bgAlpha = true, bgAlphaOwn = true, borderPx = true, style = true, richAlpha = true, frameStyle = true }
 function ns.TipLookChanged(scope, path)
-	return (scope == "Tooltip" and TIP_PATHS[path] == true) or (scope == "general" and path == "windowAlpha")
+	if scope == "Tooltip" then
+		return TIP_PATHS[path] == true or (type(path) == "string" and path:sub(1, 11) == "frameStyle.")
+	end
+	return scope == "general" and path == "windowAlpha"
 end
 ns.TipAlphaChanged = ns.TipLookChanged
 

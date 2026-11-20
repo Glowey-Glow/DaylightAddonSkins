@@ -798,13 +798,22 @@ local function Column()
 	box:SetFrameLevel(math.max(0, host:GetFrameLevel()))
 	box:EnableMouse(false)
 	box:Hide()
+	-- (Daylight UI 2.1.2 moved the box's border and opacity, Quests boxBorder / boxAlphaOwn /
+	-- boxAlpha, into its look table, Quests frameStyle (DaylightUI_Quests\Defaults.lua:23), and its
+	-- own box is now Style.Shell(box, { look = "Quests", panel = true }) (Tracker.lua:422): the same
+	-- opts here, so this box has the tracker's border, shadow and background and follows them.)
 	local function PaintBox()
 		if Quests("box") ~= true then box:Hide() return end
-		local opts = { noBorder = Quests("boxBorder") == false }
-		if Quests("boxAlphaOwn") == true and type(Quests("boxAlpha")) == "number" then
-			opts.bgAlpha = Quests("boxAlpha")
+		local opts
+		if type(Quests("frameStyle")) == "table" then
+			opts = { look = "Quests", panel = true }
 		else
-			opts.window = true
+			opts = { noBorder = Quests("boxBorder") == false }
+			if Quests("boxAlphaOwn") == true and type(Quests("boxAlpha")) == "number" then
+				opts.bgAlpha = Quests("boxAlpha")
+			else
+				opts.window = true
+			end
 		end
 		pcall(API.Skin, box, opts)
 		box:Show()

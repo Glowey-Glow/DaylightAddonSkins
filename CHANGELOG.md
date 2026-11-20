@@ -1,5 +1,11 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.5
+- Auto Skinner: an addon it has found stays on its list under All Windows. Before, the list only held addons whose windows had been opened since you logged in, so a switch you had turned on was missing from the list after a login until that window was opened again. An addon found while the options are open now shows there at once.
+- Checked against Daylight UI 2.1.2: its new setup guide, the per-window "Use Daylight UI global style" switch, gradient bars, the game's roll popups in Daylight UI style and the profession window's Profit. Nothing is dressed twice, and the overlap window still waits for the setup guide.
+- Fixed for Daylight UI 2.1.2: tooltips dressed by a skin follow the tooltips' own look again (Tooltips > Borders and background): border, corners, shadow, background color and opacity. Daylight UI 2.1.2 moved those settings, so dressed tooltips had fallen back to the General look. This covers ALL THE THINGS' model box, Keep or Toss's sample item, Questie's, RareScanner's and Total RP 3's tooltips and Details!' menus and tooltips.
+- Fixed for Daylight UI 2.1.2: Shortest Path Forever's sections docked under Daylight UI's quest tracker have the tracker box's look again (Quests > Borders and background), with or without the global style.
+
 ## 1.18.4
 - Fixed: with Daylight UI's Bags off, opening the game's own bags raised an error ("BlizzardFallbacks.lua:952: attempt to call a nil value") and the bags were left undressed. The game's bags, separate or combined, are dressed again.
 

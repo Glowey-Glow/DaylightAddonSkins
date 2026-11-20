@@ -375,12 +375,44 @@ clicks:SetScript("OnEvent", function()
 	end
 end)
 
+-- The addons found, kept between sessions (DaylightAddonSkinsDB.autoKnown[folder] = label): an
+-- addon makes many a window only when it's first opened, so without this its switch was gone
+-- from the list after every login until that window had been opened again.
+local function Known()
+	local db = _G.DaylightAddonSkinsDB
+	if type(db) ~= "table" then return nil end
+	if type(db.autoKnown) ~= "table" then db.autoKnown = {} end
+	return db.autoKnown
+end
+
+-- The list grew: the options page, when it's open, is laid out again so the new switch shows
+-- at once (DaylightUI's own refresh, DaylightUI\Options\Panel.lua:13, :656, :1131; without it
+-- the switch shows the next time the page is opened). Once for a burst of finds.
+local telling = false
+local function Grew()
+	if telling then return end
+	telling = true
+	C_Timer.After(0.2, function()
+		telling = false
+		local D = _G.DaylightUI
+		local P = type(D) == "table" and D.OptionsPanel
+		if type(P) ~= "table" or type(P.IsShown) ~= "function" or type(P.Refresh) ~= "function" then return end
+		if InCombatLockdown() then return end
+		local ok, shown = pcall(P.IsShown)
+		if ok and shown then pcall(P.Refresh) end
+	end)
+end
+
 local function Take(frame, folder)
 	frameFolder[frame] = folder
 	local e = found[folder]
 	if not e then
 		e = { label = Label(folder), windows = {} }
 		found[folder] = e
+		local known = Known()
+		local fresh = known and known[folder] == nil
+		if known then known[folder] = e.label end
+		if fresh then Grew() end
 	end
 	e.windows[frame] = true
 	if not On(folder) or hooked[frame] then return end
@@ -459,6 +491,21 @@ function ns.AutoAddons()
 		local n = 0
 		for _ in pairs(e.windows) do n = n + 1 end
 		list[#list + 1] = { folder = folder, label = e.label, windows = n }
+	end
+	-- Found in an earlier session and loaded now, its windows not made yet: listed all the same
+	-- (windows = 0), so its switch is there and what it was set to shows. One that has a pack by
+	-- now, or isn't loaded, is left out (and forgotten once it's no longer installed).
+	local known = Known()
+	if known then
+		for folder, label in pairs(known) do
+			if not found[folder] and type(folder) == "string" then
+				if ns.AddonLoaded(folder) and Eligible(folder) then
+					list[#list + 1] = { folder = folder, label = type(label) == "string" and label or Label(folder), windows = 0 }
+				elseif C_AddOns and C_AddOns.DoesAddOnExist and not C_AddOns.DoesAddOnExist(folder) then
+					known[folder] = nil
+				end
+			end
+		end
 	end
 	table.sort(list, function(a, b) return a.label:lower() < b.label:lower() end)
 	return list
