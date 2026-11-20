@@ -22,6 +22,9 @@ All pop-up menus (right-click menus and dropdowns, any addon's) and every addon'
 
 ---
 
+## New in 1.18.2
+Ready for Daylight UI 2.0. The overlap window waits for Daylight UI's welcome instead of opening over it. Tooltips dressed by a skin (ALL THE THINGS, Keep or Toss, Questie, RareScanner, Total RP 3, Details) follow Daylight UI 2.0's tooltip border and opacity. With Daylight UI's new Auction House window in use, Auctionator's and Mastercraft's pages on the game's hidden window are left alone until you switch back.
+
 ## New in 1.18.1
 Checked against Daylight UI 1.9.6. Dungeon Journal 2.1.0 (warning and reputation lines keep their colors, the reputation bar and the arrow's buttons are dressed), LayerSwap 1.14.39 (the new Swap button on the mini bar), AtlasLoot Continued's What's New window and OneForAll's Guild Games windows. New overlap, asked once: Polestar's flight timer against Daylight UI's flight banner.
 
