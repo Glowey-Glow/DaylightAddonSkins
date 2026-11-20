@@ -791,12 +791,19 @@ end
 local tipShells = setmetatable({}, { __mode = "k" })
 local washed = setmetatable({}, { __mode = "k" })
 
+-- The window shell at Daylight UI's tooltip opacity; from Daylight UI 2.0 also at its tooltips'
+-- own border size while they have one (ns.TipBorder, Core.lua: 2.0
+-- DaylightUI_Tooltip\Tooltip.lua:61-64; nil on 1.9.x and while the tooltips take General's, which
+-- is what this shell had before). Gate: ns.DaylightAtLeast(2, 0), in ns.TipBorder.
+local function CooltipLook()
+	return { bgAlpha = ns.TipAlpha() or 0.9, borderPx = ns.TipBorder() }
+end
+
 local function TipFrame(DF, frame)
 	if not Usable(frame) then return end
 	if not tipShells[frame] then
 		tipShells[frame] = true
-		local alpha = ns.TipAlpha() or 0.9
-		ns.Shell(frame, { bgAlpha = alpha }, KEY)
+		ns.Shell(frame, CooltipLook(), KEY)
 	end
 	Unround(frame)
 	if frame.SetBackdropColor and frame.GetBackdrop and frame:GetBackdrop() then
@@ -938,8 +945,15 @@ local function Hooks()
 		if type(DF) == "table" then Guard(RecolorAll, DF) end
 		ApplySoon(0.3)
 	end)
-	ns.me.On("SettingChanged", function(scope)
+	ns.me.On("SettingChanged", function(scope, path)
 		if On() and (scope == "InfoPanel" or scope == "general") then ApplySoon(0.3) end
+		-- Daylight UI's tooltip opacity (from 2.0 its tooltip border size too) changed: Cooltip's
+		-- shells follow.
+		if On() and ns.TipLookChanged(scope, path) then
+			for frame in pairs(tipShells) do
+				if Usable(frame) then ns.Shell(frame, CooltipLook(), KEY) end
+			end
+		end
 	end)
 	if DetailsReady() then ApplySoon() end
 	return true

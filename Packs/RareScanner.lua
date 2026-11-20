@@ -241,10 +241,11 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 -- DaylightUI's tooltip look (as its Tooltip module draws the game's), at the opacity set there.
+-- (ns.TipLook, Core.lua: from Daylight UI 2.0 the border is the tooltips' own size or General's,
+-- 2.0 DaylightUI_Tooltip\Tooltip.lua:61-64 and :144; before 2.0 the fixed 3 px, 1.9.6
+-- Tooltip.lua:28. Gate: ns.DaylightAtLeast(2, 0), in ns.TipLook.)
 local function TipLook()
-	local look = { borderPx = 3, flat = true, noBevel = true }
-	look.bgAlpha = ns.TipAlpha()
-	return look
+	return ns.TipLook()
 end
 
 -- The game's border out of sight (it's laid again on every show and Acquire), the shell kept
@@ -318,7 +319,8 @@ local function QTip(tip)
 	QTipClose(tip)
 end
 
--- Its tooltips' opacity follows DaylightUI's tooltip opacity as it's changed.
+-- Its tooltips' opacity (from DaylightUI 2.0 their border size too) follows DaylightUI's tooltip
+-- settings as they're changed.
 local function Reopacity()
 	local look = TipLook()
 	for tip in pairs(ours) do
@@ -1403,9 +1405,10 @@ ns.Pack(KEY, nil, function(Kit)
 		end
 	end
 
-	-- DaylightUI's tooltip opacity changed: the shells made here follow.
+	-- DaylightUI's tooltip opacity (from 2.0 its tooltip border size too) changed: the shells made
+	-- here follow.
 	ns.me.On("SettingChanged", function(scope, path)
-		if ns.TipAlphaChanged(scope, path) and ns.Enabled(KEY) then Reopacity() end
+		if ns.TipLookChanged(scope, path) and ns.Enabled(KEY) then Reopacity() end
 	end)
 
 	-- The addon compartment's tooltip, made on its first hover. (The compartment looks its hover

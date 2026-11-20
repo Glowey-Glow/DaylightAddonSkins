@@ -54,6 +54,10 @@
 -- repairs; its tooltip lines are its own price data).
 -- DaylightMogul (the user's auction house addon) may own the auction house window: this pack then
 -- leaves the tab row alone and dresses only Auctionator's own frames.
+-- Daylight UI 2.0 has an Auction House window of its own, shown in place of the game's (which
+-- stays open, unseen, under it): while that window is the one in use, nothing of Auctionator's at
+-- the auction house is dressed (Covered, below); its pop-ups, crafting panel and tracker button
+-- are dressed as ever.
 -- Taint: hooks only (hooksecurefunc on Auctionator's functions and frames, HookScript, its lists'
 -- callbacks); no SetScript on any frame of Auctionator's or the game's; looks only; nothing in a
 -- fight (queued for its end).
@@ -96,6 +100,17 @@ local function MogulLoaded()
 	local api = _G.C_AddOns
 	return type(api) == "table" and type(api.IsAddOnLoaded) == "function" and api.IsAddOnLoaded("DaylightMogul") == true
 end
+
+-- Daylight UI 2.0's own Auction House window stands in for the game's, whose frame (with every
+-- page and tab of Auctionator's on it) is parked out of sight under it: nothing of Auctionator's
+-- at the auction house is walked or dressed then, at an opening or as LibAHTab makes a page.
+-- (ns.DaylightCoversAH, Core.lua: DaylightUI.ahCovers, 2.0 DaylightUI_AuctionHouse\Window.lua:
+-- 403-407, the signal Daylight UI's own auction house skin stands down on, 2.0
+-- DaylightUI_Skins\Packs\System.lua:656-661. Feature-detected: not there on 1.9.x, where this is
+-- always false.) Nothing is marked as done while it stands down, so the first sweep after the
+-- player picks the game's window dresses everything: at once when that pick is made with the
+-- auction house open (SettingChanged, at the foot of this file), else as it next opens.
+local function Covered() return ns.DaylightCoversAH() end
 
 -- ---------------------------------------------------------------------------------------------
 -- Small pieces
@@ -478,7 +493,7 @@ local BUY_DIALOGS = { "BuyDialog", "WidePriceRangeWarningDialog", "FinalConfirma
 local LISTINGS = { "ResultsListing", "CurrentPricesListing", "HistoricalPriceListing", "PostingHistoryListing" }
 
 local function Sweep()
-	if not On() then return end
+	if not On() or Covered() then return end
 	local shop = _G.AuctionatorShoppingFrame
 	if Usable(shop) then
 		-- (Its dialogs first: a window's shell before the walk passes its controls.)
@@ -623,6 +638,7 @@ ns.Pack(KEY, "Auctionator", function(K)
 		ns.HookOnce(lib, "CreateTab", function(self, id, frame)
 			if type(id) ~= "string" or string.sub(id, 1, 16) ~= "AuctionatorTabs_" then return end
 			Now("Auctionator:tab:" .. id, function()
+				if Covered() then return end
 				Page(frame)
 				local ok, tab = pcall(self.GetButton, self, id)
 				if ok then Tab(tab) end
@@ -662,4 +678,13 @@ ns.me.On("StyleChanged", function()
 end)
 ns.me.On("SettingChanged", function(scope)
 	if scope == "DaylightAddonSkins" and Kit and On() then Guard(Repaint) end
+	-- Daylight UI's Auction House settings (2.0; the pick between its window and the game's is its
+	-- "enabled", written by the swap icon on its header: 2.0 Windows\Swap.lua:49-58, and its
+	-- module trades the windows before this event reaches plugins, 2.0 Core.lua:868-878): the
+	-- game's window may be the one in use now. Swept on the next frame, out of a fight; a sweep
+	-- while Daylight UI's window still covers it does nothing.
+	if scope == "AuctionHouse" and Kit and On() then
+		ns.Queue("Auctionator:sweep", Sweep, KEY)
+		ns.Queue("Auctionator:fit", FitTabs, KEY)
+	end
 end)

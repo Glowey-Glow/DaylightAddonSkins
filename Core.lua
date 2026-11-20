@@ -512,19 +512,69 @@ end
 -- DaylightUI's tooltip background opacity: its own (Tooltip bgAlpha) while "Separate tooltip
 -- background opacity" is on, else the shared window opacity (General windowAlpha), as its Tooltip
 -- module reads it (Style.BackAlpha, since 1.9.1). nil when neither can be read.
-function ns.TipAlpha()
+-- which == "rich": the ground of its Rich tooltip cards instead (2.0: Tooltip richAlpha in place
+-- of bgAlpha, under the same switch; 2.0 DaylightUI_Tooltip\Tooltip.lua:53-56, Defaults.lua:20).
+function ns.TipAlpha(which)
 	local okOwn, own = pcall(API.GetSetting, "Tooltip", "bgAlphaOwn")
-	local scope, path = "Tooltip", "bgAlpha"
+	local scope, path = "Tooltip", which == "rich" and "richAlpha" or "bgAlpha"
 	if okOwn and own == false then scope, path = "general", "windowAlpha" end
 	local ok, alpha = pcall(API.GetSetting, scope, path)
 	return ok and type(alpha) == "number" and alpha or nil
 end
 
--- Whether a DaylightUI setting change (SettingChanged's scope, path) moves ns.TipAlpha.
-function ns.TipAlphaChanged(scope, path)
-	return (scope == "Tooltip" and (path == "bgAlpha" or path == "bgAlphaOwn"))
-		or (scope == "general" and path == "windowAlpha")
+-- The border size DaylightUI's tooltips have of their own, in screen pixels, or nil when they
+-- take General's (leave borderPx out of the shell's opts then: the shell reads General's itself
+-- and follows it). DaylightUI 2.0 dropped the fixed 3 px tooltip border (1.9.6
+-- DaylightUI_Tooltip\Tooltip.lua:28, Tip.BORDER = 3, used at :129): every tooltip shell now takes
+-- Tooltip borderPx while "Own border and background" (Tooltip bgAlphaOwn) is on, else General's
+-- (2.0 DaylightUI_Tooltip\Tooltip.lua:61-64 Tip.BorderPx, used at :144; Defaults.lua:40-41;
+-- Options.lua:7-13). Read the supported way, API.GetSetting (2.0 API.lua:892). nil before 2.0.
+function ns.TipBorder()
+	if not ns.DaylightAtLeast(2, 0) then return nil end
+	local okOwn, own = pcall(API.GetSetting, "Tooltip", "bgAlphaOwn")
+	if not okOwn or own ~= true then return nil end
+	local ok, px = pcall(API.GetSetting, "Tooltip", "borderPx")
+	if not ok then return nil end
+	return tonumber(px)
 end
+
+-- DaylightUI's tooltip look as API.Skin opts, for an addon's tooltip a pack dresses: the shell
+-- its Tooltip module puts on every tooltip that isn't one of its own cards (2.0 Tooltip.lua:144:
+-- flat, no bevel, the tooltip opacity, the tooltip border). Before 2.0 the border is the fixed
+-- 3 px. A fresh table each call. The same in the Simple and the Rich look: DaylightUI draws its
+-- Rich cards over the game's main and compare tooltips only (2.0 Rich\Rich.lua:18-22) and gives
+-- every other tooltip, addons' included, this shell in both (Tooltip.lua:1758-1769, 1940-1944).
+-- Titles, text and small text need nothing here: an addon tooltip made from the game's tooltip
+-- template draws with the game's three tooltip fonts, which DaylightUI sets to the Tooltip
+-- sizes and fonts itself (2.0 Tooltip.lua:303-326).
+function ns.TipLook()
+	local look = { flat = true, noBevel = true, bgAlpha = ns.TipAlpha() }
+	if ns.DaylightAtLeast(2, 0) then
+		look.borderPx = ns.TipBorder()
+	else
+		look.borderPx = 3
+	end
+	return look
+end
+
+-- DaylightUI's tooltip look (2.0, API 1.12): "rich" (its own cards over the game's main and
+-- compare tooltips), "simple", or nil while its Tooltip module is off or another addon draws the
+-- tooltips (API.TooltipStyle, 2.0 API.lua:820-825; not there on 1.9.x: nil).
+function ns.TipStyle()
+	if type(API.TooltipStyle) ~= "function" then return nil end
+	local ok, style = pcall(API.TooltipStyle)
+	return ok and style or nil
+end
+
+-- Whether a DaylightUI setting change (SettingChanged's scope, path) moves ns.TipLook: the
+-- tooltip opacity, or from 2.0 the tooltips' own border size, the Rich / Simple pick and the
+-- cards' opacity (for what sits against a card). (General's border needs no word here: a shell
+-- with no borderPx of its own is laid out again by DaylightUI as General changes.)
+local TIP_PATHS = { bgAlpha = true, bgAlphaOwn = true, borderPx = true, style = true, richAlpha = true }
+function ns.TipLookChanged(scope, path)
+	return (scope == "Tooltip" and TIP_PATHS[path] == true) or (scope == "general" and path == "windowAlpha")
+end
+ns.TipAlphaChanged = ns.TipLookChanged
 
 -- Whether `key`'s switch is on (and DaylightUI's Skins module), whatever became of its pack.
 local function SwitchedOn(key)
@@ -2292,6 +2342,21 @@ function ns.DaylightAtLeast(a, b, c)
 	if x ~= a then return x > a end
 	if y ~= b then return y > b end
 	return z >= (c or 0)
+end
+
+-- Whether DaylightUI's own Auction House window (2.0) stands in for the game's AuctionHouseFrame
+-- now: the game's frame is parked out of sight under it (alpha 0, clipped off screen), or will
+-- be when the Auction House opens. False once the player picks the game's window (the swap icon
+-- on DaylightUI's window header, or Auction House > Enabled off), while a fight keeps the game's
+-- window, with DaylightMogul (which owns the Auction House), and on 1.9.x. The signal is
+-- DaylightUI.ahCovers (2.0 DaylightUI_AuctionHouse\Window.lua:403-407, set at :417), the one
+-- DaylightUI's own Window Skins stand down on (2.0 DaylightUI_Skins\Packs\System.lua:656-661).
+-- It is not in API.md, so it is feature-detected and called guarded; absent in 1.9.6.
+function ns.DaylightCoversAH()
+	local covers = DUI.ahCovers
+	if type(covers) ~= "function" then return false end
+	local ok, yes = pcall(covers)
+	return ok and yes == true
 end
 
 -- The color behind DaylightUI's windows and panels: its own dark, from 1.8.4 the player's pick

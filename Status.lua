@@ -87,6 +87,41 @@ end
 -- The report (plain text, to paste into a bug report)
 -- ---------------------------------------------------------------------------------------------
 
+-- What Daylight UI 2.0 brought that the packs follow or stand down for, as it is set now: the
+-- tooltip look (API.TooltipStyle, API 1.12: 2.0 API.lua:820-825) and border (ns.TipBorder), which
+-- window the Auction House opens in (DaylightUI.ahMogul, 2.0
+-- DaylightUI_AuctionHouse\Module.lua:17-18; its "enabled", Options.lua:10) and its own loot roll
+-- cards (Skins rolls.enabled, 2.0 DaylightUI_Skins\Defaults.lua:25). Nothing on 1.9.x.
+local function Daylight2Lines(lines)
+	if not ns.DaylightAtLeast(2, 0) then return end
+	local style = type(API.TooltipStyle) == "function" and API.TooltipStyle() or nil
+	lines[#lines + 1] = string.format(L["Tooltip Look: %s"],
+		style == "rich" and L["Rich"] or style == "simple" and L["Simple"] or L["Off"])
+	if style then
+		local own = ns.TipBorder()
+		local ok, general = pcall(API.GetSetting, "general", "borderPx")
+		if own then
+			lines[#lines + 1] = string.format(L["Tooltip Border: %s"], string.format(L["%d px (the Tooltips' Own)"], own))
+		elseif ok and type(general) == "number" then
+			lines[#lines + 1] = string.format(L["Tooltip Border: %s"], string.format(L["%d px (General's)"], general))
+		end
+	end
+	local D = _G.DaylightUI
+	local auction
+	if type(D) == "table" and D.ahMogul == true then
+		auction = L["DaylightMogul's Window"]
+	elseif not ns.ModuleOn("AuctionHouse") then
+		auction = L["Off"]
+	elseif ns.DaylightHas("AuctionHouse", "enabled") then
+		auction = L["Its Own Window"]
+	else
+		auction = L["The Game's Window"]
+	end
+	lines[#lines + 1] = string.format(L["Daylight UI's Auction House: %s"], auction)
+	lines[#lines + 1] = string.format(L["Daylight UI's Loot Rolls: %s"],
+		(ns.ModuleOn("Skins") and ns.DaylightHas("Skins", "rolls.enabled")) and L["On"] or L["Off"])
+end
+
 function ns.StatusReport()
 	local locale = GetLocale and GetLocale() or "?"
 	local lines = {
@@ -95,8 +130,9 @@ function ns.StatusReport()
 		string.format(L["Addon Skins: %s"], ns.OurVersion()),
 		string.format(L["Daylight UI: %s"], ns.Meta("DaylightUI", "Version") or "?"),
 		string.format(L["Window Skins: %s"], ns.ModuleOn("Skins") and L["On"] or L["Off"]),
-		"",
 	}
+	ns.Guard(Daylight2Lines, lines)
+	lines[#lines + 1] = ""
 	for _, e in ipairs(Entries()) do
 		local state, detail = State(e)
 		lines[#lines + 1] = string.format(L["%s, version %s: %s"], e.label, Version(e), StateText(state, detail))

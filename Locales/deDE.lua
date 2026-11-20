@@ -424,3 +424,14 @@ L["skip cinematics"] = "Zwischensequenzen überspringen"
 
 -- Leatrix Plus
 L["Another addon loaded Leatrix Plus before this plugin, so it had already read its settings: nothing can be handed over to Daylight UI this session. Leatrix Plus keeps its own."] = "Ein anderes Addon hat Leatrix Plus vor diesem Plugin geladen, daher hatte es seine Einstellungen schon gelesen: In dieser Sitzung kann nichts an Daylight UI übergeben werden. Leatrix Plus behält seine eigenen."
+
+-- Status report: Daylight UI 2.0
+L["Tooltip Look: %s"] = "Tooltip-Aussehen: %s"
+L["Tooltip Border: %s"] = "Tooltip-Rand: %s"
+L["%d px (the Tooltips' Own)"] = "%d px (eigener der Tooltips)"
+L["%d px (General's)"] = "%d px (aus Allgemein)"
+L["Daylight UI's Auction House: %s"] = "Auktionshaus von Daylight UI: %s"
+L["Its Own Window"] = "Eigenes Fenster"
+L["The Game's Window"] = "Fenster des Spiels"
+L["DaylightMogul's Window"] = "Fenster von DaylightMogul"
+L["Daylight UI's Loot Rolls: %s"] = "Beutewürfe von Daylight UI: %s"

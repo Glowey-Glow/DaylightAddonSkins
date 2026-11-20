@@ -1118,8 +1118,15 @@ local function OpenNow()
 end
 
 -- The auction house's Scan prices tab and its in-window button (isMastercraft on both).
+-- Not while Daylight UI 2.0's own Auction House window stands in for the game's: the game's frame,
+-- with Mastercraft's tab and button on it, is parked out of sight then, and this ran four times an
+-- opening over its children and the screen's. (ns.DaylightCoversAH, Core.lua: DaylightUI.ahCovers,
+-- 2.0 DaylightUI_AuctionHouse\Window.lua:403-407; feature-detected, always false on 1.9.x.)
+-- Dressed when the player picks the game's window (SettingChanged below) and at each opening
+-- after that.
 local function Auction()
 	if not On() or not Kit or not ns.Controls(KEY) or not ClassicNow() then return end
+	if ns.DaylightCoversAH() then return end
 	local function dress(b)
 		if not Usable(b) or not b.isMastercraft or ours[b] then return end
 		ours[b] = true
@@ -1138,6 +1145,12 @@ local function Auction()
 		if Kind(c) == "Frame" and c:GetNumChildren() == 1 then dress((c:GetChildren())) end
 	end
 end
+
+-- Daylight UI's Auction House settings changed (2.0: the pick between its window and the game's
+-- is its "enabled"): the game's window may be the one in use now.
+ns.me.On("SettingChanged", function(scope)
+	if scope == "AuctionHouse" and On() then Soon(Auction) end
+end)
 
 -- The bank pop-up: in the game's bank window, Baganator's (when one is open) or on the screen.
 local function Bank()

@@ -698,10 +698,11 @@ end
 
 local API = ns.API
 
+-- (ns.TipLook, Core.lua: from Daylight UI 2.0 the border is the tooltips' own size or General's,
+-- 2.0 DaylightUI_Tooltip\Tooltip.lua:61-64 and :144; before 2.0 the fixed 3 px, 1.9.6
+-- Tooltip.lua:28. Gate: ns.DaylightAtLeast(2, 0), in ns.TipLook.)
 local function TipLook()
-	local look = { borderPx = 3, flat = true, noBevel = true }
-	look.bgAlpha = ns.TipAlpha()
-	return look
+	return ns.TipLook()
 end
 
 local function Settle(tip)
@@ -743,9 +744,10 @@ if IconTooltip and type(IconTooltip.ShowOnTooltip) == "function" then
 	end, KEY)
 end
 
--- DaylightUI's tooltip opacity changed: the shells made here follow.
+-- DaylightUI's tooltip opacity (from 2.0 its tooltip border size too) changed: the shells made
+-- here follow.
 ns.me.On("SettingChanged", function(scope, path)
-	if not ns.TipAlphaChanged(scope, path) or not ns.Enabled(KEY) or next(ownTips) == nil then return end
+	if not ns.TipLookChanged(scope, path) or not ns.Enabled(KEY) or next(ownTips) == nil then return end
 	local look = TipLook()
 	for tip in pairs(ownTips) do
 		if ns.Usable(tip) then ns.Guard(API.Skin, tip, look) end

@@ -16,6 +16,57 @@ local frame, content, scroll
 local rows = {}       -- the rows on show: { addon, key, switch }
 local pool = {}       -- made rows and headings, reused
 
+-- ---------------------------------------------------------------------------------------------
+-- One thing at a time
+-- ---------------------------------------------------------------------------------------------
+-- Daylight UI's own first-run and question windows. The choice window opened by itself (at login)
+-- waits while one of them is up, so it never lands on top of one:
+--   DaylightUIInstaller      the setup guide, the plugins' setup pages, and from 2.0 the "Welcome
+--                            to Daylight UI 2.0" slides, which open 2 s after login in this same
+--                            window (2.0 Welcome.lua:22, 526-544, 556-561; InstallerUI.lua:243;
+--                            1.9.6 InstallerUI.lua:238)
+--   DaylightUITour           the tour (2.0 and 1.9.6 Tour.lua:42)
+--   DaylightUITourAsk        "Take the tour?" (2.0 and 1.9.6 Tour.lua:43)
+--   DaylightUIAsk            every yes / no question of Daylight UI's: from 2.0 the portrait
+--                            question 3 s after login (2.0 DaylightUI_UnitFrames\Socket.lua:
+--                            399-451), a reload or profile question, the action bar effects
+--                            question (2.0 Options\Widgets.lua:4384; 1.9.6 Options\Widgets.lua:4178)
+--   DaylightUIQuestieChoice  "Which quest tracker?" with Questie, 3 s after login (2.0 and 1.9.6
+--                            DaylightUI_Quests\Choice.lua:14-16)
+-- Looked up by name each time (a window not made yet is nil) and counted only while shown and not
+-- faded out, as the guides of Glowey's other plugins do (their Guide.lua, DaylightBusy). No gate:
+-- the names are the same on 1.9.x.
+local DAYLIGHT_DIALOGS = { "DaylightUIInstaller", "DaylightUITour", "DaylightUITourAsk", "DaylightUIAsk",
+	"DaylightUIQuestieChoice" }
+-- The flag the Daylight plugins' guides share (_G.DaylightGuides: name -> busy): another plugin's
+-- welcome, tour or note is up while a key of theirs is set; ours is set while this window shows,
+-- so theirs wait for it.
+local GUIDE_KEY = "DaylightAddonSkins"
+
+local function SetBusy(on)
+	local busy = _G.DaylightGuides
+	if type(busy) ~= "table" then
+		if not on then return end
+		busy = {}
+		_G.DaylightGuides = busy
+	end
+	busy[GUIDE_KEY] = on and true or nil
+end
+
+local function DaylightBusy()
+	for _, name in ipairs(DAYLIGHT_DIALOGS) do
+		local f = _G[name]
+		if type(f) == "table" and f.IsShown and f:IsShown() and (f:GetAlpha() or 0) > 0.05 then return true end
+	end
+	local busy = _G.DaylightGuides
+	if type(busy) == "table" then
+		for name, on in pairs(busy) do
+			if on and name ~= GUIDE_KEY then return true end
+		end
+	end
+	return false
+end
+
 local function Ink(fs, role)
 	local c = ns.Colors()[role]
 	if type(c) == "table" then fs:SetTextColor(c[1], c[2], c[3]) end
@@ -35,6 +86,9 @@ local function Build()
 	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
 	frame:Hide()
 	API.Skin(frame, { window = true })
+	-- (Up: the other Daylight plugins' guides wait.)
+	frame:HookScript("OnShow", function() SetBusy(true) end)
+	frame:HookScript("OnHide", function() SetBusy(false) end)
 	table.insert(UISpecialFrames, "DaylightAddonSkinsChoices")
 
 	local title = API.Text(frame, "title", "LEFT")
@@ -185,16 +239,38 @@ function ns.ShowChoices(all)
 end
 
 -- First load, and any login with a conflict not answered yet: a moment after the world shows (the
--- addons' settings are read by then), out of a fight.
+-- addons' settings are read by then), out of a fight, and never on top of a window of Daylight
+-- UI's own or of another Daylight plugin's guide (DaylightBusy, above). Nothing to ask: nothing
+-- waits. Otherwise it looks again every few seconds for as long as it takes (a handful of
+-- lookups a time), so the window still comes in this session once the screen is free; a session
+-- that ends first leaves the conflicts unanswered, and they are asked at the next login.
+-- After any wait the screen must stay free for QUIET seconds first: Daylight UI's welcome looks
+-- again every 5 s while its window is busy with something else (2.0 Welcome.lua:23, 546-554) and
+-- its portrait question every 3 s behind the tour's question (2.0 Socket.lua:417-423), so the
+-- next one of those gets to open before this does.
+local FIRST, AGAIN, QUIET = 6, 3, 6
 ns.me.On("Login", function()
-	local tries = 0
+	local waited, freeSince, any = false, nil, nil
 	local function ask()
-		tries = tries + 1
-		if InCombatLockdown() then
-			if tries < 30 then C_Timer.After(5, ask) end
+		-- (Opened by hand meanwhile: the player is at it.)
+		if frame and frame:IsShown() then return end
+		-- (Read once here; ns.ShowChoices reads them again as it opens.)
+		if any == nil then any = #ns.Conflicts(false) > 0 end
+		if not any then return end
+		if InCombatLockdown() or DaylightBusy() then
+			waited, freeSince = true, nil
+			C_Timer.After(AGAIN, ask)
 			return
+		end
+		if waited then
+			local now = GetTime()
+			freeSince = freeSince or now
+			if now - freeSince < QUIET then
+				C_Timer.After(AGAIN, ask)
+				return
+			end
 		end
 		ns.ShowChoices(false)
 	end
-	C_Timer.After(6, ask)
+	C_Timer.After(FIRST, ask)
 end)

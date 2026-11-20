@@ -166,8 +166,11 @@ end
 local API = ns.API
 local card, cardShell
 
+-- (ns.TipLook, Core.lua: from Daylight UI 2.0 the border is the tooltips' own size or General's,
+-- 2.0 DaylightUI_Tooltip\Tooltip.lua:61-64 and :144; before 2.0 the fixed 3 px, 1.9.6
+-- Tooltip.lua:28. Gate: ns.DaylightAtLeast(2, 0), in ns.TipLook.)
 local function TipLook()
-	return { borderPx = 3, flat = true, noBevel = true, bgAlpha = ns.TipAlpha() }
+	return ns.TipLook()
 end
 
 local function Settle()
@@ -212,11 +215,11 @@ local function LookForCard()
 	ns.Queue("KeepOrToss.card", function() FindCard(_G.KeepOrTossFrame, 0) end, KEY)
 end
 
--- DaylightUI's tooltip opacity changed: the card follows; this skin or DaylightUI's Tooltip
+-- DaylightUI's tooltip opacity (from 2.0 its tooltip border size too) changed: the card follows; this skin or DaylightUI's Tooltip
 -- module switched: it's dressed or given back.
 ns.me.On("SettingChanged", function(scope, path)
 	if not card then return end
-	if cardShell and ns.TipAlphaChanged(scope, path) then ns.Guard(API.Skin, cardShell, TipLook()) end
+	if cardShell and ns.TipLookChanged(scope, path) then ns.Guard(API.Skin, cardShell, TipLook()) end
 	ns.Guard(Settle)
 end)
 

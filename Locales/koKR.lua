@@ -424,3 +424,14 @@ L["skip cinematics"] = "동영상 건너뛰기"
 
 -- Leatrix Plus
 L["Another addon loaded Leatrix Plus before this plugin, so it had already read its settings: nothing can be handed over to Daylight UI this session. Leatrix Plus keeps its own."] = "다른 애드온이 이 플러그인보다 먼저 Leatrix Plus를 불러와 이미 설정을 읽었습니다. 이번 세션에는 Daylight UI로 아무것도 넘길 수 없으며, Leatrix Plus가 자체 설정을 유지합니다."
+
+-- Status report: Daylight UI 2.0
+L["Tooltip Look: %s"] = "툴팁 모양: %s"
+L["Tooltip Border: %s"] = "툴팁 테두리: %s"
+L["%d px (the Tooltips' Own)"] = "%d px (툴팁 자체 설정)"
+L["%d px (General's)"] = "%d px (일반 설정)"
+L["Daylight UI's Auction House: %s"] = "Daylight UI 경매장: %s"
+L["Its Own Window"] = "자체 창"
+L["The Game's Window"] = "게임 기본 창"
+L["DaylightMogul's Window"] = "DaylightMogul 창"
+L["Daylight UI's Loot Rolls: %s"] = "Daylight UI 전리품 주사위: %s"

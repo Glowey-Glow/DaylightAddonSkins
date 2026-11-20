@@ -310,8 +310,17 @@ end
 -- is on)
 -- ---------------------------------------------------------------------------------------------
 
+-- (ns.TipLook, Core.lua: from Daylight UI 2.0 the border is the tooltips' own size or General's,
+-- 2.0 DaylightUI_Tooltip\Tooltip.lua:61-64 and :144; before 2.0 the fixed 3 px, 1.9.6
+-- Tooltip.lua:28. Gate: ns.DaylightAtLeast(2, 0), in ns.TipLook.)
+-- In the Rich look (2.0) the box sits against Daylight UI's card over the game's tooltip, not its
+-- Simple shell: it takes the card's ground opacity (ns.TipAlpha("rich"): Tooltip richAlpha, 2.0
+-- DaylightUI_Tooltip\Rich\Panel.lua:185). Feature-detected: ns.TipStyle is nil on 1.9.x. The card's
+-- square, cut corner stays the card's (not an option of API.Skin).
 local function TipLook()
-	return { borderPx = 3, flat = true, noBevel = true, bgAlpha = ns.TipAlpha() }
+	local look = ns.TipLook()
+	if ns.TipStyle() == "rich" then look.bgAlpha = ns.TipAlpha("rich") or look.bgAlpha end
+	return look
 end
 
 local modelBox
@@ -413,7 +422,7 @@ ns.Pack(KEY, "AllTheThings", function()
 end, CAPS)
 
 -- The accent or the inks changed: the washes, grips and inked words follow; the model box follows
--- Daylight UI's tooltip opacity.
+-- Daylight UI's tooltip opacity and, from 2.0, its tooltip border size.
 local function Repaint()
 	if not On() then return end
 	for tex in pairs(washes) do Guard(PaintWash, tex) end
@@ -423,7 +432,7 @@ end
 ns.me.On("StyleChanged", Repaint)
 ns.me.On("SettingChanged", function(scope, path)
 	if scope == "DaylightAddonSkins" then Repaint() end
-	if modelBox and ns.TipAlphaChanged(scope, path) and On() then Guard(API.Skin, modelBox, TipLook()) end
+	if modelBox and ns.TipLookChanged(scope, path) and On() then Guard(API.Skin, modelBox, TipLook()) end
 end)
 
 -- ---------------------------------------------------------------------------------------------

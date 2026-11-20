@@ -858,10 +858,24 @@ end
 local TIPS = { "TRP3_MainTooltip", "TRP3_CharacterTooltip", "TRP3_CompanionTooltip", "TRP3_RefTooltip", "TRP3_Toast" }
 local TIP_LOOK = { noBevel = true, borderPx = 2, bgAlpha = 0.92 }
 
+-- From Daylight UI 2.0, while its Tooltip module is on, they take the look its own tooltips have
+-- now instead of those fixed numbers (ns.TipLook, Core.lua: the tooltip opacity, and the
+-- tooltips' own border size or General's; 2.0 DaylightUI_Tooltip\Tooltip.lua:61-64, :144). On
+-- 1.9.x, or with that module off, as before. This addon's own opacity and border on its Look and
+-- Feel page still come first (ns.Shell). Gate: ns.DaylightAtLeast(2, 0).
+local function TipLook()
+	if ns.DaylightAtLeast(2, 0) and ns.ModuleOn("Tooltip") then return ns.TipLook() end
+	return TIP_LOOK
+end
+
+local tips = setmetatable({}, { __mode = "k" })   -- the tooltips shelled here
+
 local function Tooltip(tip, Kit)
 	if not ns.Usable(tip) or not ns.Once(tip) then return end
-	local shell = API.Skin(tip, TIP_LOOK)
-	ns.Shell(tip, TIP_LOOK, KEY)
+	local look = TipLook()
+	local shell = API.Skin(tip, look)
+	ns.Shell(tip, look, KEY)
+	tips[tip] = true
 	local function settle(self)
 		if not ns.Enabled(KEY) then return end
 		if ns.Usable(self.NineSlice) then self.NineSlice:SetAlpha(0) end
@@ -873,6 +887,14 @@ local function Tooltip(tip, Kit)
 	ns.ScriptOnce(tip, "OnShow", settle, KEY)
 	if ns.Controls(KEY) and ns.Usable(tip.CloseButton) then ns.Guard(Kit.Close, tip.CloseButton) end
 end
+
+-- Daylight UI's tooltip opacity or border size changed (2.0): the tooltips shelled here follow.
+ns.me.On("SettingChanged", function(scope, path)
+	if not ns.TipLookChanged(scope, path) or not ns.DaylightAtLeast(2, 0) or not ns.Enabled(KEY) then return end
+	for tip in pairs(tips) do
+		if ns.Usable(tip) then ns.Shell(tip, TipLook(), KEY) end
+	end
+end)
 
 -- Sidebar buttons made from now on are hooked through the mixin they copy.
 local mixin = _G.TRP3_CategoryButtonMixin

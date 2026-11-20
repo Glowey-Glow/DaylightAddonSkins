@@ -1,5 +1,12 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.2
+- Checked against Daylight UI 2.0, released today: its new Auction House window, Rich tooltips, loot roll cards, portraits, nameplate options and welcome window. Nothing is dressed twice, and everything works as before on Daylight UI 1.9.
+- The overlap window (the one that asks who handles a feature both an addon and Daylight UI have) no longer opens on top of Daylight UI's "Welcome to Daylight UI 2.0" window. It now waits for that window, Daylight UI's setup guide, tour and questions, and the welcome of any other Glowey plugin, and opens once the screen is free. If you log out first, it asks at your next login.
+- Tooltips dressed by a skin get the same border as Daylight UI 2.0's own tooltips: the thickness set under Tooltips > "Own border and background", or General's when that's off, and they follow it as you change it. Before, they kept the thin border of older versions. This covers ALL THE THINGS' model box beside the tooltip, Keep or Toss's sample item, Questie's minimap and gamepad tooltips, RareScanner's tooltips, Total RP 3's tooltips and Details!' menus and tooltips. (Rich tooltip cards are Daylight UI's own, for the game's tooltip: addon tooltips keep the Simple look in both styles, as they do in Daylight UI itself.)
+- Auctionator and Mastercraft: while Daylight UI 2.0's own Auction House window is the one you use, their pages, tabs and buttons on the game's hidden window are no longer dressed at every opening. Switch to the game's window (the swap icon on Daylight UI's Auction House header) and they're dressed right away.
+- /skins report now also lists Daylight UI 2.0's tooltip look and border, which Auction House window is in use, and whether its loot roll cards are on.
+
 ## 1.18.1
 - Checked against today's updates of the addons you have installed: Daylight UI 1.9.6, Dungeon Journal 2.1.0, LayerSwap 1.14.39 and LFG Forever 2.3.0 (nothing to change for LFG Forever).
 - Dungeon Journal 2.1.0: on a quest's page, the new red note under the objective and the other red warnings stay red, "Requires Neutral with Timbermaw Hold" is green or red by your standing, its reputation bar takes the Daylight UI look (standing color kept), and the mark around a required item from the dungeon you're viewing is your accent color.

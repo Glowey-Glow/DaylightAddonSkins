@@ -424,3 +424,14 @@ L["skip cinematics"] = "跳过过场动画"
 
 -- Leatrix Plus
 L["Another addon loaded Leatrix Plus before this plugin, so it had already read its settings: nothing can be handed over to Daylight UI this session. Leatrix Plus keeps its own."] = "另一个插件在本插件之前加载了 Leatrix Plus，它已读取了自己的设置：本次会话无法将任何功能交给 Daylight UI。Leatrix Plus 保留自己的设置。"
+
+-- Status report: Daylight UI 2.0
+L["Tooltip Look: %s"] = "鼠标提示外观：%s"
+L["Tooltip Border: %s"] = "鼠标提示边框：%s"
+L["%d px (the Tooltips' Own)"] = "%d 像素（鼠标提示自己的）"
+L["%d px (General's)"] = "%d 像素（通用设置的）"
+L["Daylight UI's Auction House: %s"] = "Daylight UI 拍卖行：%s"
+L["Its Own Window"] = "自己的窗口"
+L["The Game's Window"] = "游戏的窗口"
+L["DaylightMogul's Window"] = "DaylightMogul 的窗口"
+L["Daylight UI's Loot Rolls: %s"] = "Daylight UI 战利品掷骰：%s"
