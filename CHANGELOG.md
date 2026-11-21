@@ -1,5 +1,8 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.7
+- Fixed: opening the macro window raised an error ("ScrollBox.lua:595: attempt to index a nil value"). The game builds the macro grid, and the icon grid of every icon picker (macros, equipment sets, guild bank and bank tabs), the first time it is shown; Daylight UI's window skins asked those lists for their rows before that. Such a list now waits until the game has built it, then its rows are dressed as usual. Nothing changes for lists that are ready.
+
 ## 1.18.6
 - Checked against today's later releases of the addons you may not have installed: Camping Kit 1.11.1, Forever Fishing 0.9.224, Forever Leveling BiS 1.4.4, Leatrix Plus 1.60.36, LootTriage 1.2.1, Mastercraft 2.0.8, Pawn 2.14.7 and Shortest Path Forever 1.43.10. Nothing to change for Forever Fishing, Leatrix Plus and Pawn; the other supported addons have no newer release.
 - Camping Kit 1.11.1: its redrawn settings window is dressed throughout: the new Find a Setting box, the cards round each group of settings, choice buttons and chips (the picked one in your accent), color squares and their Custom button, the tick box table with its fold arrows, the small dark buttons, and the search results. The Snap tick on the placement bar is in your accent again, and the new layout editing bar takes the Daylight UI window.

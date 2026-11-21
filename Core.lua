@@ -1172,13 +1172,74 @@ end)
 
 local waiting = {}
 
+-- Kit.EachRow asks a list for its rows right away, and a game list has none to ask before its
+-- view is set (ScrollBox.lua: ForEachFrame reads self:GetView()). Some lists get theirs only on
+-- their first show: the macro window's grid and every icon picker (ScrollBoxSelectorMixin:OnShow
+-- -> Init), so a walk over such a window before then (DaylightUI's own or a pack's) raised
+-- "ScrollBox.lua:595: attempt to index a nil value". Here such a list is held back until the game
+-- gives it a view (a secure hook on its SetView, once per list), then handed to the Kit in the
+-- order it was asked for: the first one unnamed becomes the Kit's default as before, a key asked
+-- again replaces its function. Everything else goes straight through.
+local rowsHeld = setmetatable({}, { __mode = "k" })   -- list -> { fn or false, key, ... }
+local rowsHooked = setmetatable({}, { __mode = "k" })
+
+local function GuardRows(Kit)
+	local EachRow = type(Kit) == "table" and Kit.EachRow
+	if type(EachRow) ~= "function" or ns.rowsGuarded then return end
+	ns.rowsGuarded = true
+	local function release(box)
+		local held = rowsHeld[box]
+		if not held then return end
+		rowsHeld[box] = nil
+		for i = 1, #held do Guard(EachRow, box, held[i].fn, held[i].key) end
+	end
+	Kit.EachRow = function(box, fn, key, ...)
+		if type(box) == "table" and box.ForEachFrame and type(box.GetView) == "function"
+			and type(box.SetView) == "function" and type(fn) == "function" then
+			local ok, view = pcall(box.GetView, box)
+			if ok and view == nil then
+				local held = rowsHeld[box]
+				if not held then
+					held = {}
+					rowsHeld[box] = held
+				end
+				local at
+				for i = 1, #held do
+					if held[i].key == key then at = i break end
+				end
+				if not at then
+					held[#held + 1] = { fn = fn, key = key }
+				elseif key ~= nil then
+					held[at].fn = fn
+				end
+				if not rowsHooked[box] then
+					rowsHooked[box] = true
+					hooksecurefunc(box, "SetView", release)
+				end
+				return
+			end
+		end
+		return EachRow(box, fn, key, ...)
+	end
+end
+
 local function GotKit(Kit)
+	GuardRows(Kit)
 	if ns.Kit or not Kit then return end
 	ns.Kit = Kit
 	local list = waiting
 	waiting = {}
 	for i = 1, #list do Guard(list[i], Kit) end
 end
+
+-- The guard goes on at login even when no pack has been handed the Kit yet (DaylightUI's own
+-- window skins use the same Kit; DaylightUI.Skins.Kit is its door for plugins).
+me.On("Login", function()
+	local skins = type(DaylightUI) == "table" and DaylightUI.Skins
+	if type(skins) ~= "table" or type(skins.Kit) ~= "function" then return end
+	local ok, Kit = pcall(skins.Kit)
+	if ok then GuardRows(Kit) end
+end)
 
 function ns.WithKit(fn)
 	if ns.Kit then
