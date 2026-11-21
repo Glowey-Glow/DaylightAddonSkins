@@ -758,7 +758,8 @@ local function LetterFill(Kit)
 	local inbox = _G.InboxFrame
 	if Kind(html) == "SimpleHTML" and Usable(inbox) and type(_G.GetInboxText) == "function" then
 		local c = Kit.TEXT
-		html:SetTextColor(c[1], c[2], c[3])
+		-- (A SimpleHTML's SetTextColor takes the kind of text first: SimpleHTMLAPIDocumentation.lua.)
+		for _, tag in ipairs({ "P", "H1", "H2", "H3" }) do html:SetTextColor(tag, c[1], c[2], c[3]) end
 		local id = inbox.openMailID
 		if id then
 			local ok, text = pcall(_G.GetInboxText, id)

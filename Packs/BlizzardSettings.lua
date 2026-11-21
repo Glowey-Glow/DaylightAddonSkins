@@ -1167,8 +1167,9 @@ local function DressReadyBox(box, host)
 			local c = select(i, box:GetChildren())
 			if TextButton(c) then Kit.Button(c, host) end
 		end
-		HideButton(box.closeButton)
-		HideButton(box.CloseButton)
+		-- (The game names this button "$parentCloseButton" and gives it no key: LFGFrame.xml.)
+		local name = box.GetName and box:GetName()
+		HideButton(box.closeButton or box.CloseButton or (name and _G[name .. "CloseButton"]))
 	end
 	FontReady(box, 0)
 	InkReady(box, 0)

@@ -850,9 +850,9 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 local PARTS = {
-	{ addon = nil, fn = CharacterStart },   -- (the character window is always there)
-	{ addon = "Blizzard_TokenUI", fn = TransferStart },
-	{ addon = "Blizzard_PlayerSpells", fn = SpellsStart },
+	{ addon = nil, fn = CharacterStart, on = On },   -- (the character window is always there)
+	{ addon = "Blizzard_TokenUI", fn = TransferStart, on = On },
+	{ addon = "Blizzard_PlayerSpells", fn = SpellsStart, on = SpellsOn },
 }
 
 local function Loaded(addon)
@@ -864,9 +864,10 @@ end
 
 local function TryParts()
 	local Kit = ns.Kit
-	if not Kit or not ns.loggedIn or not SpellsOn() then return end
+	if not Kit or not ns.loggedIn then return end
+	-- (Each part follows its own window's switch: Character Frame, or Spells and Talents.)
 	for _, p in ipairs(PARTS) do
-		if not p.done and (p.addon == nil or Loaded(p.addon)) then
+		if not p.done and p.on() and (p.addon == nil or Loaded(p.addon)) then
 			local ok, out = xpcall(p.fn, geterrorhandler(), Kit)
 			p.done = ok and out ~= false
 		end
@@ -876,7 +877,7 @@ end
 -- A style change (the accent): this file's own accent marks and rows again, and the spellbook's
 -- headers (SpellsSoon). Only what this file painted; the rest is DaylightUI's and the Kit's.
 local function Restyle()
-	if not SpellsOn() or not ns.Kit then return end
+	if not ns.Enabled(KEY) or not ns.Kit then return end
 	PaintSidebarSoon()
 	for tex, how in pairs(accented) do
 		if Usable(tex) then

@@ -1232,14 +1232,18 @@ local function GotKit(Kit)
 	for i = 1, #list do Guard(list[i], Kit) end
 end
 
--- The guard goes on at login even when no pack has been handed the Kit yet (DaylightUI's own
--- window skins use the same Kit; DaylightUI.Skins.Kit is its door for plugins).
-me.On("Login", function()
+-- The guard goes on as this file loads: DaylightUI starts its window skins (the always-loaded
+-- windows, the character window's icon picker among them) before it fires "Login", and before any
+-- pack has been handed the Kit. DaylightUI's skins load ahead of this plugin (OptionalDeps) and
+-- use the same Kit; DaylightUI.Skins.Kit is its door for plugins. "Login" is the second chance.
+local function GuardRowsNow()
 	local skins = type(DaylightUI) == "table" and DaylightUI.Skins
 	if type(skins) ~= "table" or type(skins.Kit) ~= "function" then return end
 	local ok, Kit = pcall(skins.Kit)
 	if ok then GuardRows(Kit) end
-end)
+end
+GuardRowsNow()
+me.On("Login", GuardRowsNow)
 
 function ns.WithKit(fn)
 	if ns.Kit then
