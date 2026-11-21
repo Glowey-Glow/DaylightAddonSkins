@@ -4,7 +4,7 @@
 -- opens for it (report, issue, thanks; before ForeverCore 1.15 also the Forever addons link and
 -- your Forever profile), ForeverCore's right-click menu (the tracker's header and lines) and, before
 -- Shortest Path 1.42 (which dropped it), its "Journey" button under the minimap.
--- (Checked against Shortest Path 1.43.9, which carries ForeverCore 1.15.4 inside itself.)
+-- (Checked against Shortest Path 1.43.10, which carries ForeverCore 1.15.6 inside itself.)
 -- Left alone: everything it draws on the world map and minimap (route lines, pins, docks,
 -- portals), the direction arrow and compass (on-screen guides with settings of their own), its
 -- settings (the game's Settings window). Its tracker sections: docked under DaylightUI's quest
@@ -432,6 +432,70 @@ ns.me.On("Login", function()
 			ns.Queue("ShortestPathForever:optionsButton", function() ns.WithKit(OptionsButton) end, KEY)
 		end)
 	end
+end)
+
+-- ForeverCore's "your ForeverCore is older" notice (1.15.6, Core/Loader.lua ShowNotice; before, the
+-- game's StaticPopup, which DaylightUI dresses): a small dialog in the game's dialog art with one
+-- OK button. It has no name, and the loader makes it by a call it keeps to itself, on the frame
+-- after the world is entered, once per installed ForeverCore version. So only while the loader says
+-- there is such a warning, it is looked for among the screen's own frames, each frame for two
+-- seconds from the world's entry, by how it is made (strata, width) and by its words.
+local function NoticeAmong(text, ...)
+	for i = 1, select("#", ...) do
+		local f = select(i, ...)
+		if ns.Usable(f) and f:GetObjectType() == "Frame" and not f:GetName() and f:IsShown()
+			and f:GetFrameStrata() == "DIALOG" and math.abs((f:GetWidth() or 0) - 320) < 1 then
+			for _, r in ipairs({ f:GetRegions() }) do
+				if ns.Usable(r) and r:GetObjectType() == "FontString" then
+					local words = r:GetText()
+					if type(words) == "string" and not (issecretvalue and issecretvalue(words)) and words == text then
+						return f, r
+					end
+				end
+			end
+		end
+	end
+end
+
+local function DressNotice(f, message, Kit)
+	if not ns.Once(f) then return end
+	for _, region in ipairs({ f:GetRegions() }) do
+		if ns.Usable(region) and region:GetObjectType() == "Texture" and region:GetDrawLayer() == "BACKGROUND" then
+			ns.Kill(region)
+		end
+	end
+	ns.Shell(f, { window = true }, KEY)
+	if ns.Controls(KEY) then
+		for _, child in ipairs({ f:GetChildren() }) do
+			if ns.Usable(child) and child:GetObjectType() == "Button" and ns.Once(child) then ns.Guard(Kit.Button, child) end
+		end
+	end
+	-- (It sized itself to its words in the game's font: again in the player's.)
+	ns.FollowFont(message, KEY)
+	local h = message:GetStringHeight()
+	if type(h) == "number" and h > 0 then f:SetHeight(h + 63) end
+end
+
+local noticeWatch = CreateFrame("Frame")
+noticeWatch:RegisterEvent("PLAYER_ENTERING_WORLD")
+noticeWatch:SetScript("OnEvent", function(self)
+	self:UnregisterEvent("PLAYER_ENTERING_WORLD")
+	local loader = _G.ForeverCoreLoader
+	if type(loader) ~= "table" or type(loader.Warning) ~= "function" or not ns.Enabled(KEY) then return end
+	local left = 2
+	self:SetScript("OnUpdate", function(me, elapsed)
+		-- (The first frame after a loading screen can be seconds long: counted as a tenth at most.)
+		left = left - math.min(elapsed or 0, 0.1)
+		local ok, text = pcall(loader.Warning)
+		if ok and type(text) == "string" then
+			local f, message = NoticeAmong(text, UIParent:GetChildren())
+			if f then
+				left = 0
+				ns.WithKit(function(Kit) ns.Guard(DressNotice, f, message, Kit) end)
+			end
+		end
+		if left <= 0 then me:SetScript("OnUpdate", nil) end
+	end)
 end)
 
 -- ---------------------------------------------------------------------------------------------

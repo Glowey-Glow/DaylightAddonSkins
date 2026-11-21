@@ -13,7 +13,17 @@
 -- The announce message editor (CampingKitAnnounceEditor): ground off, shell, close and buttons, the
 -- text well as a quiet DaylightUI box (its edge in your accent while you type), its text inked.
 -- The placement bar (KitCoreMoveBar, while placing the reminder panel): shell, buttons, the Snap
--- tick in your accent, its text inked.
+-- tick in your accent, its text inked. The layout editing bar (KitCoreEditBar, Kit Core 23 on): the
+-- same.
+-- Camping Kit 1.11.1 ships Kit Core 31, whose settings window is drawn anew: a search box in the
+-- header, each sub-heading's rows on a card, short choices as a row of buttons (the picked one
+-- lit), color squares with a Custom... button, on/off chips, a table of tick boxes with rows that
+-- fold open, fold arrows, small dark buttons. All of them are made of the same few pieces (a dark
+-- well with four gold one-pixel edges, a gold wash under the mouse, a gold fill and gold words on
+-- the picked one, a gold arrow), so they are dressed piece by piece, wherever a row holds them
+-- (Deep below): wells and edges as above, the picked fill and words in your accent, arrows in the
+-- text ink, the edge round the color in use in your accent. A color square's color is the setting
+-- and stays.
 -- The "Campfire..." label beside the tent: its gold words in DaylightUI's label ink.
 -- Left as it is on purpose: the kit itself (tent, slots, flyouts, dials, dock, map pins) is a secure
 -- action HUD; the gold "Kit reminders" box and grid shown over the screen while placing the reminder
@@ -137,6 +147,83 @@ local function InkOnShow(frame, Kit, extra)
 	ink()
 end
 
+-- Words the kit paints gold while their button is the picked one (a choice button, a chip,
+-- Custom...) and gray while it isn't, again on every repaint: the accent in place of the gold.
+-- (Told apart by the kit's own colors: the accent painted here, and again on a style change, comes
+-- through this hook too and is left as it is.)
+local function FollowPick(fs)
+	if not ns.Usable(fs) or not fs.SetTextColor or not fs.GetTextColor then return end
+	local busy = false
+	local function follow(self, r, g, b)
+		if busy or not ns.Enabled(KEY) or type(r) ~= "number" or type(g) ~= "number" then return end
+		if r == 1 and math.abs(g - 0.82) < 0.01 and (b or 0) < 0.05 then
+			accented[self] = "text"
+			busy = true
+			PaintAccent(self)
+			busy = false
+		elseif (math.abs(r - 0.75) < 0.01 and math.abs(g - 0.72) < 0.01) or (math.abs(r - 0.6) < 0.01 and math.abs(g - 0.58) < 0.01) then
+			accented[self] = nil
+		end
+	end
+	if ns.HookOnce(fs, "SetTextColor", follow, KEY) then follow(fs, fs:GetTextColor()) end
+end
+
+-- Kit Core's pieces, wherever a row holds them (Kit Core 23 on; see the top), `depth` levels down.
+-- Each frame once: the kit makes a row's pieces with the row and only shows, hides and recolors
+-- them after.
+local function Deep(f, Kit, depth)
+	if depth > 6 or not ns.Usable(f) then return end
+	local kind = f:GetObjectType()
+	if kind ~= "Frame" and kind ~= "Button" then return end
+	-- (A button of the game's template is the walk's.)
+	if f.Left and f.Middle and f.Right then return end
+	-- A color square: its color and its x are the setting; the gold edge round the one in use.
+	if ns.Usable(f.fill) and ns.Usable(f.edge) then
+		Accent(f.edge, "color", 1)
+		return
+	end
+	local back, edges = false, nil
+	for _, region in ipairs({ f:GetRegions() }) do
+		if ns.Usable(region) and region:GetObjectType() == "Texture" then
+			local layer = region:GetDrawLayer()
+			if layer == "HIGHLIGHT" then
+				region:SetColorTexture(1, 1, 1, WASH)
+			elseif layer == "BORDER" then
+				edges = edges or {}
+				edges[#edges + 1] = region
+			elseif layer == "BACKGROUND" and region ~= f.sel and region ~= f.openBg then
+				back = true
+			end
+		end
+	end
+	if edges then
+		if #edges >= 4 and back and not f.sel then
+			-- A well: a tick box (16 square) has a tick, any other an arrow or nothing.
+			local w, h = f:GetSize()
+			local tick = f.tick ~= nil or (math.abs((w or 0) - 16) < 1 and math.abs((h or 0) - 16) < 1)
+			Box(f, Kit, tick)
+		elseif #edges >= 4 then
+			-- A chip or Custom...: its fill is its own (the picked one's below).
+			local edge = Kit.CONTROL_BORDER or { 0.24, 0.21, 0.16 }
+			for _, region in ipairs(edges) do region:SetColorTexture(edge[1], edge[2], edge[3], 1) end
+		else
+			for _, region in ipairs(edges) do Hairline(region) end
+		end
+	end
+	if ns.Usable(f.sel) then
+		Accent(f.sel, "color", 0.14)
+		FollowPick(f.text)
+	end
+	-- (A table row folded open: its faint gold ground.)
+	if ns.Usable(f.openBg) and f.openBg.SetColorTexture then f.openBg:SetColorTexture(1, 1, 1, 0.03) end
+	if ns.Usable(f.arrow) and f.arrow.SetVertexColor then
+		local t = Kit.TEXT or { 1, 1, 1 }
+		f.arrow:SetVertexColor(t[1], t[2], t[3])
+	end
+	ns.Guard(Kit.InkGameText, f)
+	for _, child in ipairs({ f:GetChildren() }) do Deep(child, Kit, depth + 1) end
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- The settings window
 -- ---------------------------------------------------------------------------------------------
@@ -194,7 +281,7 @@ local function ScrollTrack(track, Kit)
 end
 
 local function Row(row, Kit)
-	if not ns.Once(row) then return end
+	if not ns.Once(row) then return false end
 	local kind = type(row.item) == "table" and row.item.kind
 	if kind == "check" then
 		Wash(row)
@@ -235,19 +322,43 @@ local function Row(row, Kit)
 	end
 	-- Labels stay white; gold values and sub-headings, and gray descriptions, take DaylightUI's inks.
 	ns.Guard(Kit.InkGameText, row)
+	-- Every other piece in it (Kit Core 23 on: choice buttons, chips, color squares, table cells,
+	-- fold arrows, small buttons).
+	ns.Guard(Deep, row, Kit, 0)
+	return true
 end
 
+-- A page: its heading and line once, then every row on it not dressed yet (Kit Core 23 on makes
+-- rows after the page too: the search results page gets its rows with each search) and the cards
+-- behind a sub-heading's rows (a faint ground and four gold edges: the edges quiet hairlines).
+-- Says whether anything on it was new.
 local function Page(page, Kit)
-	ns.Guard(Kit.InkGameText, page)
-	for _, region in ipairs({ page:GetRegions() }) do
-		if ns.Usable(region) and region:GetObjectType() == "Texture" and region:GetDrawLayer() == "BORDER" then
-			Hairline(region)
+	local fresh = false
+	if ns.Once(page) then
+		fresh = true
+		ns.Guard(Kit.InkGameText, page)
+		for _, region in ipairs({ page:GetRegions() }) do
+			if ns.Usable(region) and region:GetObjectType() == "Texture" and region:GetDrawLayer() == "BORDER" then
+				Hairline(region)
+			end
 		end
 	end
-	local rows = type(page.rows) == "table" and page.rows or { page:GetChildren() }
-	for _, row in ipairs(rows) do
-		if ns.Usable(row) then Row(row, Kit) end
+	for _, child in ipairs({ page:GetChildren() }) do
+		if ns.Usable(child) then
+			if type(child.item) == "table" then
+				if Row(child, Kit) then fresh = true end
+			elseif ns.Once(child) then
+				fresh = true
+				for _, region in ipairs({ child:GetRegions() }) do
+					if ns.Usable(region) and region:GetObjectType() == "Texture" and region:GetDrawLayer() == "BORDER" then
+						Hairline(region)
+					end
+				end
+				ns.Guard(Kit.InkGameText, child)
+			end
+		end
 	end
+	return fresh
 end
 
 -- The window's own pieces: the header line and the line beside the sections (one pixel wide or
@@ -266,6 +377,14 @@ local function Options(f, Kit)
 			local kind = child:GetObjectType()
 			if kind == "Button" and child.sel and child.bar and child.text then
 				NavButton(child)
+			elseif kind == "Button" and ns.Usable(child.text) and not child.sel then
+				-- (Kit Core 23 on: "Move everything" and "Key bindings" under the sections.)
+				Wash(child)
+				ns.Guard(Kit.InkGameText, child)
+			elseif kind == "EditBox" then
+				-- (Kit Core 23 on: the "Find a setting" box, a well like the rest; its glass in the text ink.)
+				Box(child, Kit, false)
+				ns.Guard(Kit.InkGameText, child)
 			elseif kind == "ScrollFrame" then
 				scroll = child
 			elseif kind == "Frame" and child:IsMouseEnabled() and child:GetNumChildren() == 1
@@ -282,29 +401,22 @@ local function OptionsWindow(f, Kit)
 	local pages = Options(f, Kit)
 	ns.PlainWindow(f)
 	ns.Guard(Kit.InkGameText, f)
-	local counted = -1   -- pages at the last look (they're only ever added)
 	local function Pass()
 		if not ns.Enabled(KEY) or not ns.Usable(pages) then return end
-		-- (A dynamic page's relayout sets the height again on every change: nothing new then.)
-		local n = pages:GetNumChildren()
-		if n == counted then return end
-		counted = n
+		-- (A page's relayout sets the height again on every change: each page and row is looked
+		-- at, and only what is new is dressed.)
 		local fresh = false
 		for _, page in ipairs({ pages:GetChildren() }) do
-			if ns.Usable(page) and ns.Once(page) then
-				fresh = true
-				Page(page, Kit)
-			end
+			if ns.Usable(page) and Page(page, Kit) then fresh = true end
 		end
 		-- The template buttons on a page built after the window's last walk (the window walks
 		-- itself again on every show).
 		if fresh then ns.Dress(f, nil, 0, KEY) end
 	end
-	local function Queue()
-		ns.Queue("CampingKit:pages", Pass, KEY)
-	end
-	-- Every page shown (built the first time) sets the scroll child's height to the page's.
-	if ns.Usable(pages) then ns.HookOnce(pages, "SetHeight", Queue, KEY) end
+	-- Every page shown (built the first time; the search results with each search) sets the scroll
+	-- child's height to the page's, its rows made and painted by then: dressed right there, before
+	-- it's drawn.
+	if ns.Usable(pages) then ns.HookOnce(pages, "SetHeight", function() ns.Guard(Pass) end, KEY) end
 	Pass()
 end
 
@@ -385,6 +497,10 @@ local function HookOpeners()
 		if type(proto) == "table" and type(proto.OpenOptions) == "function" then
 			ns.HookOnce(proto, "OpenOptions", Now, KEY)
 		end
+		-- (Kit Core 23 on: editing a kit's layout makes and shows its bar, KitCoreEditBar.)
+		if type(proto) == "table" and type(proto.SetEdit) == "function" then
+			ns.HookOnce(proto, "SetEdit", Now, KEY)
+		end
 	end
 	-- (The buttons are made at login, the minimap button only once a second kit shares it.)
 	for name, script in pairs(OPENERS) do
@@ -455,7 +571,16 @@ ns.Pack(KEY, "Camping Kit", function()
 	ns.Watch(KEY, "KitCoreMoveBar", function(bar, Kit)
 		ns.PlainWindow(bar)
 		local tick = bar.tick
-		if ns.Usable(tick) then Box(tick:GetParent(), Kit, true) end
+		if ns.Usable(tick) then
+			Box(tick:GetParent(), Kit, true)
+		else
+			-- (Kit Core 23 on keeps the Snap tick to itself: its box is found among the bar's pieces.)
+			for _, child in ipairs({ bar:GetChildren() }) do ns.Guard(Deep, child, Kit, 0) end
+		end
+		InkOnShow(bar, Kit)
+	end)
+	ns.Watch(KEY, "KitCoreEditBar", function(bar, Kit)
+		ns.PlainWindow(bar)
 		InkOnShow(bar, Kit)
 	end)
 end, { window = true, controls = true, text = true, shadow = true })

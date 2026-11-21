@@ -1,7 +1,7 @@
 -- LootTriage: its settings window (1.2.0 on: /lt, or the Open button on its page in the game's
 -- options; with the gamepad UI on it keeps its settings in the options instead), its "What's New"
 -- dialog, and the delete button it puts on the loot window's title bar.
--- (Checked against LootTriage 1.2.0.1.)
+-- (Checked against LootTriage 1.2.1.)
 -- * The settings window (an unnamed ButtonFrameTemplate window): DaylightUI's window shell (its logo
 --   portrait, stone inset and brown title strip go with the template's art), its page list as
 --   DaylightUI's line rows (the picked page in the accent wash, its words lit), its section headings
@@ -163,16 +163,37 @@ local function DressWindow(win, Kit)
 			ns.ScriptOnce(item, "OnClick", function() ns.Guard(ListWords, win, Kit) end, KEY)
 		end
 	end
-	ns.HookOnce(win, "Refresh", function() ns.Guard(ListWords, win, Kit) end, KEY)
+	local again   -- the window's walk, asked for again (set below)
+	ns.HookOnce(win, "Refresh", function()
+		ns.Guard(ListWords, win, Kit)
+		if again then again() end
+	end, KEY)
 	-- The What's New link.
 	local news = win.news
 	ns.ScriptOnce(news, "OnEnter", function() NewsLink(news, true) end, KEY)
 	ns.ScriptOnce(news, "OnLeave", function() NewsLink(news, false) end, KEY)
 	ns.ScriptOnce(news, "OnClick", DialogClicked, KEY)
 	NewsLink(news, false)
+	-- 1.2.1 makes a page's controls the first time that page is shown (its Refresh; before, all of
+	-- them with the window). Each page not made yet is shown to it once here, through its own
+	-- Refresh, and the page it was on put back: the walk below then finds every control, so no
+	-- page is first seen undressed. (The walk is asked for again after each Refresh all the same.)
+	if type(win.Refresh) == "function" then
+		local was = win.page
+		for _, page in ipairs(win.pages) do
+			if type(page) == "table" and type(page.rows) == "table" and not page.built then
+				win.page = page
+				pcall(win.Refresh)
+			end
+		end
+		if win.page ~= was then
+			win.page = was
+			pcall(win.Refresh)
+		end
+	end
 	-- Its pages: the controls, walked (hidden pages too, again as each shows).
 	if ns.Walk then
-		ns.Walk(Kit, win, { skip = skip }, function() ns.Guard(Headings, win) end, nil, KEY)
+		again = ns.Walk(Kit, win, { skip = skip }, function() ns.Guard(Headings, win) end, nil, KEY)
 	else
 		ns.Guard(Kit.Auto, win, { skip = skip })
 		ns.Guard(Headings, win)

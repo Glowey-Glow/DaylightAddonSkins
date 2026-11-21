@@ -31,7 +31,7 @@
 --   * The windows: the main window (MastercraftFrame), the compact view, the item tracker, the
 --     farming HUD, the fishing bar and catch card, the mini guide, the never-bank list, the alt
 --     view, the recipe details, the Trade board, Share my crafts, Map icons, What's New, the setup
---     guide, the error report, the "/mc report" Crafters report (2.0.7), the question box (Mastercraft's own; it never uses the game's
+--     guide, the error report, the "/mc report" Crafters report (2.0.7), the address copy box, the food-to-keep and never-suggest lists and the craft orders' toast (2.0.8), the question box (Mastercraft's own; it never uses the game's
 --     popups), the Crafters request pop-up, its toasts, the mailbox helper and the bank pop-up: the
 --     DaylightUI window shell in place of its box (its own opacity, border and bevel when it has a
 --     look of its own), DaylightUI's X, the accent line along the top in the accent. The fishing bar
@@ -120,11 +120,51 @@ local function MSettings()
 	return type(db) == "table" and type(db.settings) == "table" and db.settings or nil
 end
 
--- This character ("Name-Realm"), or nil while the game doesn't know the name yet.
+-- This character: its GUID, or nil while the game doesn't know it yet.
+-- (The record was kept under "Name-Realm" before. The game now answers an empty realm name,
+-- GetRealmName() is "", so every key came out as "Name-": one record for every character of that
+-- name, and the "Name-Realm" ones written before were no longer found.)
 local function CharKey()
+	local guid = _G.UnitGUID and _G.UnitGUID("player")
+	if type(guid) ~= "string" or guid == "" then return nil end
+	return guid
+end
+
+local function IsGUID(key) return string.find(key, "^Player%-%d+%-%x+$") ~= nil end
+
+-- A record from before, taken over under the GUID, once: the "Name-Realm" one where the game still
+-- tells the realm, else the only old record under this name ("Name-Realm" or "Name-"). It is moved,
+-- never dropped. With several old records under the name (the same name on other realms) none can
+-- be told to be this character's: they all stay, and their answer is taken only when they agree.
+local function Adopt(t, key)
+	if t[key] ~= nil then return end
 	local name = _G.UnitName and _G.UnitName("player")
-	if type(name) ~= "string" or name == "" or name == (_G.UNKNOWNOBJECT or "Unknown") then return nil end
-	return name .. "-" .. tostring(_G.GetRealmName and _G.GetRealmName() or "")
+	if type(name) ~= "string" or name == "" or name == (_G.UNKNOWNOBJECT or "Unknown") then return end
+	local realm = _G.GetRealmName and _G.GetRealmName()
+	if type(realm) == "string" and realm ~= "" then
+		local old = name .. "-" .. realm
+		if type(t[old]) == "boolean" then
+			t[key], t[old] = t[old], nil
+			return
+		end
+	end
+	local prefix = name .. "-"
+	local first, count, agree, value = nil, 0, true, nil
+	for k, v in pairs(t) do
+		if type(k) == "string" and type(v) == "boolean" and string.sub(k, 1, #prefix) == prefix and not IsGUID(k) then
+			count = count + 1
+			if count == 1 then
+				first, value = k, v
+			elseif v ~= value then
+				agree = false
+			end
+		end
+	end
+	if count == 1 then
+		t[key], t[first] = value, nil
+	elseif count > 1 and agree then
+		t[key] = value
+	end
 end
 
 -- Whether the skin was on for this character at its last login (nil: not known).
@@ -132,14 +172,19 @@ local function SkinWas()
 	local t = SV().mastercraftSkin
 	if type(t) ~= "table" then return nil end
 	local key = CharKey()
-	return key and t[key]
+	if not key then return nil end
+	Adopt(t, key)
+	return t[key]
 end
 
 local function SkinIs(on)
 	local db = SV()
 	if type(db.mastercraftSkin) ~= "table" then db.mastercraftSkin = {} end
 	local key = CharKey()
-	if key then db.mastercraftSkin[key] = on end
+	if not key then return end
+	-- (Its old record moved over first, so it doesn't stay behind under the name.)
+	Adopt(db.mastercraftSkin, key)
+	db.mastercraftSkin[key] = on
 end
 
 -- Classic on, the style it had kept. A style it shows while the record is there was picked in its
@@ -269,10 +314,13 @@ local function IsAccent(r, g, b)
 end
 
 -- Its gold (C.gold: what it lifts out, "here", the pick, a title), and the lighter gold of a picked
--- crafter status's words and a picked color swatch's edge.
+-- crafter status's words and a picked color swatch's edge. From 2.0.8 also the game's own gold
+-- (1, 0.82, 0), which it paints in every style on the craft orders board (a row's hover, Orders.lua
+-- :775 and :1034) and the Professions road.
 local function IsGold(r, g, b)
 	if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" or abs(r - 1) >= 0.04 then return false end
 	return (abs(g - 0.82) < 0.04 and abs(b - 0.25) < 0.06) or (abs(g - 0.86) < 0.02 and b >= 0.40 and b <= 0.46)
+		or (abs(g - 0.82) < 0.01 and b < 0.01)
 end
 
 -- A picked chip's ground (its gold x 0.3: the Crafters page's profession and filter chips).
@@ -287,7 +335,10 @@ end
 
 -- Its warm plates, drawn so in every style: the Crafters page's chips, tabs and tick boxes (ground and
 -- edge), the mailbox helper's header band and its rule.
-local WARM = { { 0.10, 0.09, 0.07 }, { 0.36, 0.31, 0.22 }, { 0.05, 0.035, 0.025 }, { 0.58, 0.39, 0.12 } }
+-- (2.0.8: the gold-brown edge of the craft orders board's dark rows and boxes, Orders.lua:766, :960
+-- and :1025, and the Professions road's two browns, Tabs/ProfRoad.lua:155-157.)
+local WARM = { { 0.10, 0.09, 0.07 }, { 0.36, 0.31, 0.22 }, { 0.05, 0.035, 0.025 }, { 0.58, 0.39, 0.12 },
+	{ 0.55, 0.42, 0.18 }, { 0.42, 0.30, 0.12 }, { 0.30, 0.22, 0.10 } }
 local function Warm(r, g, b)
 	if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then return false end
 	for _, c in ipairs(WARM) do
@@ -1008,9 +1059,12 @@ end
 local NAMED = { "MastercraftFrame", "MastercraftCompact", "MastercraftGoals", "MastercraftFarmHUD",
 	"MastercraftFishBar", "MastercraftFishRecap", "MastercraftMiniGuide", "MastercraftNeverBank",
 	"MastercraftAltView", "MastercraftDetails", "MastercraftTradeBoard", "MastercraftConfirm",
-	"MastercraftShareCrafts", "MastercraftNodeIcons", "MastercraftErrorReport", "MastercraftNetReport" }
+	"MastercraftShareCrafts", "MastercraftNodeIcons", "MastercraftErrorReport", "MastercraftNetReport",
+	-- (2.0.8: the copy box for its web addresses (Help.lua), Gold's "food to keep" and Loot Advisor
+	-- "never suggest" lists (Tabs/Gold.lua), and the craft orders' toast (Orders.lua).)
+	"MastercraftCopyChat", "MastercraftFoodKeep", "MastercraftLootNever", "MastercraftOrderToast" }
 local BY_EVENT = { "MastercraftCompact", "MastercraftGoals", "MastercraftFarmHUD", "MastercraftFishBar",
-	"MastercraftFishRecap", "MastercraftMiniGuide" }
+	"MastercraftFishRecap", "MastercraftMiniGuide", "MastercraftOrderToast" }
 -- (What's New and the setup guide are made once per language, named after it.)
 local FAMILIES = { "MastercraftSetup", "MastercraftWhatsNew" }
 local LANGS = { "", "_de", "_el", "_es", "_fr", "_ko", "_pl", "_pt", "_ru", "_zh" }

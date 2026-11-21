@@ -317,8 +317,19 @@ ns.Watch(KEY, "ForeverLevelingBiSWhatsNew", function(frame)
 	HookClicks(frame, 3, Opened)
 end)
 -- The Wish list dock on the main window (1.3.2): by name, since folded it's too short for the scan.
+-- From 1.4.3 the dock itself is a bare holder: the panel's look is on a face of its own (frame.face,
+-- hidden while folded), and folded it is a small star tab with the wish count (frame.tab, a button
+-- with the window's backdrop). Those two are dressed then, and the holder left bare (a shell on it
+-- would double the face's, and sit behind the tab).
 ns.Watch(KEY, "ForeverLevelingBiSWishDock", function(frame)
-	if On() then Dress(frame, "window") end
+	if not On() then return end
+	local face, tab = frame.face, frame.tab
+	if ns.Usable(face) and face.GetBackdrop then
+		Dress(face, "window")
+		if ns.Usable(tab) and tab.GetBackdrop then Dress(tab, "window") end
+	else
+		Dress(frame, "window")
+	end
 end)
 -- (The button is made at login.)
 ns.Watch(KEY, "ForeverLevelingBiSMinimapButton", function(button)

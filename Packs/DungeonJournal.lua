@@ -66,6 +66,22 @@
 --   * The two buttons under its arrow ("Not found? Next spot", and 2.1.0's "Skip for now"):
 --     DaylightUI's, made wider when its font needs it. The arrow, its words and its item button are
 --     its own.
+--   * 2.1.1: the warnings it now writes in blue in a font of their own (FDJ.WarningFont: the quest
+--     page's, the "Requires ..." lines, the line under a boss's name) are held in DaylightUI's warning
+--     ink like the red ones before, and a reputation not met no longer keeps the green of one that
+--     was. "Dungeon Chain Step" over a step's objective keeps its light blue. The red level in
+--     "Available from Level 30" on a quest's page (a dark red DaylightUI's journal skin lights like
+--     any dark ink, which also took the journal's bold copy of it away) is DaylightUI's warning ink.
+--     The one-time note under the new Export button (inside the journal, so see-through after
+--     DaylightUI's walk): the window shell, its OK DaylightUI's. The flight bar under the arrow:
+--     DaylightUI's bar in the accent, not yellow. The controller's frame round the thing picked
+--     (Systems/GamePad.lua; a gold backdrop DaylightUI's journal skin hides like every backdrop in
+--     the journal): an edge and a faint wash in the accent, so the pick still shows.
+-- Left as it is in 2.1.1: the Export button beside Report and the Options' Export tab and search
+-- box (the journal and its settings window are DaylightUI's skin's), the teal tint of a dungeon
+-- chain step's page and its chain icon (they say where the step is done), the controller hints
+-- under the journal, the "Use <item> now!" words and the item button under them (a protected
+-- button of the game's: never touched), the arrow's flight master and loot bag icons.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -626,40 +642,88 @@ end
 -- ---------------------------------------------------------------------------------------------
 -- A quest's page. DaylightUI's journal skin writes every line of it in its text ink on each of its
 -- passes (a click anywhere in the journal, item data coming in, the page drawn again), which takes
--- the meaning out of the lines the journal colors: its dark red warnings, and (2.1.0) the green or
--- red "Requires <standing> with <faction>". Those are held in DaylightUI's warning and done inks:
--- each time one is colored, by the journal (its own dark red or green, which says which it is) or
--- by DaylightUI's skin (anything else), it's put back. While DaylightUI's journal skin is off only
--- the journal colors them, and they stay as it draws them.
+-- the meaning out of the lines the journal colors: its warnings (dark red until 2.1.0; from 2.1.1
+-- blue, 0, 0.129, 1, in a font of their own: FDJ.WarningFont, Core/Fonts.lua:253-263), and (2.1.0)
+-- the green or warning-colored "Requires <standing> with <faction>". Those are held in DaylightUI's
+-- warning and done inks: each time one is colored, by the journal (its own warning color or green,
+-- which says which it is) or by DaylightUI's skin (anything else), it's put back. While DaylightUI's
+-- journal skin is off only the journal colors them, and they stay as it draws them.
+-- A line kept in a color of its own instead (2.1.1's "Dungeon Chain Step") is held in that color.
 -- ---------------------------------------------------------------------------------------------
 
-local kept = setmetatable({}, { __mode = "k" })   -- font string -> the ink it's held in
+local kept = setmetatable({}, { __mode = "k" })   -- font string -> the ink it's held in (or its own color)
 local keeping = false
 
 local function Rekeep(fs, r, g, b)
 	if keeping or type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then return end
-	-- The journal's own: 0.05, 0.42, 0.05 (you have the standing) and 0.62, 0.10, 0.05 (a warning).
-	if r < 0.2 and g > 0.3 and b < 0.2 then
-		kept[fs] = "GOOD"
-		return
-	elseif r > 0.5 and g < 0.2 and b < 0.2 then
-		kept[fs] = "BAD"
-		return
+	local c = kept[fs]
+	if type(c) ~= "table" then
+		-- The journal's own: 0.05, 0.42, 0.05 (you have the standing), and a warning: 0.62, 0.10,
+		-- 0.05 until 2.1.0, blue from 2.1.1 (FDJ.WARNING_COLOR, 0, 0.129, 1; a standing not met:
+		-- QuestText.lua:3609-3614).
+		if r < 0.2 and g > 0.3 and b < 0.2 then
+			kept[fs] = "GOOD"
+			return
+		elseif (r > 0.5 and g < 0.2 and b < 0.2) or (r < 0.2 and g < 0.3 and b > 0.8) then
+			kept[fs] = "BAD"
+			return
+		end
+		c = ns.Colors()[c or "BAD"]
 	end
-	local c = ns.Colors()[kept[fs] or "BAD"]
-	if not c or (r == c[1] and g == c[2] and b == c[3]) then return end
+	if not c or (math.abs(r - c[1]) < 0.004 and math.abs(g - c[2]) < 0.004 and math.abs(b - c[3]) < 0.004) then return end
 	keeping = true
 	fs:SetTextColor(c[1], c[2], c[3])
 	keeping = false
 end
 
-local function KeepInk(fs)
+local function KeepInk(fs, own)
 	if not ns.Usable(fs) or fs:GetObjectType() ~= "FontString" then return end
 	if kept[fs] == nil then
-		kept[fs] = "BAD"
+		kept[fs] = own or "BAD"
 		ns.HookOnce(fs, "SetTextColor", Rekeep, KEY)
 	end
 	Rekeep(fs, fs:GetTextColor())
+end
+
+-- (2.1.1) "Dungeon Chain Step" over the objective of a chain step done inside the dungeon, in a
+-- light blue it sets on every draw (Journal.lua:1458): held in that, with the teal page behind it.
+local STEP_BLUE = { 0.30, 0.76, 1.00 }
+
+-- (2.1.1) "Available from Level 30" on a quest's page: the level is written in a dark red
+-- (|cffc41414, FDJ.QuestLevelText, Journal.lua:1187-1196) while the character is below it, with a
+-- bold copy drawn over it (FDJ.MarkRedLevel, a hook of the journal's own on the line's SetText,
+-- Journal.lua:14657-14661). DaylightUI's journal skin rewrites dark color runs to its text ink
+-- (2.1.2 DaylightUI_Skins/Kit.lua:374-399), which turned the level plain and, through that hook,
+-- hid the copy. When the line comes back as the journal's own with only its colors changed, the
+-- level is written in DaylightUI's warning ink instead (a light red, which DaylightUI leaves).
+-- Nothing is changed while DaylightUI's journal skin is off: the line is only ever set by the journal.
+local RED_LEVEL = "|cffc41414"
+local levelLines = setmetatable({}, { __mode = "k" })   -- the line -> { at, plain, ours } of the journal's last red level
+
+local function Uncolored(text)
+	return (string.gsub((string.gsub(text, "|c%x%x%x%x%x%x%x%x", "")), "|r", ""))
+end
+
+local function RedLevel(fs, text)
+	if type(text) ~= "string" or (issecretvalue and issecretvalue(text)) then
+		levelLines[fs] = nil
+		return
+	end
+	local at = string.find(text, RED_LEVEL, 1, true)
+	if at then
+		local hex = Hex("BAD")
+		levelLines[fs] = hex and { at = at, plain = Uncolored(text),
+			ours = string.sub(text, 1, at - 1) .. hex .. string.sub(text, at + #RED_LEVEL) } or nil
+		return
+	end
+	local line = levelLines[fs]
+	if not line or text == line.ours then return end
+	-- The same words with another color where the red began: DaylightUI's skin lit it.
+	if string.sub(text, line.at, line.at + 3) ~= "|cff" or Uncolored(text) ~= line.plain then
+		levelLines[fs] = nil
+		return
+	end
+	fs:SetText(line.ours)
 end
 
 -- The page's red lines, by the keys the journal keeps them under.
@@ -712,8 +776,21 @@ local function FitButton(b)
 	if need > (b:GetWidth() or 0) then b:SetWidth(need) end
 end
 
+local flightBar   -- the arrow's flight bar, once dressed (its color follows the accent)
+
 local function Arrow(f, Kit)
 	if not ns.Usable(f) or not ns.Controls(KEY) then return end
+	-- (2.1.1) In the air a bar under the quest's name empties as the flight goes on (f.taxiBar:
+	-- a flat black box holding a plain status bar in the game's bar art, yellow, colored once as
+	-- it's made, MapMarkers.lua:5856-5882): DaylightUI's bar in the accent, its own box off.
+	local holder = f.taxiBar
+	local bar = ns.Usable(holder) and holder.bar
+	if ns.Usable(bar) and bar:GetObjectType() == "StatusBar" and First(bar) then
+		ns.NoBackdrop(holder)
+		ns.Guard(Kit.StatusBar, bar)
+		bar:SetStatusBarColor(ns.AccentOf(KEY))
+		flightBar = bar
+	end
 	for _, key in ipairs({ "nextSpawn", "skipNow" }) do
 		local b = f[key]
 		if ns.Usable(b) and b:GetObjectType() == "Button" and First(b) then
@@ -721,6 +798,108 @@ local function Arrow(f, Kit)
 			ns.ScriptOnce(b, "OnShow", FitButton, KEY)
 			ns.HookOnce(b, "SetText", FitButton, KEY)
 			FitButton(b)
+		end
+	end
+end
+
+-- (2.1.1) The one-time note under the Export button on the journal's title bar ("You can now export
+-- your character's progress to the website", RunLogUI.lua:3854-3943): a button with a tooltip-border
+-- backdrop, a child of the Export button and so inside the journal, where DaylightUI's skin walks it
+-- like a row (its backdrop gone, see-through over the page). The shell like the journal's other
+-- popups, its small OK DaylightUI's (wider when the font needs it). Its red arrow stays.
+local function ExportNoteOf(icon)
+	if not ns.Usable(icon) or not icon.GetChildren then return nil end
+	for _, child in ipairs({ icon:GetChildren() }) do
+		if type(child) == "table" and child.fdjIcon == icon then return child end
+	end
+	return nil
+end
+
+local function ExportNote(note, Kit)
+	Popup(note)
+	local ok = note.ok
+	if ns.Controls(KEY) and ns.Usable(ok) and ns.Once(ok) then
+		ns.Guard(Kit.Button, ok)
+		FitButton(ok)
+	end
+end
+
+-- (2.1.1) Controller support (Systems/GamePad.lua): a frame with a gold tooltip-border backdrop
+-- sits round the thing picked (MakeCursor, GamePad.lua:272-287; one frame, moved onto each pick as
+-- its child, :304-313). Inside the journal DaylightUI's skin hides every backdrop it walks, this
+-- one too after the first click, which left the pick with no mark at all. Once that has happened
+-- the frame gets an edge and a faint wash of ours in the accent (plain textures, which DaylightUI's
+-- walk leaves; they pulse with the frame). While its gold still shows (DaylightUI's journal skin
+-- off) nothing is added. The frame is the journal's own local: looked for under the journal after
+-- a controller button (at most twice a second) until found, then kept.
+local PAD_EDGE = 2
+local padCatcher, padCursor, padParts, padSought
+
+local function PadPaint()
+	if not padParts then return end
+	for i = 1, 4 do ns.FillAccent(padParts[i], 1, nil, KEY) end
+	ns.FillAccent(padParts[5], 0.1, nil, KEY)
+end
+
+local function PadFind(f, depth)
+	if depth > 14 or not ns.Usable(f) or not f.GetChildren then return nil end
+	for _, c in ipairs({ f:GetChildren() }) do
+		if ns.Usable(c) then
+			if c:GetObjectType() == "Frame" and type(rawget(c, "pulse")) == "table" and c.GetBackdrop and c:GetBackdrop()
+				and not c:IsMouseEnabled() then
+				return c
+			end
+			local found = PadFind(c, depth + 1)
+			if found then return found end
+		end
+	end
+	return nil
+end
+
+local function PadCursor()
+	if padParts or not ns.Enabled(KEY) then return end
+	if not padCursor then
+		-- (The pick may be in another window of its own for a while.)
+		local now = GetTime()
+		if padSought and now - padSought < 0.5 then return end
+		padSought = now
+		padCursor = PadFind(_G.ForeverDungeonJournalFrame, 0)
+		if not padCursor then return end
+	end
+	local c = padCursor
+	local edge = c.TopEdge
+	if not ns.Usable(edge) or edge:GetAlpha() > 0.05 then return end   -- its gold still shows
+	local function line(p1, p2, w, h)
+		local t = c:CreateTexture(nil, "OVERLAY")
+		t:SetPoint(p1)
+		t:SetPoint(p2)
+		if w then t:SetWidth(w) else t:SetHeight(h) end
+		return t
+	end
+	local fill = c:CreateTexture(nil, "ARTWORK")
+	fill:SetAllPoints(c)
+	padParts = { line("TOPLEFT", "TOPRIGHT", nil, PAD_EDGE), line("BOTTOMLEFT", "BOTTOMRIGHT", nil, PAD_EDGE),
+		line("TOPLEFT", "BOTTOMLEFT", PAD_EDGE), line("TOPRIGHT", "BOTTOMRIGHT", PAD_EDGE), fill }
+	PadPaint()
+end
+
+-- A controller button in the journal: looked at on the next frame and once more a moment later
+-- (DaylightUI's walk runs a frame after the click the button made).
+local function PadPressed()
+	if padParts then return end
+	ns.Queue("ForeverDungeonJournal:pad", PadCursor, KEY)
+	C_Timer.After(0.2, function() ns.Guard(PadCursor) end)
+end
+
+-- The frame that takes the controller's buttons (made at login, GamePad.lua:605-611): the
+-- journal's child with an OnGamePadButtonDown script.
+local function PadCatcher(frame)
+	if padCatcher or not ns.Usable(frame) then return end
+	for _, c in ipairs({ frame:GetChildren() }) do
+		if ns.Usable(c) and c.HasScript and c:HasScript("OnGamePadButtonDown") and c:GetScript("OnGamePadButtonDown") then
+			padCatcher = c
+			ns.ScriptOnce(c, "OnGamePadButtonDown", PadPressed, KEY)
+			return
 		end
 	end
 end
@@ -777,7 +956,13 @@ local function OwnFontsInDaylight()
 end
 
 -- A new DaylightUI font (or text style): the copies follow.
-ns.me.On("StyleChanged", function() ns.Guard(OwnFontsInDaylight) end)
+ns.me.On("StyleChanged", function()
+	ns.Guard(OwnFontsInDaylight)
+	-- (A new accent: the arrow's flight bar and the controller's frame follow.)
+	if not ns.Enabled(KEY) then return end
+	if ns.Usable(flightBar) then flightBar:SetStatusBarColor(ns.AccentOf(KEY)) end
+	ns.Guard(PadPaint)
+end)
 
 -- Every window here is made the first time it opens, so each is dressed right after the call or
 -- click that makes or opens it, in the same frame it first shows; the look-out by name stays as the
@@ -805,6 +990,21 @@ ns.Pack(KEY, nil, function(Kit)
 			if not ns.Usable(f) then return end
 			for _, key in ipairs(WARNINGS) do KeepInk(f[key]) end
 			ns.Queue("ForeverDungeonJournal:here", marks, KEY)
+		end, KEY)
+	end
+	-- (2.1.1) Every warning is given its font and blue through this one call (Core/Fonts.lua:257;
+	-- the quest page's, "Requires: <quest>", a standing not met, the line under a boss's name):
+	-- held in the warning ink from its first coloring on.
+	if type(FDJ.WarningFont) == "function" then
+		ns.HookOnce(FDJ, "WarningFont", function(fs)
+			if type(fs) == "table" then KeepInk(fs) end
+		end, KEY)
+	end
+	-- (2.1.1) "Dungeon Chain Step" is made, colored and shown inside this call.
+	if type(FDJ.PlaceDungeonStepLabel) == "function" then
+		ns.HookOnce(FDJ, "PlaceDungeonStepLabel", function()
+			local f = _G.ForeverDungeonJournalFrame
+			if ns.Usable(f) then KeepInk(f.questDungeonStepText, STEP_BLUE) end
 		end, KEY)
 	end
 	-- (2.1.0) A quest's reputation needs are placed (and colored) inside this call.
@@ -972,6 +1172,8 @@ ns.Pack(KEY, nil, function(Kit)
 	After("ShowTierSourceTip", Global("ForeverDungeonJournalTierSourceTip"), Window)
 	-- Its arrow is made the first time it has somewhere to point (a click on a quest's Show on Map,
 	-- a Route step), its buttons with it.
+	-- (2.1.1) The one-time note under the Export button, shown inside this call.
+	After("ShowExportHint", ExportNoteOf, ExportNote)
 	After("FollowWaypoint", Global("ForeverDungeonJournalArrow"), Arrow)
 	After("SetWaypointArrow", Global("ForeverDungeonJournalArrow"), Arrow)
 	After("ToggleBugReportWindow", function(frame) return type(frame) == "table" and frame.bugReportWindow or nil end, Popup)
@@ -1056,6 +1258,14 @@ ns.Pack(KEY, nil, function(Kit)
 	ns.Watch(KEY, "ForeverDungeonJournalFrame", function(frame)
 		JournalPopups(frame)
 		HomeIcons(frame)
-		ns.ScriptOnce(frame, "OnShow", JournalPopups, KEY)
+		-- (2.1.1) The frame that takes a controller's buttons: looked for again as the journal
+		-- opens, should it be made after this.
+		PadCatcher(frame)
+		ns.ScriptOnce(frame, "OnShow", function(self)
+			JournalPopups(self)
+			PadCatcher(self)
+		end, KEY)
+		-- (2.1.1) The quest page's level line.
+		if ns.Usable(frame.selectedQuestMeta) then ns.HookOnce(frame.selectedQuestMeta, "SetText", RedLevel, KEY) end
 	end)
 end)

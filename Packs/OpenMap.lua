@@ -41,6 +41,14 @@
 -- Its content stays: the map, the dungeon's picture, its pins, POIs and icons on the map, the
 -- floors' pictures (their edge is dressed), the action and favorite icons, the favorite star.
 -- Its minimap button is DaylightUI's button collector's.
+-- 0.8.11: "The game's map" on the dungeon view's bar (view.gameMap, inside that dungeon only,
+-- Map/Dungeons.lua:388-411, shown at :1176) is a template button, dressed by the walk with the
+-- rest of the bar; its width is set once as it's made, for the game's font, so it's widened when
+-- the player's font needs more. A click on it hides the view and leaves the game's map of the
+-- instance: Dungeon Journal's dungeon map, taken down while OpenMap's view was up (Packs/DungeonJournal.lua),
+-- is asked for again right then instead of at the map's next opening. Left as it is: the place
+-- name over the controller's map (Map/PadView.lua:313-323: on the game's world map, in the game's
+-- own fonts, as the game's own zone label), its "OpenMap X is out" line in chat.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -1009,6 +1017,30 @@ local function EdgeTabs(list)
 	for _, b in ipairs(list) do EdgeTab(b) end
 end
 
+-- (0.8.11) "The game's map" on the dungeon view's bar: sized once, as the view is made, to its words
+-- in the game's font plus 28 (Map/Dungeons.lua:394): widened when they need more in the player's.
+-- (Its neighbor, Back, is sized again at every opening, :1173-1174.) It hangs from Back's left edge,
+-- so it grows toward the floor's name in the middle of the bar.
+local function FitGameMap(view)
+	local b = view.gameMap
+	local fs = ns.Usable(b) and b.GetFontString and b:GetFontString()
+	if not ns.Usable(fs) then return end
+	local need = math.ceil((fs:GetStringWidth() or 0) + 28)
+	if need > (b:GetWidth() or 0) + 0.5 then b:SetWidth(need) end
+end
+
+-- A click on it hides the view for the game's own map of the instance (Map/Dungeons.lua:395-403).
+-- Dungeon Journal lays its dungeon map over that one, but only looks as the world map opens
+-- (its WorldMapOverlay.lua:529-534), and while OpenMap's view was up its overlay was taken down
+-- (Packs/DungeonJournal.lua): asked for again on the next frame, the view gone by then.
+local function GameMapPicked()
+	if type(FDJ) ~= "table" or type(FDJ.RefreshWorldMapOverlay) ~= "function" then return end
+	ns.Queue("OpenMap:gameMap", function()
+		local map = _G.WorldMapFrame
+		if ns.Usable(map) and map:IsShown() then pcall(FDJ.RefreshWorldMapOverlay) end
+	end, KEY)
+end
+
 -- quiet: from a refresh that comes whether the view is up or not (every map open and change): a
 -- view that's put away isn't walked then, since its own showing walks it before it's drawn.
 local views = setmetatable({}, { __mode = "k" })
@@ -1045,6 +1077,7 @@ local function View(view, quiet)
 		if ns.Usable(view.floorButton) then
 			ns.ScriptOnce(view.floorButton, "OnClick", function() if view.list then Dress(view.list) end end, KEY)
 		end
+		if ns.Usable(view.gameMap) then ns.ScriptOnce(view.gameMap, "OnClick", GameMapPicked, KEY) end
 		-- (Plain HookScript for its two OnShow hooks: ns.ScriptOnce takes one per frame.)
 		hooked[view] = true
 		view:HookScript("OnShow", Dress)
@@ -1068,6 +1101,7 @@ local function View(view, quiet)
 		end
 	end
 	if first or not quiet or view:IsShown() then Dress(view) end
+	FitGameMap(view)
 	-- The dungeon's two tabs at the map's edge.
 	local tabs = view.sideTabs
 	if ns.Usable(tabs) and type(tabs.list) == "table" then ns.Guard(EdgeTabs, tabs.list) end
