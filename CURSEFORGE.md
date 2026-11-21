@@ -6,12 +6,12 @@ A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its 
 
 ---
 
-## New in 1.18.6
-- **Dungeon Journal 2.1.1:** its new blue warnings keep Daylight UI's warning color (a reputation line could show the wrong color), the red level in "Available from Level" is back, and the export note, the arrow's flight bar and the controller cursor are dressed.
-- **Camping Kit 1.11.1:** its redrawn settings window is dressed throughout, search results and the new edit bar included.
-- **Mastercraft 2.0.8:** its new windows and colors are dressed.
-- **Forever Leveling BiS 1.4.4, LootTriage 1.2.1, Shortest Path Forever 1.43.10, OpenMap v0.8.11:** followed.
-- **Checked, nothing to change:** Daylight UI 2.1.3, LayerSwap 1.14.41, Forever Fishing 0.9.224, Leatrix Plus 1.60.36, Pawn 2.14.7.
+## New in 1.18.7
+- **Fixed, macro window:** opening it no longer raises an error ("ScrollBox.lua:595"). The same fix covers the icon pickers (macros, equipment sets, guild bank and bank tabs) and the Auction House's lists.
+- **Fixed, letters:** opening a letter in the game's own letter window could raise an error and switch the Game Windows skins off.
+- **Fixed, Character Frame switch:** the character and currency transfer windows are dressed with the Spells and Talents switch off too.
+- **Dungeon-ready dialog:** its small hide button takes the Daylight UI look.
+- **Checked:** every game window skin was read against the game's own code for errors.
 
 ---
 
