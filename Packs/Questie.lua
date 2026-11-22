@@ -6,9 +6,10 @@
 -- Dressed here: its current settings window (QuestieStandaloneSettings: shell, side tabs with
 -- DaylightUI's hover wash and the accent outline following each click, the controls on each tab
 -- including the play-sound buttons, the color swatches and the gold rules, each tab's scroll bar
--- even when its canvas is built over several frames), its right-click menus (LibUIDropDownMenu's
--- lists: the tracker menu, Townsfolk; their rows' hover, radio and check marks, expand arrows and
--- color swatches), its own popups (QuestiePopup, not the game's StaticPopup: shell, buttons, edit
+-- even when its canvas is built over several frames), before Questie 12.12 its right-click menus
+-- (LibUIDropDownMenu's lists: the tracker menu, Townsfolk; their rows' hover, radio and check marks,
+-- expand arrows and color swatches; from 12.12 they are the game's own menus, which DaylightUI's
+-- window skins dress as they do every game menu), its own popups (QuestiePopup, not the game's StaticPopup: shell, buttons, edit
 -- box), the objective type tutorial, its late tooltips (the minimap waypoint and gamepad map
 -- tooltips), the debug offer window, the gold ring on its world map corner button (the shared
 -- ns.MapRings pass), and its own tracker while the player has picked Questie's over DaylightUI's
@@ -402,6 +403,10 @@ end
 -- Right-click menus: L_DropDownListQuestie1..n. The library shows one of its two backdrops on every
 -- open; both are kept at nothing and the shell is the menu's ground. The first three are made as
 -- the library loads, so they are there at login; the rest follow the library's CreateFrames.
+-- (Before Questie 12.12 only. 12.12 dropped the library and opens the game's own menus
+-- (QuestieMenuBuilder, Blizzard_Menu), which get DaylightUI's menu look from its window skins; the
+-- trace entry's red and green, set by Questie on every draw, are kept there too. This part stands
+-- aside then.)
 -- ---------------------------------------------------------------------------------------------
 
 -- Its rows: the quest-title hover bar becomes a faint white wash (the library only shows and hides
@@ -543,7 +548,11 @@ local function Menu(list)
 	if ns.Controls(KEY) then MenuRows(list) end
 end
 
-ns.Watch(KEY, "L_DropDownListQuestie1", function()
+-- (Not looked for on 12.12 and later, where QuestieMenuBuilder opens the game's menus: the lists
+-- never come, and the watch would wait on them for good.)
+local MenuBuilder = Module("QuestieMenuBuilder")
+local ownMenus = not (MenuBuilder and type(MenuBuilder.Show) == "function")
+if ownMenus then ns.Watch(KEY, "L_DropDownListQuestie1", function()
 	for i = 1, 8 do
 		local list = _G["L_DropDownListQuestie" .. i]
 		if not list then break end
@@ -566,7 +575,7 @@ ns.Watch(KEY, "L_DropDownListQuestie1", function()
 			end
 		end, KEY)
 	end
-end)
+end) end
 
 -- ---------------------------------------------------------------------------------------------
 -- Questie's own popups: its dialog art kept at nothing under the shell, the edit box a quiet well.

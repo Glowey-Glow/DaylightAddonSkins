@@ -80,8 +80,7 @@
 -- Left as it is in 2.1.1: the Export button beside Report and the Options' Export tab and search
 -- box (the journal and its settings window are DaylightUI's skin's), the teal tint of a dungeon
 -- chain step's page and its chain icon (they say where the step is done), the controller hints
--- under the journal, the "Use <item> now!" words and the item button under them (a protected
--- button of the game's: never touched), the arrow's flight master and loot bag icons.
+-- under the journal (2.1.3 dropped its "Use <item> now!" prompt), the arrow's flight master and loot bag icons.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -1174,6 +1173,16 @@ ns.Pack(KEY, nil, function(Kit)
 	-- a Route step), its buttons with it.
 	-- (2.1.1) The one-time note under the Export button, shown inside this call.
 	After("ShowExportHint", ExportNoteOf, ExportNote)
+	-- (2.1.3) The tracker's reset question with a controller connected (RunLogUI.lua:2143-2183): a
+	-- dialog-border window of its own, made and shown inside this call; its Yes / No the game's buttons.
+	After("AskResetTracker", Global("ForeverDungeonJournalResetAsk"), Window)
+	-- (2.1.3) "Click the item to see location" beside an item card on a quest's page with a picture
+	-- (Journal.lua:7242-7319): a tooltip-border box inside the journal, which DaylightUI's journal walk
+	-- leaves see-through (as the 2.1.1 Export note): the shell. Its red arrow and white words stay.
+	After("PlaceItemLocationHint", function()
+		local f = _G.ForeverDungeonJournalFrame
+		return ns.Usable(f) and f.questItemLocationHint or nil
+	end, Popup)
 	After("FollowWaypoint", Global("ForeverDungeonJournalArrow"), Arrow)
 	After("SetWaypointArrow", Global("ForeverDungeonJournalArrow"), Arrow)
 	After("ToggleBugReportWindow", function(frame) return type(frame) == "table" and frame.bugReportWindow or nil end, Popup)
@@ -1248,6 +1257,7 @@ ns.Pack(KEY, nil, function(Kit)
 	-- (The update notice is shown from a timer of its own three seconds after login, through no call
 	-- that can be hooked: found by name in the frame it's made.)
 	ns.Watch(KEY, "ForeverDungeonJournalNotice", Window)
+	ns.Watch(KEY, "ForeverDungeonJournalResetAsk", Window)
 	ns.Watch(KEY, function() return FDJ.foreverHint end, Window)
 	ns.Watch(KEY, "ForeverDungeonJournalTierPanel", TierPage)
 	ns.Watch(KEY, "ForeverDungeonJournalArrow", Arrow)

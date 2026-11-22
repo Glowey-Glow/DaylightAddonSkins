@@ -2,7 +2,8 @@
 -- windows (Large and Small, the Small one's menu rows lit in the accent), the Places panel beside
 -- the world map and its side tab, its text buttons on the game's quest, gossip and book
 -- windows (Listen / Stop, Contribute, Play), and its subtitles (a solid plate behind the words
--- in place of its soft shade, the speaker's row in DaylightUI's inks). Left alone: the
+-- in place of its soft shade, the speaker's row in DaylightUI's inks), and under the controller UI
+-- its question dialog and the Compendium's filter menu. Left alone: the
 -- DialogueUI-style narrator (drawn in DialogueUI's art on purpose), the minimap button, the
 -- Compendium's and the Places panel's parchment pages and list rows (dark ink on paper, redrawn on
 -- every render), and the settings pages, which sit inside the game's own Settings window.
@@ -145,10 +146,89 @@ local function Subtitles(sub)
 	local c = ns.Colors()
 	if type(c.TITLE) == "table" and ns.Usable(sub.title) then sub.title:SetTextColor(c.TITLE[1], c.TITLE[2], c.TITLE[3]) end
 	if type(c.LABEL) == "table" then
-		for _, k in ipairs({ "dot", "label", "pausedLabel" }) do
+		-- (3.12: also why a line is held and how many wait, "· (Waiting for combat to end.)" "· +2",
+		-- in the same mid gray.)
+		for _, k in ipairs({ "dot", "label", "pausedLabel", "heldDot", "held", "moreDot", "more" }) do
 			if ns.Usable(sub[k]) then sub[k]:SetTextColor(c.LABEL[1], c.LABEL[2], c.LABEL[3]) end
 		end
 	end
+end
+
+-- Under the controller UI (3.12) Spoken asks its questions in a dialog of its own in place of the
+-- game's popup (SpokenLayoutPrompt: the game's dark dialog ground under its diamond-cornered
+-- border, a tooltip-edged box to type a name in, two red text buttons). DaylightUI's window here,
+-- the box and buttons in its look. Made on its first question (Layout.Ask / Layout.Confirm), shown
+-- in the same call.
+local function Prompt(frame, Kit)
+	if not ns.Usable(frame) or not ns.Once(frame) then return end
+	for _, region in ipairs({ frame:GetRegions() }) do
+		if ns.Usable(region) and region:GetObjectType() == "Texture" and region:GetDrawLayer() == "BACKGROUND" then
+			ns.Kill(region)
+		end
+	end
+	ns.Shell(frame, { window = true }, KEY)
+	Kit.InkGameText(frame)
+	-- (The box is no template the walk knows: its tooltip edge off, DaylightUI's box on. The
+	-- buttons are the walk's.)
+	if ns.Controls(KEY) then
+		for _, child in ipairs({ frame:GetChildren() }) do
+			if ns.Usable(child) and child:GetObjectType() == "EditBox" and ns.Once(child) then
+				ns.NoBackdrop(child)
+				ns.Guard(Kit.EditBox, child)
+			end
+		end
+	end
+	ns.Dress(frame, nil, 0, KEY)
+end
+
+local function PromptNow()
+	local Kit = ns.Kit
+	local frame = _G.SpokenLayoutPrompt
+	if Kit and ns.Enabled(KEY) and ns.Usable(frame) then ns.Guard(Prompt, frame, Kit) end
+end
+
+-- The Compendium's filter under the controller UI (3.12, SpokenCompendiumWindowFilterPad): a menu
+-- of Spoken's own drawn as the game's (its dropdown ground, check boxes and yellow ticks, the quest
+-- log's highlight), made on its first opening. DaylightUI's menu look, as the game's menus have it
+-- here: its shell, no empty box, the tick in the accent, the hover a wash in the accent (its white
+-- words kept). Spoken draws each row's tick again on every click, and lays the rows out
+-- again on every opening, before it shows it: dressed on each show and after each click. (Its
+-- opener is Spoken's own to itself: the menu is found by its watch on its first opening.)
+local function FilterRows(frame, Kit)
+	if not ns.Usable(frame) or not ns.Enabled(KEY) then return end
+	if type(frame.rows) == "table" then
+		for _, row in ipairs(frame.rows) do
+			if ns.Usable(row) then
+				if ns.Controls(KEY) then
+					if ns.Usable(row.mark) then row.mark:SetAlpha(0) end
+					if ns.Usable(row.tick) then
+						row.tick:SetDesaturated(true)
+						ns.PaintAccent(row.tick, 1, nil, KEY)
+					end
+					local hover = row.GetHighlightTexture and row:GetHighlightTexture()
+					if ns.Usable(hover) then
+						ns.FillAccent(hover, 0.18, nil, KEY)
+						hover:SetBlendMode("BLEND")
+					end
+					ns.ScriptOnce(row, "OnClick", function() ns.Guard(FilterRows, frame, Kit) end, KEY)
+				end
+				Kit.InkGameText(row)
+			end
+		end
+	end
+	ns.Dress(frame, nil, 0, KEY)
+end
+
+local function FilterPad(frame, Kit)
+	if not ns.Usable(frame) or not ns.Once(frame) then return end
+	for _, region in ipairs({ frame:GetRegions() }) do
+		if ns.Usable(region) and region:GetObjectType() == "Texture" and region:GetDrawLayer() == "BACKGROUND" then
+			ns.Kill(region)
+		end
+	end
+	ns.Shell(frame, nil, KEY)
+	ns.ScriptOnce(frame, "OnShow", function() ns.Guard(FilterRows, frame, Kit) end, KEY)
+	FilterRows(frame, Kit)
 end
 
 -- The Places panel beside the world map: the game's flat panel (or, on a client without it, a
@@ -238,6 +318,16 @@ ns.Pack("Spoken", "Spoken", function(Kit)
 	ns.Watch(KEY, "SpokenGatheredLines", function(frame) ns.PlainWindow(frame) end)
 	ns.Watch(KEY, "SpokenMinimapMenu", function(frame) ns.PlainWindow(frame) end)
 
+	-- (Its controller dialog: looked for right after the calls that make and show it, so it's
+	-- dressed before it's drawn. Only ever made there: no watch, which a player without the
+	-- controller UI would keep waiting on.)
+	local layout = _G.SpokenLayout
+	if type(layout) == "table" then
+		for _, method in ipairs({ "Ask", "Confirm" }) do
+			if type(layout[method]) == "function" then ns.HookOnce(layout, method, PromptNow, KEY) end
+		end
+	end
+
 	ns.Watch(KEY, "SpokenPlacesPanel", PlacesPanel)
 	ns.Watch(KEY, "SpokenPlacesPanelToggle", PlacesToggle)
 	ns.Watch(KEY, QuestsButton("DialogPlayButton"), TextButton)
@@ -275,5 +365,8 @@ ns.Pack("Spoken", "Spoken", function(Kit)
 		end
 		parts()
 		later()
+		-- (Its controller filter menu, from the window's filter arrow: looked for once the window
+		-- is there.)
+		ns.Watch(KEY, "SpokenCompendiumWindowFilterPad", FilterPad)
 	end)
 end, { window = true, controls = true, text = true, shadow = true })

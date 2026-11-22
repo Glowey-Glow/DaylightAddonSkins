@@ -316,11 +316,13 @@ end
 -- Its gold (C.gold: what it lifts out, "here", the pick, a title), and the lighter gold of a picked
 -- crafter status's words and a picked color swatch's edge. From 2.0.8 also the game's own gold
 -- (1, 0.82, 0), which it paints in every style on the craft orders board (a row's hover, Orders.lua
--- :775 and :1034) and the Professions road.
+-- :775 and :1034) and the Professions road. And from 2.0.9 the soft gold hover of the craft orders'
+-- "Some" material tiles (1, 0.78, 0.25, OrdersArt.lua PostTicks), just past its own gold: that one
+-- color exactly, not a wider match.
 local function IsGold(r, g, b)
 	if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" or abs(r - 1) >= 0.04 then return false end
 	return (abs(g - 0.82) < 0.04 and abs(b - 0.25) < 0.06) or (abs(g - 0.86) < 0.02 and b >= 0.40 and b <= 0.46)
-		or (abs(g - 0.82) < 0.01 and b < 0.01)
+		or (abs(g - 0.82) < 0.01 and b < 0.01) or (abs(g - 0.78) < 0.005 and abs(b - 0.25) < 0.005)
 end
 
 -- A picked chip's ground (its gold x 0.3: the Crafters page's profession and filter chips).

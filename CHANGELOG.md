@@ -1,5 +1,18 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.9
+- Checked against Daylight UI 2.2.2 (from 2.1.3: 2.2, 2.2.1 and 2.2.2). Nothing to change: dressed windows, tooltips, the bag marks and the overlap window work as before, including with its new way of holding the game's spellbook, profession and Auction House windows out of sight.
+- AtlasLoot Continued 12987: its new Atlas Nav look (now its default) is left as AtlasLoot draws it: the window, Favourites, What's New, the theme chooser and its new settings window. Before, the Daylight UI look was laid over Nav's own, so the two fought (a box inside a box, light words on its light panels). With the legacy look (/al style legacy) everything is dressed as before.
+- LFG Forever 2.5.0: the new red x that takes your own listing down gets the Daylight UI button, like Invite and Ask to Join.
+- Dungeon Journal 2.1.3: the reset question the tracker asks with a controller connected takes the Daylight UI window and buttons, and the "Click the item to see location" note on a quest's page gets its box back (it showed as words floating over the page).
+- OneForAll 6.2.13: its new switches that skip the talk at vendors, bankers, trainers, auctioneers, stable masters, the guild bank, tabard vendors and battlemasters are the same as Daylight UI's skip-gossip. If you turned any on, the overlap window asks once who handles it (Daylight UI by default), and each one can be put back on the OneForAll page.
+- Shortest Path Forever 1.45.3: the Quests tab beside the quest log is a Daylight UI side tab, clicking it clears the services tab's outline again, and the "Reset tab position" menu opens already dressed.
+- Spoken 3.12.0 with a controller: the profile questions (copy, delete, new, forget visited places) take the Daylight UI window, and the Compendium's filter looks like a Daylight UI menu. On subtitles, "(Waiting...)" and "+2" are in the label color like the rest.
+- Mastercraft 2.0.9: hovering a "Some" tile on the craft orders board shows your accent instead of gold.
+- Questie 12.12.0: its right-click menus are now the game's own and take Daylight UI's menu look; the skin no longer looks for its old menus there.
+- Checked against today's updates of the addons you have installed: Keep or Toss 2.4.1, OpenMap v0.8.13 and Polestar 0.4.2.2. Nothing to change for Keep or Toss and Polestar. OpenMap: its own map-pin button handling (0.8.12) is left to it.
+- Checked against today's releases of the addons you may not have installed: ALL THE THINGS 5.4.16, Auctionator 351, Forever Leveling BiS 1.4.5, High Fidelity World Map 1.4.13, Kerzo Classic Quest Log 6.6.1, Leatrix Plus 1.60.37, Pawn 2.14.8 and RareScanner 1.60.1.11: nothing to change. The other supported addons have no new release.
+
 ## 1.18.8
 - Spoken, easier to read (checked against Spoken 3.11.0):
   - Subtitles: a flat dark plate behind the words in place of Spoken's soft, see-through shade, so every letter has the same ground under it. It follows Spoken's own Subtitle Shadow setting and is more solid at each step (its 60% is 80% here; at 0 there is no plate). The speaker's name is in Daylight UI's title color and the small gray labels in its label color.

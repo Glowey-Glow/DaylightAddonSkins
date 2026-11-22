@@ -22,8 +22,10 @@
 -- the item rims and names in their quality colors, its marks' and meanings' colors, its own
 -- tooltip lines (DaylightUI's tooltip), the item page's sample tooltips (the game's tooltip,
 -- DaylightUI's look), its minimap button (DaylightUI's addon drawer), What's new's version tabs
--- (2.2.0; its own inks, like its other tabs), What's new's "Turn off What's New after updates"
--- link (2.3.0, News.lua:398: a button of its own on the page, in its font objects), and the
+-- (2.2.0; its own inks, like its other tabs; 2.4.0 dropped the "Turn off What's New after
+-- updates" link, and What's new no longer opens by itself unless turned on in its settings), its
+-- word choices (2.4.0, Theme.lua ns.InkChoice: the settings' choices, the item page's Keep / Toss /
+-- No mark, Lists and the profession switch: its own inks, in its font objects), and the
 -- Lookup page (2.3.0, Lookup.lua; the "Item name, link, or ID" field on the tab strip,
 -- Window.lua:205-219): a page of the journal's like its settings, on the same panel, its rows
 -- (Window.CreateLookupRow, Window.lua:977), scroll bar (Sheet.Scroll) and inks its own, its

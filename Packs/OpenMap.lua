@@ -42,7 +42,7 @@
 -- floors' pictures (their edge is dressed), the action and favorite icons, the favorite star.
 -- Its minimap button is DaylightUI's button collector's.
 -- 0.8.11: "The game's map" on the dungeon view's bar (view.gameMap, inside that dungeon only,
--- Map/Dungeons.lua:388-411, shown at :1176) is a template button, dressed by the walk with the
+-- Map/Dungeons.lua:399-420 in 0.8.13, shown at :1185) is a template button, dressed by the walk with the
 -- rest of the bar; its width is set once as it's made, for the game's font, so it's widened when
 -- the player's font needs more. A click on it hides the view and leaves the game's map of the
 -- instance: Dungeon Journal's dungeon map, taken down while OpenMap's view was up (Packs/DungeonJournal.lua),
@@ -1018,8 +1018,8 @@ local function EdgeTabs(list)
 end
 
 -- (0.8.11) "The game's map" on the dungeon view's bar: sized once, as the view is made, to its words
--- in the game's font plus 28 (Map/Dungeons.lua:394): widened when they need more in the player's.
--- (Its neighbor, Back, is sized again at every opening, :1173-1174.) It hangs from Back's left edge,
+-- in the game's font plus 28 (Map/Dungeons.lua:403 in 0.8.13): widened when they need more in the player's.
+-- (Its neighbor, Back, is sized again at every opening, :1182-1183.) It hangs from Back's left edge,
 -- so it grows toward the floor's name in the middle of the bar.
 local function FitGameMap(view)
 	local b = view.gameMap
@@ -1029,7 +1029,7 @@ local function FitGameMap(view)
 	if need > (b:GetWidth() or 0) + 0.5 then b:SetWidth(need) end
 end
 
--- A click on it hides the view for the game's own map of the instance (Map/Dungeons.lua:395-403).
+-- A click on it hides the view for the game's own map of the instance (Map/Dungeons.lua:404-412 in 0.8.13).
 -- Dungeon Journal lays its dungeon map over that one, but only looks as the world map opens
 -- (its WorldMapOverlay.lua:529-534), and while OpenMap's view was up its overlay was taken down
 -- (Packs/DungeonJournal.lua): asked for again on the next frame, the view gone by then.
@@ -1236,6 +1236,9 @@ local function PinButton(m)
 	if type(m.SetPinMode) ~= "function" or type(m.PinMode) ~= "function" or type(m.IsStitched) ~= "function" then return end
 	-- (Plain hooksecurefunc: the game's own button.)
 	hooksecurefunc(btn, "SetActive", function(_, on)
+		-- (OpenMap 0.8.12 and later do this themselves, WorldMap.lua mod.SyncBlizzardPin, #324: stand
+		-- down. Asked here, not at setup: OpenMap defines it in its map's Setup, maybe after this.)
+		if type(m.SyncBlizzardPin) == "function" and not pinArmed then return end
 		if on then
 			if ns.Enabled(KEY) and m.IsStitched() and not m.PinMode() then
 				pinArmed = true

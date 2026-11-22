@@ -347,7 +347,7 @@ local RELOAD = { reload = true }
 
 -- (From an audit of OneForAll 6.2.10 against every DaylightUI module, checked again for 6.2.11 and
 -- 6.2.12: its new junk list key, gray map quests, walking routes and Guild Games have no
--- DaylightUI twin. Left out: its NPC tooltip quests, which turn themselves off while Questie is loaded; its chat font size, which has no
+-- DaylightUI twin. 6.2.13: its per-service gossip skips, below. Left out: its NPC tooltip quests, which turn themselves off while Questie is loaded; its chat font size, which has no
 -- off to give back.)
 ns.Handover(KEY, {
 	ready = function() return type(_G.OneForAllDB) == "table" end,
@@ -387,6 +387,25 @@ ns.Handover(KEY, {
 			function() return has("Skins", "mapReveal") end),
 		C("flightMapNow", L["Open the Flight Map at Once"], ns.In(L["its NPC window and skip-gossip"], "Quality of Life"),
 			function() return has("NPC", "enabled") or has("QoL", "skipGossip") end),
+		-- NPCs (6.2.13, QoL.GOSSIP_SERVICES: one switch per service, all off until the player ticks them
+		-- in its "Skip the talk at service NPCs" list): the NPC's one service button pressed at once,
+		-- as DaylightUI's skip-gossip does for every service.
+		C("gossipVendor", L["Skip the Talk at Vendors"], ns.In(L["skip gossip"], "Quality of Life"),
+			function() return has("QoL", "skipGossip") end),
+		C("gossipBank", L["Skip the Talk at Bankers"], ns.In(L["skip gossip"], "Quality of Life"),
+			function() return has("QoL", "skipGossip") end),
+		C("gossipTrainer", L["Skip the Talk at Trainers"], ns.In(L["skip gossip"], "Quality of Life"),
+			function() return has("QoL", "skipGossip") end),
+		C("gossipAuction", L["Skip the Talk at Auctioneers"], ns.In(L["skip gossip"], "Quality of Life"),
+			function() return has("QoL", "skipGossip") end),
+		C("gossipStable", L["Skip the Talk at Stable Masters"], ns.In(L["skip gossip"], "Quality of Life"),
+			function() return has("QoL", "skipGossip") end),
+		C("gossipGuildBank", L["Skip the Talk at the Guild Bank"], ns.In(L["skip gossip"], "Quality of Life"),
+			function() return has("QoL", "skipGossip") end),
+		C("gossipTabard", L["Skip the Talk at Guild Tabard Vendors"], ns.In(L["skip gossip"], "Quality of Life"),
+			function() return has("QoL", "skipGossip") end),
+		C("gossipBattle", L["Skip the Talk at Battlemasters"], ns.In(L["skip gossip"], "Quality of Life"),
+			function() return has("QoL", "skipGossip") end),
 		-- Quality of life
 		C("flightTimes", L["Flight Timer"], ns.In(L["the flight timer"], "Quality of Life"),
 			function() return has("QoL", "flightTimer") end),

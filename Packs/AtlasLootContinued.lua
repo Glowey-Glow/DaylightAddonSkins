@@ -1,6 +1,21 @@
 -- AtlasLoot Continued (the Forever build, 12978): every window it draws in the DaylightUI look.
--- It draws everything itself from a handful of builders of its own (GUI:Create, its DropDown and
--- Select lists, its item buttons, the model and sound pages, Favourites' window), on the flat
+-- Atlas Nav (12987+, its default style, db.GUI.style "nav"): the window, Favourites, the changelog,
+-- the theme chooser and the settings keep AtlasLoot's own Nav look; nothing here touches them. The
+-- legacy style (/al style legacy) is dressed as before. Told apart at hook time, the way AtlasLoot
+-- does: the main window by GUI.Nav.active (set by Nav:Apply at the end of GUI:Create, cleared by
+-- Nav:Revert when Nav fails and the classic window comes back), Favourites by what its Nav layer did
+-- to the window (title strip and X hidden: Favourites_Nav's FN.applied is a local of its own), the
+-- changelog by which window is shown (Nav draws AtlasLootChangelogNavFrame instead of the classic
+-- AtlasLootChangelogFrame). The theme chooser (AtlasLoot_ThemeChoice-Frame), the Nav settings
+-- (AtlasLoot_Settings-Frame) and Nav's tooltip and dropdown are Nav's own and never looked at here.
+-- Switching style: the main window is built once a session (GUI:Create at GUI.Init) and AtlasLoot
+-- asks for a reload (ATLASLOOT_RELOAD_STYLE), so a classic window dressed here stays dressed until
+-- that reload, then Nav is drawn and this pack stands down. Favourites takes the style it finds on its
+-- first open, the changelog on every show: both are judged when they're built or shown. With Nav the
+-- main window's pages and popups (model, sounds, set strip, faction tooltip, previews, copy box)
+-- are left as AtlasLoot draws them too.
+-- Legacy style: it draws everything itself from a handful of builders of its own (GUI:Create, its
+-- DropDown and Select lists, its item buttons, the model and sound pages, Favourites' window), on the flat
 -- tooltip backdrop; those builders are followed here and what they drew is dressed in the same
 -- moment (fast path: post-hooks on GUI:Create, ModelFrame:Create, SoundFrame:Create, Favourites'
 -- GUI:Create and the lazy popups' builders; a watch by name stays behind each as the safety net).
@@ -401,6 +416,21 @@ end
 
 local function AL() return _G.AtlasLoot end
 
+-- Atlas Nav drawn over the main window right now (12987+; nil before it: the classic window).
+local function NavMain()
+	local A = AL()
+	local N = A and type(A.GUI) == "table" and A.GUI.Nav
+	return type(N) == "table" and N.active == true
+end
+
+-- Favourites' window in its Atlas Nav look: FN:Apply hides its title strip and its X (FN:Revert,
+-- when Nav fails, shows them again).
+local function NavFavourites(f)
+	local A = AL()
+	if not (A and type(A.GUI) == "table" and type(A.GUI.Nav) == "table") then return false end
+	return Usable(f.titleFrame) and not f.titleFrame:IsShown() and Usable(f.CloseButton) and not f.CloseButton:IsShown()
+end
+
 -- The content area's inset: a shade and two faint rules of ours (its own colored bands off).
 local function ContentArea(cf)
 	if not Usable(cf) or not Once(cf) then return end
@@ -469,7 +499,8 @@ end
 
 local function MainWindow(f)
 	local Kit = ns.Kit
-	if not Kit or not Usable(f) or not On() or not Once(f) then return end
+	-- (Atlas Nav over it: its own look, nothing of ours.)
+	if not Kit or not Usable(f) or not On() or NavMain() or not Once(f) then return end
 	local A = AL()
 	local G = A.GUI
 	NoBack(f)
@@ -529,7 +560,7 @@ end
 local function ModelPage()
 	local A = AL()
 	local M = A and A.GUI and A.GUI.ModelFrame
-	if not On() or not M or not Usable(M.frame) or not Once(M.frame) then return end
+	if not On() or NavMain() or not M or not Usable(M.frame) or not Once(M.frame) then return end
 	ModelControls(M.frame)
 end
 
@@ -583,7 +614,7 @@ local function SoundPage()
 	local A = AL()
 	local S = A and A.GUI and A.GUI.SoundFrame
 	local f = S and S.frame
-	if not On() or not Usable(f) or not Once(f) then return end
+	if not On() or NavMain() or not Usable(f) or not Once(f) then return end
 	ScrollBar(f.scrollbar)
 	local function again() Guard(SoundRows) end
 	for _, row in ipairs(f.buttons or {}) do
@@ -601,7 +632,7 @@ end
 local function ExtraStrip(button)
 	local parent = Usable(button) and button:GetParent()
 	parent = Usable(parent) and parent:GetParent()
-	if not Usable(parent) then return end
+	if NavMain() or not Usable(parent) then return end
 	for i = 1, select("#", parent:GetChildren()) do
 		local c = select(i, parent:GetChildren())
 		if Usable(c) and type(c.AddButton) == "function" and type(c.Container) == "table" then
@@ -618,7 +649,7 @@ end
 -- The WoWHead copy box: an edit box made on its first use, under the item's button.
 local function CopyBox(button)
 	local Kit = ns.Kit
-	if not Kit or not Usable(button) then return end
+	if not Kit or NavMain() or not Usable(button) then return end
 	for i = 1, select("#", button:GetChildren()) do
 		local c = select(i, button:GetChildren())
 		if Kind(c) == "EditBox" and type(c.SetCopyText) == "function" and Once(c) then
@@ -632,7 +663,7 @@ end
 local function FactionTip(T)
 	local Kit = ns.Kit
 	local f = T and T.tooltipFrame
-	if not Kit or not Usable(f) or not Once(f) then return end
+	if not Kit or NavMain() or not Usable(f) or not Once(f) then return end
 	NoBack(f)
 	ns.Shell(f, nil, KEY)
 	local st = f.standing
@@ -646,7 +677,7 @@ end
 
 local function PreviewBox(f)
 	local Kit = ns.Kit
-	if not Kit or not Usable(f) or not Once(f) then return end
+	if not Kit or NavMain() or not Usable(f) or not Once(f) then return end
 	NoBack(f)
 	ns.Shell(f, nil, KEY)
 	if Usable(f.modelFrame) then NoBack(f.modelFrame) end
@@ -673,7 +704,8 @@ end
 
 local function Favourites(f)
 	local Kit = ns.Kit
-	if not Kit or not Usable(f) or not On() or not Once(f) then return end
+	-- (Its Atlas Nav look, from Favourites_Nav's GUI:Create: its own, nothing of ours.)
+	if not Kit or not Usable(f) or not On() or NavFavourites(f) or not Once(f) then return end
 	NoBack(f)
 	ns.Shell(f, { window = true }, KEY)
 	if Controls() and Usable(f.CloseButton) then Guard(Kit.Close, f.CloseButton) end
@@ -813,8 +845,10 @@ local function ChangelogWindow(f)
 end
 
 local function ChangelogNow()
+	-- (The classic window, shown in the legacy style or when Nav's AtlasLootChangelogNavFrame can't
+	-- be drawn; with Nav it stays hidden and the Nav window keeps its own look.)
 	local f = _G.AtlasLootChangelogFrame
-	if Usable(f) then Calm(ChangelogWindow, f) end
+	if Usable(f) and f:IsShown() then Calm(ChangelogWindow, f) end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -842,7 +876,7 @@ local function FollowAll()
 	Hook(G, "RefreshContentBackGround", function() if dressed[G.frame] then Guard(ItemGround) end end)
 	Hook(G, "ShowLoadingInfo", function()
 		local cf = G.frame and G.frame.contentFrame
-		if On() and Usable(cf) and not ns.PlainText(KEY) then ns.FollowFont(cf.loadingDataText, KEY) end
+		if On() and not NavMain() and Usable(cf) and not ns.PlainText(KEY) then ns.FollowFont(cf.loadingDataText, KEY) end
 	end)
 	-- Every page fill ends in UpdateFilter: the item buttons' words re-inked.
 	local IF = G.ItemFrame
@@ -854,6 +888,8 @@ local function FollowAll()
 	local SF = G.SoundFrame
 	Hook(SF, "Create", function() Calm(SoundPage) end)
 	Hook(SF, "Refresh", function() if SF.frame and dressed[SF.frame] then Guard(SoundRows) end end)
+	-- Atlas Nav failing later (a refresh error) puts the classic window back: dressed then.
+	Hook(G.Nav, "Revert", MainNow)
 	local B = A.Button
 	if type(B) == "table" then
 		Hook(B, "ExtraItemFrame_GetFrame", function(_, button) if On() then Calm(ExtraStrip, button) end end)

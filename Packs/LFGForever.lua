@@ -152,6 +152,9 @@ local function ResultRow(row, Kit)
 	if Kind(row.LFGFNote) == "FontString" and not ns.PlainText(KEY) then ns.FollowFont(row.LFGFNote, KEY) end
 	FlatButton(row.LFGFInvite, Kit)
 	FlatButton(row.LFGFAskToJoin, Kit)
+	-- (2.5.0) Its own red x on your own listing (listpanel.lua:151, the same row-button template as
+	-- Invite); the game's DelistButton below stays hidden on its rows from 2.5.0. The x is kept.
+	FlatButton(row.LFGFDelist, Kit)
 	if Usable(row.DataDisplay) then FlatButton(row.DataDisplay.DelistButton, Kit) end
 end
 

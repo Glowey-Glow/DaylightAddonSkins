@@ -1,6 +1,6 @@
 -- Shortest Path Forever: its Nearby services panel in the world map's quest log (its paper ground
 -- and border gone, DaylightUI's look on its search box, scroll bar, rows, section heads, map
--- switches and side tab), its Journey stops and Farming tour windows, the windows ForeverCore
+-- switches and side tab, and the Quests tab ForeverCore puts atop that column), its Journey stops and Farming tour windows, the windows ForeverCore
 -- opens for it (report, issue, thanks; before ForeverCore 1.15 also the Forever addons link and
 -- your Forever profile), ForeverCore's right-click menu (the tracker's header and lines) and, before
 -- Shortest Path 1.42 (which dropped it), its "Journey" button under the minimap.
@@ -206,19 +206,46 @@ ns.Watch(KEY, "ShortestPathForeverServicesPanel", function(panel, Kit)
 	end
 end)
 
+local function Repaint()
+	local Kit = ns.Kit
+	if Kit and type(Kit.RepaintSoon) == "function" and ns.Enabled(KEY) then ns.Guard(Kit.RepaintSoon) end
+end
+
+-- ForeverCore 1.17: a click on a tab in its column goes through the tab's own mouse-up, which
+-- picks the tab (the Quests tab with the ShowQuests it was handed as it was made, before the hook
+-- below can be there) and, on a right-click once the column was dragged, opens ForeverCore's menu
+-- ("Reset tab position") straight from inside it. After it: the tabs' look read again, and that
+-- menu looked for at once (dressed before it's drawn, rather than by its watch a frame late).
+local function TabClicked()
+	C_Timer.After(0, Repaint)
+	ns.WatchNow()
+end
+
 ns.Watch(KEY, "ShortestPathForeverServicesTab", function(tab, Kit)
 	if ns.Controls(KEY) and ns.Once(tab) then ns.Guard(Kit.SideTab, tab) end
+	ns.ScriptOnce(tab, "OnMouseUp", TabClicked, KEY)
 end)
+
+-- Where the game hides the quest log's own Quests tab, ForeverCore draws one of its own atop its
+-- column (ForeverQuestLogQuestsTab: the same side tab template, the game's quest icons): DaylightUI's
+-- side tab, cropped as DaylightUI crops the game's Quests tab. Made with the column, as the first
+-- addon puts its tab in (QuestLogTabs.Register): looked for after each, and at once in case that
+-- was before this ran. (No watch: a client that shows the game's own tab never gets this one.)
+local function QuestsTab()
+	local tab = _G.ForeverQuestLogQuestsTab
+	if not ns.Usable(tab) or not ns.Enabled(KEY) then return end
+	ns.ScriptOnce(tab, "OnMouseUp", TabClicked, KEY)
+	if not ns.Controls(KEY) or not ns.Once(tab) then return end
+	ns.WithKit(function(Kit) Kit.SideTab(tab, nil, Kit.SIDE_TAB_CROP) end)
+end
 
 -- Its side tab and the quest log's own are checked from code (ForeverCore's QuestLogTabs: picking
 -- a tab, or the quest log asking for its quests back), so the tabs' look is read again after.
 WhenCore(function(core)
 	local LogTabs = core.QuestLogTabs
 	if type(LogTabs) ~= "table" then return end
-	local function Repaint()
-		local Kit = ns.Kit
-		if Kit and type(Kit.RepaintSoon) == "function" and ns.Enabled(KEY) then ns.Guard(Kit.RepaintSoon) end
-	end
+	if type(LogTabs.Register) == "function" then ns.HookOnce(LogTabs, "Register", QuestsTab, KEY) end
+	QuestsTab()
 	for _, method in ipairs({ "ShowQuests", "Select" }) do
 		if type(LogTabs[method]) == "function" then
 			ns.HookOnce(LogTabs, method, function() C_Timer.After(0, Repaint) end, KEY)
