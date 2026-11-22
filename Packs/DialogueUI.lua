@@ -123,8 +123,8 @@ After(_G.DUIDialogOptionButtonMixin, "LoadTheme", Tree)
 After(_G.DUIDialogOptionButtonMixin, "SetParentHighlightTexture", function(_, highlight) DarkenTree(highlight, 0) end)
 After(_G.DUIDialogHotkeyFrameMixin, "LoadTheme", Tree)
 After(_G.DUIDialogHotkeyFrameMixin, "SetTheme", Tree)
-After(_G.DUIDialogItemButtonMixin, "SetBackgroundTexture", Tree)
-After(_G.DUIDialogItemButtonMixin, "LoadTheme", Tree)
+-- (DUIDialogItemButtonMixin's SetBackgroundTexture and LoadTheme: hooked further down, with the
+-- plate of a reward still to be picked. One hook a method.)
 After(_G.DUIDialogSmallItemButtonMixin, "SetBackgroundTexture", Tree)
 After(_G.DUIDialogOptionButtonLockMixin, "LoadTheme", Tree)
 After(_G.DUIDialogInputBoxMixin, "SetBackgroundTexture", Tree)
@@ -207,21 +207,41 @@ local function RecolorAll()
 	for font in pairs(ownColor) do ns.Guard(Recolor, font) end
 end
 
--- Item names: its Brown theme writes them all in dark brown. The item's quality color, or the
--- accent on a reward still to be picked.
+-- Item names: its Brown theme writes them all in dark brown. The item's quality color, always:
+-- on a reward still to be picked too (its own single "select" color there, and the accent we
+-- once put in its place, both read as a quality the item doesn't have: a pink accent as epic).
 After(_G.DUIDialogItemButtonMixin, "UpdateNameColor", function(self, quality)
 	local name = self.Name
 	if not ns.Usable(name) then return end
-	if self.backgroundID == 2 then
-		name:SetTextColor(Accent())
-		return
-	end
 	quality = quality or self.quality or 0
 	local get = C_Item and C_Item.GetItemQualityColor or _G.GetItemQualityColor
 	if type(get) ~= "function" then return end
 	local r, g, b = get(quality)
 	if type(r) == "number" then name:SetTextColor(r, g, b) end
 end)
+
+-- A reward still to be picked ("Choose your reward"): its Dark theme lays a bright red plate
+-- under each choice (RewardChoice-Pending.png), which on the dark shell reads as "you can't use
+-- this". The same plate without its red: gray and dimmed, so the icon and the quality-colored
+-- name carry the row. Every other plate is left as its art is (it never tints this texture).
+local function PendingPlate(self)
+	local bg = self.Background
+	if not ns.Usable(bg) or bg:GetObjectType() ~= "Texture" then return end
+	local pending = self.backgroundID == 2
+	if bg.SetDesaturated then bg:SetDesaturated(pending) end
+	if pending then bg:SetVertexColor(0.42, 0.42, 0.42) else bg:SetVertexColor(1, 1, 1) end
+	-- (A name colored before the plate changed: again, for the plate it has now.)
+	if type(self.UpdateNameColor) == "function" then
+		self.nameColor = nil
+		self:UpdateNameColor()
+	end
+end
+local function ItemPlate(self)
+	Tree(self)
+	PendingPlate(self)
+end
+After(_G.DUIDialogItemButtonMixin, "SetBackgroundTexture", ItemPlate)
+After(_G.DUIDialogItemButtonMixin, "LoadTheme", ItemPlate)
 
 -- ---------------------------------------------------------------------------------------------
 -- Fonts: what it set on each font object is kept, and the look laid over that, so a change of its

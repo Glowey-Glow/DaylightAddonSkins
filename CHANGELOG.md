@@ -1,5 +1,12 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.8
+- Spoken, easier to read (checked against Spoken 3.11.0):
+  - Subtitles: a flat dark plate behind the words in place of Spoken's soft, see-through shade, so every letter has the same ground under it. It follows Spoken's own Subtitle Shadow setting and is more solid at each step (its 60% is 80% here; at 0 there is no plate). The speaker's name is in Daylight UI's title color and the small gray labels in its label color.
+  - Small Window: no more paper page inside the dark frame. With Spoken's background set to Parchment its words were dark ink on paper; the paper is put away and the name, title, counters and captions are written light, as on its Dark setting.
+  - Sizes stay Spoken's to set: Subtitle Size (or Ctrl and the mouse wheel over a subtitle) and Window Size in its options. Its narrator windows start at 70%.
+- Dialogue UI: a quest's rewards to choose from keep their item colors. While a reward was waiting to be picked, each choice sat on Dialogue UI's bright red plate (its Dark theme's own art, which on the dark shell read as "you can't use this"), and the skin wrote every name in your accent color, so a pink accent made common items look epic. The names are now in each item's quality color, there as everywhere else, and the plate is the same art without its red.
+
 ## 1.18.7
 - Fixed: opening the macro window raised an error ("ScrollBox.lua:595: attempt to index a nil value"). The game builds some lists the first time they are shown: the macro grid, the icon grid of every icon picker (macros, equipment sets, guild bank and bank tabs) and the Auction House's item lists. Daylight UI's window skins asked those lists for their rows before that. Such a list now waits until the game has built it, then its rows are dressed as usual. Nothing changes for lists that are ready.
 - Fixed: the game's own letter window (Daylight UI's mailbox off) set its text color in a form the game no longer takes, which could raise an error when a letter was opened and switch the Game Windows skins off.

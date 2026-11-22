@@ -6,13 +6,9 @@ A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its 
 
 ---
 
-## New in 1.18.7
-- **Fixed, macro window:** opening it no longer raises an error ("ScrollBox.lua:595"). The same fix covers the icon pickers (macros, equipment sets, guild bank and bank tabs) and the Auction House's lists.
-- **Fixed, letters:** opening a letter in the game's own letter window could raise an error and switch the Game Windows skins off.
-- **Fixed, Character Frame switch:** the character and currency transfer windows are dressed with the Spells and Talents switch off too.
-- **Dungeon-ready dialog:** its small hide button takes the Daylight UI look.
-- **Checked:** every game window skin was read against the game's own code for errors.
-
+## New in 1.18.8
+- **Spoken is easier to read:** subtitles sit on a solid dark plate, and the Small Window no longer shows a paper page inside the dark frame (its words are written light).
+- **Dialogue UI rewards keep their item colors:** a quest's rewards to choose from show each name in its item quality color, and no longer sit on a bright red plate that looked like "you can't use this".
 ---
 
 ## Addons it skins
