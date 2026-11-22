@@ -6,9 +6,12 @@ A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its 
 
 ---
 
-## New in 1.18.8
-- **Spoken is easier to read:** subtitles sit on a solid dark plate, and the Small Window no longer shows a paper page inside the dark frame (its words are written light).
-- **Dialogue UI rewards keep their item colors:** a quest's rewards to choose from show each name in its item quality color, and no longer sit on a bright red plate that looked like "you can't use this".
+## New in 1.18.9
+- **Checked against Daylight UI 2.2.2** and today's releases of every supported addon.
+- **AtlasLoot Continued's new Atlas Nav look** (its default from 12987) is left as AtlasLoot draws it, instead of the Daylight UI look fighting it. The legacy look is dressed as before.
+- **New windows dressed:** LFG Forever's delist button, Dungeon Journal's controller reset question and item-location note, Shortest Path Forever's Quests tab, Spoken's controller prompts and Compendium filter.
+- **OneForAll 6.2.13's skip-the-talk switches** (vendors, bankers, trainers and more) join the Daylight UI Override list, since Daylight UI already skips gossip.
+- **Small touches:** a gold hover on Mastercraft's craft orders board is now your accent, and Questie 12.12's menus take Daylight UI's menu look.
 ---
 
 ## Addons it skins
