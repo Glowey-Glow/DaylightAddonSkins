@@ -1298,14 +1298,30 @@ end
 
 -- The fast path is the rule: a pack hooks the call that makes or opens a window and dresses it
 -- right there (ns.WatchNow() runs every pending watch at once, for hooks that only know "something
--- may have been made"). The watches below are the safety net, and even they look every frame
--- (only while one is still waiting): a window made by a click or an event is found in that same
--- frame, before the game draws it, so it never shows undressed. Each look is a name lookup or a
--- small function per waiting window.
+-- may have been made"). The watches below are the safety net. They look every frame for a short
+-- while after something that can make a window (a click anywhere, an addon loading, a loading
+-- screen, a pack's hook asking): a window made then is found in that same frame, before the game
+-- draws it, so it never shows undressed. The rest of the time they look twice a second: most of
+-- them wait the whole session for a window that's never opened, and a look every frame at all of
+-- them, for hours, added up. Each look is a name lookup or a small function per waiting window.
 local watches = {}
 local watcher = CreateFrame("Frame")
 watcher:Hide()
 local ticking = false
+local BURST = 2      -- seconds of a look every frame after a trigger
+local SLOW = 0.5     -- seconds between looks otherwise
+local burstLeft, sinceLook = 0, 0
+
+-- A watch for an addon that isn't there (not installed, switched off in the addon list, or one that
+-- couldn't load and isn't loaded on demand): its window never comes this session. Asked once per
+-- watch, after login; the game's own windows and a pack's own keys are always looked for.
+local function NeverComes(w)
+	if w.checked then return false end
+	w.checked = true
+	if not ns.targets[w.key] or IsGame(w.key) then return false end
+	local state = ns.TargetState(w.key)
+	return state == "missing" or state == "disabled" or state == "notloaded"
+end
 
 local function Found(w, frame)
 	ns.WithKit(function(Kit)
@@ -1328,8 +1344,9 @@ local function Tick()
 	ticking = true
 	for i = #watches, 1, -1 do
 		local w = watches[i]
-		if ready and not ns.Enabled(w.key) then
-			-- Its addon is switched off (a switch takes hold after a reload): not looked for again.
+		if ready and (not ns.Enabled(w.key) or NeverComes(w)) then
+			-- Its addon is switched off (a switch takes hold after a reload), or isn't there: not
+			-- looked for again.
 			table.remove(watches, i)
 		else
 			local get, frame = w.get
@@ -1348,20 +1365,46 @@ local function Tick()
 	ticking = false
 	if #watches == 0 then watcher:Hide() end
 end
-watcher:SetScript("OnUpdate", Tick)
+watcher:SetScript("OnUpdate", function(_, elapsed)
+	if burstLeft > 0 then
+		burstLeft = burstLeft - elapsed
+	else
+		sinceLook = sinceLook + elapsed
+		if sinceLook < SLOW then return end
+	end
+	sinceLook = 0
+	Tick()
+end)
+
+-- Something that may make a window: a look every frame for the next while.
+local function Burst()
+	burstLeft = BURST
+	if ns.loggedIn and #watches > 0 then watcher:Show() end
+end
 
 -- ns.Watch(key, get, fn): `get` = a global frame name or a function returning the frame (or nil);
 -- fn(frame, Kit) runs once, when it exists. The fallback: pair it with a hook on the call that
 -- makes the window (and ns.WatchNow() or the dressing called from that hook).
 function ns.Watch(key, get, fn)
 	watches[#watches + 1] = { key = key, get = get, fn = fn }
-	if ns.loggedIn then watcher:Show() end
+	if ns.loggedIn then Burst() end
 end
 
--- Every pending watch looked at now (from a hook on an addon's open / build call).
+-- Every pending watch looked at now (from a hook on an addon's open / build call), and every frame
+-- for the next while (what the call opens may be made a frame or two later).
 function ns.WatchNow()
-	if ns.loggedIn and #watches > 0 then Guard(Tick) end
+	if ns.loggedIn and #watches > 0 then
+		Burst()
+		Guard(Tick)
+	end
 end
+
+-- The triggers: a click anywhere (most windows open from one), an addon loading, a loading screen.
+local triggers = CreateFrame("Frame")
+triggers:RegisterEvent("GLOBAL_MOUSE_UP")
+triggers:RegisterEvent("ADDON_LOADED")
+triggers:RegisterEvent("PLAYER_ENTERING_WORLD")
+triggers:SetScript("OnEvent", Burst)
 
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")
@@ -1369,7 +1412,7 @@ boot:SetScript("OnEvent", function(self)
 	self:UnregisterEvent("PLAYER_LOGIN")
 	ns.loggedIn = true
 	if #watches > 0 then
-		watcher:Show()
+		Burst()
 		Tick()
 	end
 end)
@@ -1459,7 +1502,10 @@ end
 local hookedOnce = setmetatable({}, { __mode = "k" })   -- obj -> { ["method:pack"] = true }
 local hookedGlobal = {}                                   -- "name:pack" -> true
 
-function ns.HookOnce(obj, method, fn, pack)
+-- test(...), when given: a cheap test of the call's arguments run first, outside the guarded call
+-- (for a global the game calls for every button or tab, when only a few of them are ours). It
+-- must not error: only a table lookup or the like.
+function ns.HookOnce(obj, method, fn, pack, test)
 	pack = pack or current
 	if type(method) ~= "string" or type(fn) ~= "function" then return false end
 	local id = method .. ":" .. tostring(pack)
@@ -1467,7 +1513,12 @@ function ns.HookOnce(obj, method, fn, pack)
 		if type(_G[method]) ~= "function" then return false end
 		if hookedGlobal[id] then return true end
 		hookedGlobal[id] = true
-		hooksecurefunc(method, Wrap(fn, pack))
+		local run = Wrap(fn, pack)
+		if type(test) == "function" then
+			hooksecurefunc(method, function(...) if test(...) then run(...) end end)
+		else
+			hooksecurefunc(method, run)
+		end
 		return true
 	end
 	if type(obj) ~= "table" or type(obj[method]) ~= "function" then return false end

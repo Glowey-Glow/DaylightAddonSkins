@@ -934,10 +934,10 @@ Entry("ChatConfigFrame", function(f, Kit)
 		end, KEY)
 	end
 	if type(_G.FCFTab_UpdateColors) == "function" then
+		-- (Called for every chat tab, often: the cheap test first, before the guarded call.)
 		ns.HookOnce(nil, "FCFTab_UpdateColors", function(tab)
-			-- (Called for every chat tab, often: the cheap test first.)
 			if windowTabSet[tab] and On() then Guard(PaintTabs, Kit, windowTabs, WindowTabPicked) end
-		end, KEY)
+		end, KEY, function(tab) return windowTabSet[tab] ~= nil end)
 	end
 end)
 

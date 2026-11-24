@@ -53,7 +53,6 @@ local TEMPLATE_PARTS = { "NineSlice", "Bg", "TitleBg", "PortraitContainer", "Tit
 
 local found = {}        -- folder -> { label, windows = { frame = true } }
 local frameFolder = setmetatable({}, { __mode = "k" })   -- frame -> folder
-local seen = setmetatable({}, { __mode = "k" })          -- frames looked at already
 local hooked = setmetatable({}, { __mode = "k" })
 local dressed = setmetatable({}, { __mode = "k" })
 local waiting = setmetatable({}, { __mode = "k" })       -- shown during a fight
@@ -221,14 +220,18 @@ local function InkAmong(label, ...)
 		end
 	end
 end
-local function Ink(frame, label, depth)
+local Ink
+-- (The children as the game hands them back: no table made for each frame of the walk.)
+local function InkChildren(label, depth, ...)
+	for i = 1, select("#", ...) do
+		local child = select(i, ...)
+		if not Call(child, "IsProtected") then Ink(child, label, depth) end
+	end
+end
+Ink = function(frame, label, depth)
 	if depth > 10 or Call(frame, "IsForbidden") or SKIP_KINDS[Call(frame, "GetObjectType")] then return end
 	if frame.GetRegions then InkAmong(label, frame:GetRegions()) end
-	if frame.GetChildren then
-		for _, child in ipairs({ frame:GetChildren() }) do
-			if not Call(child, "IsProtected") then Ink(child, label, depth + 1) end
-		end
-	end
+	if frame.GetChildren then InkChildren(label, depth + 1, frame:GetChildren()) end
 end
 
 -- The window's title stays where the addon put it: Kit.Window moves it to the left of the title
@@ -357,13 +360,14 @@ end
 local clicks = CreateFrame("Frame")
 clicks:RegisterEvent("GLOBAL_MOUSE_UP")
 local newSoon = false
+local function CheckSoon()
+	newSoon = false
+	Check()
+end
 clicks:SetScript("OnEvent", function()
 	if caughtUp and not newSoon then
 		newSoon = true
-		C_Timer.After(0, function()
-			newSoon = false
-			Check()
-		end)
+		C_Timer.After(0, CheckSoon)
 	end
 	if again or not next(dressed) then return end
 	for frame in pairs(dressed) do
@@ -423,9 +427,8 @@ end
 
 -- A frame at the top (UIParent's child, or one made with no parent at all: BtWQuests' options
 -- list) from an addon that may be dressed.
+-- (Each frame is looked at once: the walk below never comes back to one it has passed.)
 local function Consider(frame)
-	if seen[frame] then return end
-	seen[frame] = true
 	if Call(frame, "IsForbidden") then return end
 	local parent = Call(frame, "GetParent")
 	if parent ~= nil and parent ~= UIParent then return end
@@ -443,8 +446,9 @@ local function Step(budget)
 	if cursor then frame = EnumerateFrames(cursor) else frame = EnumerateFrames() end
 	local n = 0
 	while frame do
-		Consider(frame)
+		-- (Moved past before it's looked at: one that errors is not looked at again.)
 		cursor = frame
+		Consider(frame)
 		n = n + 1
 		if budget and n >= budget then return false end
 		frame = EnumerateFrames(frame)

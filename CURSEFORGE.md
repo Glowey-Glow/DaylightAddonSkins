@@ -6,10 +6,9 @@ A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its 
 
 ---
 
-## New in 1.18.11
-- **LFG Forever 2.6.0:** its new Compact mode arrow is a Daylight UI page button, its chevron turning the way it acts.
-- **Checked against today's releases:** ALL THE THINGS 5.4.18, AtlasLoot Continued 12997 and Shortest Path Forever 1.45.5 need nothing new.
-- **The choice window and the copy box** follow Daylight UI's look, scale and window feel.
+## New in 1.18.12
+- **The game's Auction House window, given back by Daylight UI,** is laid out at its own size again: the "Daylight UI window" link no longer spans the whole header, and the list's columns stay inside the window.
+- **Lighter:** less work every frame and on every click; skins for addons you don't have no longer wait for them.
 ---
 
 ## Addons it skins

@@ -1288,13 +1288,19 @@ local function LookNew()
 	lastScreen = n
 end
 
--- The shared menu, made earlier (while Guildy's window wasn't open) and opened from it now.
-local function LookMenu()
-	if found.menu then return end
-	for i = 1, UIParent:GetNumChildren() do
-		local c = select(i, UIParent:GetChildren())
+-- The shared menu, made earlier (while Guildy's window wasn't open) and opened from it now. The
+-- screen's children are taken once per look and walked as they come (taking them again for each
+-- one grew with the square of their number, on every click until the menu was found).
+local function MenuAmong(...)
+	for i = 1, select("#", ...) do
+		local c = select(i, ...)
 		if Usable(c) and type(rawget(c, "buttons")) == "table" and c:IsShown() then Guard(Spot, c) end
 	end
+end
+
+local function LookMenu()
+	if found.menu then return end
+	MenuAmong(UIParent:GetChildren())
 end
 
 -- Each tab's (and page's) panel, dressed the moment it's shown: Guildy builds it then. A page

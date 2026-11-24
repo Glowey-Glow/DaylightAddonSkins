@@ -5,11 +5,14 @@
 -- (the compositor's font strings reset to GameFontHighlight). The menu never shows again, so that
 -- skin isn't run again, and the rows stay in the game's wider font until the menu is reopened
 -- (DaylightUI issue #1).
--- Here, while a game menu is open, a frame of ours looks over its texts each frame and gives any
--- that lost it DaylightUI's menu font object back (the one DaylightUI made for that size, so the
--- look is exactly its own). A refresh happens on a click, before that frame's OnUpdate, so the text
--- is back before it's drawn. Nothing is hooked or made on the menu itself; with no menu open the
--- frame is hidden and costs nothing. Only while DaylightUI's Skins module is on.
+-- Here, while a game menu is open, a frame of ours looks over its texts and gives any that lost it
+-- DaylightUI's menu font object back (the one DaylightUI made for that size, so the look is exactly
+-- its own). It looks every frame for a moment after the menu opens, after a click and when the
+-- mouse moves onto another row (a refresh happens on a click, before that frame's OnUpdate, so the
+-- text is back before it's drawn), and a few times a second otherwise (a wheel scroll, a change
+-- the game makes by itself): not every frame for as long as a menu stays open. Nothing is hooked
+-- or made on the menu itself; with no menu open the frame is hidden and costs nothing. Only while
+-- DaylightUI's Skins module is on.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -110,11 +113,21 @@ local cover = setmetatable({}, { __mode = "k" })   -- the game's texture -> our 
 local rowOf = setmetatable({}, { __mode = "k" })   -- the game's texture -> the row it was on
 local mine = setmetatable({}, { __mode = "k" })    -- our textures (left alone)
 local langOn = true                                -- false once the game refused this once
+local isLang = {}                                  -- atlas name -> whether it's a language's
 
 local function Lang(t, row)
 	if mine[t] then return end
 	local atlas = t:GetAtlas()
-	if type(atlas) == "string" and atlas:lower():find("^lang%-regions%-") then
+	local lang = false
+	if type(atlas) == "string" then
+		-- (Each atlas name tested once: the same few dozen come back on every pass.)
+		lang = isLang[atlas]
+		if lang == nil then
+			lang = atlas:lower():find("^lang%-regions%-") ~= nil
+			isLang[atlas] = lang
+		end
+	end
+	if lang then
 		langOf[t], rowOf[t] = atlas, row
 		local c = cover[t]
 		if c then c:Hide() end
@@ -181,7 +194,7 @@ local function FixString(fs, font)
 	if inks then InkText(fs) end
 end
 
--- (This runs every frame while a menu is open: the regions and children are gone through as the
+-- (This runs often while a menu is open: the regions and children are gone through as the
 -- game hands them back, with no table made for them. A text still in the menu font is only read,
 -- under one protected call; the font and inks are read when a menu opens, not on every frame.)
 local FixFrame
@@ -243,7 +256,42 @@ local function ReadInks()
 	inks.accent[1], inks.accent[2], inks.accent[3] = ar, ag, ab
 end
 
-watcher:SetScript("OnUpdate", function(self)
+-- When to look: every frame for a moment after a menu opens (DaylightUI's skin dresses it a frame
+-- later, and paints the language pictures over then), after a click (a tick refreshes the menu)
+-- and when the mouse moves onto something else (a row's hover); a few times a second otherwise.
+local BURST = 0.25         -- seconds of a look every frame after one of those
+local SLOW = 0.2           -- seconds between looks otherwise
+local burstLeft, sinceLook = 0, 0
+local lastFocus
+local Foci = _G.GetMouseFoci
+local Focus = _G.GetMouseFocus
+
+local function MouseOn()
+	if Foci then
+		local ok, f = pcall(Foci)
+		return ok and type(f) == "table" and f[1] or nil
+	end
+	if Focus then
+		local ok, f = pcall(Focus)
+		return ok and f or nil
+	end
+end
+
+local function Burst() burstLeft = BURST end
+
+watcher:SetScript("OnUpdate", function(self, elapsed)
+	local on = MouseOn()
+	if on ~= lastFocus then
+		lastFocus = on
+		burstLeft = BURST
+	end
+	if burstLeft > 0 then
+		burstLeft = burstLeft - elapsed
+	else
+		sinceLook = sinceLook + elapsed
+		if sinceLook < SLOW then return end
+	end
+	sinceLook = 0
 	local any = false
 	if stale then ReadInks() end
 	for menu in pairs(open) do
@@ -267,8 +315,14 @@ registry:RegisterCallback("MenuProxy.OnShow", function(_, menu)
 	open[menu] = true
 	stale = true
 	if langOn and menu.GetChildren and not pcall(NoteLangs, menu) then langOn = false end
+	Burst()
 	watcher:Show()
 end, owner)
+-- A click (on a menu's row, or anywhere: the menu may close or refresh): looked at the same frame.
+local clicks = CreateFrame("Frame")
+clicks:RegisterEvent("GLOBAL_MOUSE_DOWN")
+clicks:RegisterEvent("GLOBAL_MOUSE_UP")
+clicks:SetScript("OnEvent", function() if watcher:IsShown() then Burst() end end)
 registry:RegisterCallback("MenuProxy.OnClose", function(_, menu)
 	if type(menu) == "table" then open[menu] = nil end
 	if not next(open) then pcall(DropCovers) end

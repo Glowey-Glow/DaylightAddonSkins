@@ -649,10 +649,13 @@ if type(_G.StaticPopup_Show) == "function" then
 end
 
 -- The item's quality, set again as its data arrives (the box shows before the item is cached).
+-- (The game calls this for every item button it draws: only a box's button goes on to the guarded
+-- call, the rest stop at the lookup.)
+local function IsPopupItem(btn) return popupItems[btn] ~= nil end
 if type(_G.SetItemButtonQuality) == "function" then
 	ns.HookOnce(nil, "SetItemButtonQuality", function(btn)
 		if popupItems[btn] and ns.Kit and On() then Guard(ItemEdge, btn) end
-	end, KEY)
+	end, KEY, IsPopupItem)
 end
 
 -- The world map's pin button --------------------------------------------------------------------
@@ -734,3 +737,63 @@ Entry("AuctionHouseFrame", function(f, Kit)
 	local buy = f.BuyDialog
 	if Usable(buy) then B.ShellWindow(Kit, buy) end
 end)
+
+-- A game window Daylight UI gives back (2.x: its Auction House, profession, trainer and other
+-- windows stand in for the game's, whose own is "parked" meanwhile: DaylightUI\Windows\
+-- Follow.lua). Parked "aside", a window is scaled to 0.001 and widened to Daylight UI's window
+-- (writeWidth), and what is measured or laid out there stays so when it comes back. Daylight UI
+-- refits the game's fit-to-text buttons then (refit), but two things it doesn't:
+--   * Its own "Daylight UI window" link on the game's header (DaylightUI\Windows\Swap.lua, a
+--     Widgets.Link): its width is its label's GetStringWidth, read when it is labeled. Labeled
+--     while parked, it came back as wide as the header and further: a press anywhere on the
+--     header swapped windows, and its hover line ran off the window's left edge.
+--   * The game's Auction House lists (AuctionHouseItemListMixin, Blizzard_AuctionHouseItemList.lua
+--     on the forever branch): their columns are laid out once, from the list's width then
+--     (UpdateTableBuilderLayout: SetTableWidth(ScrollBox:GetWidth()), Arrange), and again only when
+--     marked dirty. Laid out at the parked width, the Available column ran past the window.
+-- So when Daylight UI says it has given a window back ("GameWindowBack", fired from giveBack:
+-- internal, so looked for and called guarded), the link is sized to its words again and every
+-- such list is marked dirty and laid out again at the window's own width (one hidden now lays
+-- itself out as it shows: its OnShow). Once the window has its own size (the next frame), and
+-- once more a moment later, as Daylight UI's own refit does.
+local function RefitLink(g)
+	if not g.GetChildren then return end
+	for _, c in ipairs({ g:GetChildren() }) do
+		local text = type(c) == "table" and c.text
+		if type(c.SetLabel) == "function" and type(c.line) == "table" and type(text) == "table"
+			and type(text.GetStringWidth) == "function" then
+			local w, now = text:GetStringWidth(), c:GetWidth()
+			if type(w) == "number" and w > 0 and type(now) == "number" and now > w + 1 then c:SetWidth(w) end
+		end
+	end
+end
+
+local function Relayout(frame, depth)
+	if depth > 6 or not frame.GetChildren then return end
+	for _, c in ipairs({ frame:GetChildren() }) do
+		if type(c) == "table" then
+			if type(c.UpdateTableBuilderLayout) == "function" and type(c.tableBuilderLayoutFunction) == "function" then
+				c.tableBuilderLayoutDirty = true
+				if c:IsShown() then pcall(c.UpdateTableBuilderLayout, c) end
+			end
+			Relayout(c, depth + 1)
+		end
+	end
+end
+
+local function Back(g)
+	if not On() or type(g) ~= "table" or (g.IsForbidden and g:IsForbidden()) then return end
+	if g:GetParent() ~= UIParent then return end   -- (parked again meanwhile)
+	Guard(RefitLink, g)
+	Guard(Relayout, g, 1)
+end
+
+do
+	local D = _G.DaylightUI
+	if type(D) == "table" and type(D.On) == "function" then
+		pcall(D.On, "GameWindowBack", function(_, _, g)
+			C_Timer.After(0, function() Back(g) end)
+			C_Timer.After(0.2, function() Back(g) end)
+		end)
+	end
+end

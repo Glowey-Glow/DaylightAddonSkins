@@ -1,5 +1,9 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.12
+- The game's Auction House window, once Daylight UI hands it back (you picked the game's window, or a fight started), is laid out at its own size again. While Daylight UI's window stood in for it, the game's was kept tiny and as wide as Daylight UI's, and two things stayed that way: the "Daylight UI window" link on its header grew across the whole header and past its left edge (a click anywhere there swapped windows), and the list's columns ran past the window (Available outside it). The link is sized to its words again and the lists' columns laid out again at the window's width.
+- Lighter: less work every frame and on every click. Waiting windows are looked for a few times a second instead of every frame (every frame for a moment after a click), skins for addons you don't have no longer wait for them, open game menus and the AtlasLoot Continued, ALL THE THINGS and Guildy windows are kept up for less, and the game's item buttons and chat tabs pass through quicker.
+
 ## 1.18.11
 - The choice window and the copy box follow Daylight UI's look, scale and window feel: their colors and the hover tips on the options pages change with your look, they open and close with Daylight UI's sounds and fade, Escape closes them, and they work with a controller.
 - LFG Forever 2.6.0: Compact mode's arrow (left of the Filters tab) is a Daylight UI page button, its chevron turning the way it acts. Checked against ALL THE THINGS 5.4.18, AtlasLoot Continued 12997 and Shortest Path Forever 1.45.5: nothing to change.

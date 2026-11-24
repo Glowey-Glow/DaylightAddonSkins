@@ -155,9 +155,17 @@ local function RowInk(fs, name)
 	end
 end
 
+local function RowText(fs, ink)
+	if Kind(fs) == "FontString" then
+		RowFont(fs)
+		RowInk(fs, ink)
+	end
+end
+
+-- Returns whether the row shows (the rows it shows come first: the first one hidden ends them).
 local rowDone = weak()
 local function Row(row)
-	if not Usable(row) then return end
+	if not Usable(row) then return false end
 	if not rowDone[row] then
 		rowDone[row] = true
 		local hl = row.GetHighlightTexture and row:GetHighlightTexture()
@@ -166,26 +174,25 @@ local function Row(row)
 			PaintWash(hl)
 		end
 	end
-	if not row:IsShown() then return end
+	if not row:IsShown() then return false end
 	-- (Its header row, the first, is in GameFontNormalLarge: the value ink.)
 	local ink = row.lastFont == "GameFontNormalLarge" and "VALUE" or "LABEL"
-	for _, fs in ipairs({ row.Label, row.Summary }) do
-		if Kind(fs) == "FontString" then
-			RowFont(fs)
-			RowInk(fs, ink)
-		end
-	end
+	RowText(row.Label, ink)
+	RowText(row.Summary, ink)
+	return true
 end
 
--- Every row a window has made so far (rawget: its rows table makes a row on any other lookup).
+-- The rows a window shows (rawget: its rows table makes a row on any other lookup). It redraws
+-- often, shown or not: a hidden window's rows wait for the redraw that comes as it shows, and the
+-- rows past the last one it shows (kept from a longer list) for one that shows them.
 local function Rows(w)
-	local container = Usable(w) and w.Container
+	if not (Usable(w) and w:IsShown()) then return end
+	local container = w.Container
 	local rows = Usable(container) and container.rows
 	if type(rows) ~= "table" then return end
 	for i = 1, 1000 do
 		local row = rawget(rows, i)
-		if not row then break end
-		Row(row)
+		if not row or not Row(row) then break end
 	end
 end
 

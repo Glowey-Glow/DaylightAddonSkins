@@ -20,6 +20,10 @@ if not ns.ok then return end
 
 ns.Target("ForeverLevelingBiS", "Forever Leveling BiS", { window = true, text = true, font = "daylight" })
 
+-- Not loaded: nothing to look for (its windows, and the gear panel on DaylightUI's character
+-- window, never come), so no watches or hooks are left waiting for them.
+if not ns.AddonLoaded("ForeverLevelingBiS") then return end
+
 local KEY = "ForeverLevelingBiS"
 local abs = math.abs
 
@@ -30,6 +34,8 @@ local sessionModern
 local function Modern()
 	if sessionModern ~= nil then return sessionModern end
 	local db = _G.ForeverLevelingBiSDB
+	-- (No settings yet, a first install: its own default, the modern theme. The pack only runs
+	-- with the addon loaded: the check at the top.)
 	local theme = type(db) == "table" and type(db.display) == "table" and db.display.theme
 	local modern = theme == nil or theme == "modern"
 	if type(db) == "table" and IsLoggedIn() then sessionModern = modern end

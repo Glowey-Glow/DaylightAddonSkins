@@ -92,8 +92,12 @@ local ANSWER = { GUILD = true, PARTY = true, RAID = true, INSTANCE_CHAT = true }
 local secret = _G.issecretvalue
 
 local function Heard(prefix, text, channel)
-	if secret and (secret(prefix) or secret(text) or secret(channel)) then return end
-	if prefix ~= PREFIX or type(text) ~= "string" or not On() then return end
+	-- (Every addon's messages come here: the prefix first, so the rest are let go at once. A secret
+	-- one can't be compared, so that's asked of it before.)
+	if secret and secret(prefix) then return end
+	if prefix ~= PREFIX then return end
+	if secret and (secret(text) or secret(channel)) then return end
+	if type(text) ~= "string" or not On() then return end
 	local v = text:match("^V\t(%d+%.%d+%.%d+)$")
 	if not v then return end
 	if Newer(v, mine) then

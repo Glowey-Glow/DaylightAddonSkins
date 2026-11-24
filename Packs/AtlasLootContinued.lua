@@ -129,19 +129,38 @@ end
 local SKIP_KINDS = { Model = true, PlayerModel = true, DressUpModel = true, ModelScene = true, GameTooltip = true,
 	Cooldown = true }
 
+-- Whether a font file is the narrow number face (each path tested once: a handful come back on
+-- every walk).
+local narrow = {}
+local function Narrow(path)
+	local yes = narrow[path]
+	if yes == nil then
+		yes = string.find(string.upper(path), "ARIALN", 1, true) ~= nil
+		narrow[path] = yes
+	end
+	return yes
+end
+
 local function FontsAmong(...)
 	for i = 1, select("#", ...) do
 		local r = select(i, ...)
 		if Kind(r) == "FontString" then
 			local ok, path = pcall(r.GetFont, r)
-			if not (ok and type(path) == "string" and string.find(string.upper(path), "ARIALN", 1, true)) then
+			if not (ok and type(path) == "string" and Narrow(path)) then
 				ns.FollowFont(r, KEY)
 			end
 		end
 	end
 end
 
-local function Words(f, depth)
+local Words
+-- (The children as the game hands them back, taken once per frame: taking them again for each one
+-- grew with the square of their number.)
+local function WordsAmong(depth, ...)
+	for i = 1, select("#", ...) do Words((select(i, ...)), depth) end
+end
+
+Words = function(f, depth)
 	if depth > 8 or not Usable(f) or SKIP_KINDS[f:GetObjectType()] then return end
 	local Kit = ns.Kit
 	if f.GetRegions then
@@ -149,9 +168,7 @@ local function Words(f, depth)
 		if Kit then Kit.InkGameText(f) end
 	end
 	if f:GetObjectType() == "EditBox" and not ns.PlainText(KEY) then ns.FollowFont(f, KEY) end
-	if f.GetChildren then
-		for i = 1, select("#", f:GetChildren()) do Words((select(i, f:GetChildren())), depth + 1) end
-	end
+	if f.GetChildren then WordsAmong(depth + 1, f:GetChildren()) end
 end
 
 local function WordsIn(f)
@@ -610,13 +627,27 @@ local function SoundRows()
 	WordsIn(f)
 end
 
+-- A scroll or a click runs both its Refresh and the scroll bar's or button's own script, each of
+-- which repaints (a walk of the whole page's words): the first in a frame repaints at once, so the
+-- rows are dressed before they're drawn; any more in that frame are folded into one pass after it.
+local soundRowsAt
+local function SoundRowsSoon()
+	local now = GetTime()
+	if soundRowsAt ~= now then
+		soundRowsAt = now
+		Guard(SoundRows)
+	else
+		ns.Queue("AtlasLootSoundRows", SoundRows, KEY)
+	end
+end
+
 local function SoundPage()
 	local A = AL()
 	local S = A and A.GUI and A.GUI.SoundFrame
 	local f = S and S.frame
 	if not On() or NavMain() or not Usable(f) or not Once(f) then return end
 	ScrollBar(f.scrollbar)
-	local function again() Guard(SoundRows) end
+	local function again() SoundRowsSoon() end
 	for _, row in ipairs(f.buttons or {}) do
 		if Usable(row) and Usable(row.collapse) then row.collapse:HookScript("OnClick", again) end
 	end
@@ -887,7 +918,7 @@ local function FollowAll()
 	Hook(MF, "Create", function() Calm(ModelPage) end)
 	local SF = G.SoundFrame
 	Hook(SF, "Create", function() Calm(SoundPage) end)
-	Hook(SF, "Refresh", function() if SF.frame and dressed[SF.frame] then Guard(SoundRows) end end)
+	Hook(SF, "Refresh", function() if SF.frame and dressed[SF.frame] then SoundRowsSoon() end end)
 	-- Atlas Nav failing later (a refresh error) puts the classic window back: dressed then.
 	Hook(G.Nav, "Revert", MainNow)
 	local B = A.Button
