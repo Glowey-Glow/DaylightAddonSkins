@@ -33,6 +33,10 @@
 -- (DaylightUI's addon button drawer), the tab it adds to the game's Group Finder (DaylightUI's
 -- Group Finder hides that window; with it off the tab stays as the game draws its neighbors).
 -- The new-whisper flash on the Whispers tab stays.
+-- 2.6.0: Compact mode's toggle (the spellbook's page arrows) as DaylightUI's page button, its
+-- chevron turned the way it acts; its warning triangle stays. Every listing's details line (no
+-- longer only Quests & Zones) takes the text look as before; a whisper's Location link now shows
+-- the player's zone in place, in the same link inks.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -300,6 +304,8 @@ local function FitTabsSoon(fp)
 	end)
 end
 
+local Toggle
+
 local function Window(f, Kit)
 	local content = f.Content
 	if not Usable(content) or not ns.Once(f) then return end
@@ -338,6 +344,11 @@ local function Window(f, Kit)
 		FilterPanel(fp, Kit)
 		if Usable(fp.MyFiltersDropdown) then skip[fp.MyFiltersDropdown] = true end
 	end
+	-- (2.6.0) Compact mode's toggle: this pack's (Toggle), never the walk's.
+	if Usable(f.CompactToggle) then
+		skip[f.CompactToggle] = true
+		Toggle(f, Kit)
+	end
 	-- Every control of the game's templates inside, on every show (sections come and go). Its two
 	-- lists' rows are this pack's (rows = false): the walk's own row look would fight it.
 	if Controls() and ns.Walk then ns.Walk(Kit, f, { rows = false, skip = skip }, nil, nil, KEY) end
@@ -348,6 +359,31 @@ local function Window(f, Kit)
 		TextLook(f)
 		FitTabsSoon(fp)
 	end, KEY)
+end
+
+-- (2.6.0) Compact mode's toggle, left of the Filters tab (on the list's right edge in Compact
+-- mode): the spellbook's gold page arrows (window.lua:715-720), set again on every switch
+-- (LayOutToggle, window.lua:730-745). DaylightUI's page button in their place, its chevron pointing
+-- the way the toggle acts: left while the filters show (collapse), right while they're hidden
+-- (expand). Its warning triangle in Compact mode stays, as the sections' warnings do.
+Toggle = function(f, Kit)
+	local t = f.CompactToggle
+	local fp = f.Content and f.Content.FilterPanel
+	if Kind(t) ~= "Button" or not Usable(fp) or not Controls() then return end
+	local function Dir() return fp:IsShown() and "left" or "right" end
+	local chevron = Kit.PageButton(t, Dir())
+	if not chevron then return end
+	local function Follow()
+		if not On() then return end
+		for _, get in ipairs({ "GetNormalTexture", "GetPushedTexture" }) do
+			local tex = t[get] and t[get](t)
+			if IsTexture(tex) then Kit.Hide(tex) end
+		end
+		chevron:SetRotation(Kit.ROTATION[Dir()] or 0)
+	end
+	ns.HookOnce(t, "SetNormalTexture", Follow, KEY)
+	ns.HookOnce(t, "SetPushedTexture", Follow, KEY)
+	Follow()
 end
 
 -- The window as soon as it's there (built and shown in one call): from each way it opens, then a

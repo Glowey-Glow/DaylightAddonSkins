@@ -67,10 +67,8 @@ local function DaylightBusy()
 	return false
 end
 
-local function Ink(fs, role)
-	local c = ns.Colors()[role]
-	if type(c) == "table" then fs:SetTextColor(c[1], c[2], c[3]) end
-end
+-- (Core.lua: painted again whenever the look changes.)
+local Ink = ns.Ink
 
 local function Build()
 	frame = CreateFrame("Frame", "DaylightAddonSkinsChoices", UIParent)
@@ -89,7 +87,10 @@ local function Build()
 	-- (Up: the other Daylight plugins' guides wait.)
 	frame:HookScript("OnShow", function() SetBusy(true) end)
 	frame:HookScript("OnHide", function() SetBusy(false) end)
-	table.insert(UISpecialFrames, "DaylightAddonSkinsChoices")
+	-- Escape, sounds, fade and the controller (Core.lua ns.Window; the name is Escape's fallback),
+	-- at Daylight UI's global scale.
+	ns.Window(frame, "DaylightAddonSkinsChoices", 6)
+	ns.Scaled(frame, 1)
 
 	local title = API.Text(frame, "title", "LEFT")
 	title:SetPoint("TOPLEFT", PAD, -PAD)
@@ -105,7 +106,7 @@ local function Build()
 	Ink(sub, "TEXT")
 	frame.sub = sub
 
-	local close = API.Close(frame, function() frame:Hide() end)
+	local close = API.Close(frame, function() ns.CloseWindow(frame) end)
 	close:SetPoint("TOPRIGHT", -10, -10)
 
 	scroll = CreateFrame("ScrollFrame", nil, frame)
@@ -134,7 +135,7 @@ local function Build()
 			ns.Choose(r.addon, r.key, r.switch.on ~= true)
 			if r.reload then reload = true end
 		end
-		frame:Hide()
+		ns.CloseWindow(frame)
 		if reload then
 			print("|cffa335eeAddon Skins|r: " .. L["some of these take a /reload to finish (the ones marked so). Type /reload when it suits you."])
 		end
@@ -143,7 +144,7 @@ local function Build()
 	local later = API.Button(frame, L["Ask Me Later"], 26)
 	later:SetSize(150, 26)
 	later:SetPoint("BOTTOMRIGHT", -PAD, PAD)
-	later:SetScript("OnClick", function() frame:Hide() end)
+	later:SetScript("OnClick", function() ns.CloseWindow(frame) end)
 end
 
 local function Piece(kind)
@@ -196,7 +197,6 @@ function ns.ShowChoices(all)
 	end
 	wipe(rows)
 	local y, last = 0, nil
-	local r, g, b = API.Accent()
 	for _, c in ipairs(list) do
 		if c.addon ~= last then
 			last = c.addon
@@ -206,7 +206,7 @@ function ns.ShowChoices(all)
 			h:SetPoint("RIGHT", content, "RIGHT", 0, 0)
 			h.text:SetText(ns.targets[c.addon] or c.addon)
 			Ink(h.text, "LABEL")
-			h.line:SetColorTexture(r, g, b, 0.5)
+			ns.Tint(h.line, "pop", 0.5)
 			h:Show()
 			y = y + HEAD + 4
 		end
@@ -253,7 +253,7 @@ ns.me.On("Login", function()
 	local waited, freeSince, any = false, nil, nil
 	local function ask()
 		-- (Opened by hand meanwhile: the player is at it.)
-		if frame and frame:IsShown() then return end
+		if frame and ns.WindowShown(frame) then return end
 		-- (Read once here; ns.ShowChoices reads them again as it opens.)
 		if any == nil then any = #ns.Conflicts(false) > 0 end
 		if not any then return end

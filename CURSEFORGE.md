@@ -6,11 +6,10 @@ A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its 
 
 ---
 
-## New in 1.18.10
-- **Checked against Daylight UI 2.2.5** and today's releases of every supported addon. Addon Skins now sits under the DaylightUI Plugins heading in the AddOns list.
-- **Fixed for new versions:** High Fidelity World Map 1.4.14's cave window (its ground, opacity, depth slider and floor menu), LayerSwap 1.14.49's status lines measured in your font, and DoesItDie 0.10.0's scrolling option pages.
-- **New windows dressed:** Questie 12.13's settings search, LayerSwap's event box, OneForAll's Dungeon tracker, High Fidelity World Map's maximize / restore buttons.
-- **Dungeon Journal 2.1.4:** its new "Best done together with:" line keeps its warning color.
+## New in 1.18.11
+- **LFG Forever 2.6.0:** its new Compact mode arrow is a Daylight UI page button, its chevron turning the way it acts.
+- **Checked against today's releases:** ALL THE THINGS 5.4.18, AtlasLoot Continued 12997 and Shortest Path Forever 1.45.5 need nothing new.
+- **The choice window and the copy box** follow Daylight UI's look, scale and window feel.
 ---
 
 ## Addons it skins

@@ -1,5 +1,9 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.11
+- The choice window and the copy box follow Daylight UI's look, scale and window feel: their colors and the hover tips on the options pages change with your look, they open and close with Daylight UI's sounds and fade, Escape closes them, and they work with a controller.
+- LFG Forever 2.6.0: Compact mode's arrow (left of the Filters tab) is a Daylight UI page button, its chevron turning the way it acts. Checked against ALL THE THINGS 5.4.18, AtlasLoot Continued 12997 and Shortest Path Forever 1.45.5: nothing to change.
+
 ## 1.18.10
 - Checked against Daylight UI 2.2.5 (from 2.2.2: 2.2.3, 2.2.4 and 2.2.5). Nothing to change: dressed windows, tooltips, the bag marks and the overlap window work as before.
 - Sits under the DaylightUI Plugins heading in the AddOns list.

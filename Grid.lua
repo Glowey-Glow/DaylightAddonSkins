@@ -24,10 +24,8 @@ local function Set(key, on)
 	ns.Guard(function() DUI:Set(ADDON, key, on and true or false) end)
 end
 
-local function Ink(fs, role, alpha)
-	local c = ns.Colors()[role]
-	if type(c) == "table" then fs:SetTextColor(c[1], c[2], c[3], alpha or 1) end
-end
+-- (Core.lua: painted again whenever the look changes.)
+local Ink = ns.Ink
 
 local function Width(fs, text)
 	local w = fs.GetUnboundedStringWidth and fs:GetUnboundedStringWidth() or fs:GetStringWidth()
@@ -55,8 +53,15 @@ end
 local box
 local REPORT_H = 240
 
+-- (Core.lua ns.CloseWindow: faded out with Daylight UI's close sound when it wired the box.)
+local function CloseBox()
+	if box.input then box.input:ClearFocus() end
+	if box.text then box.text:ClearFocus() end
+	ns.CloseWindow(box)
+end
+
 local function CopiedSoon(_, key)
-	if key == "C" and IsControlKeyDown() then C_Timer.After(0.1, function() box:Hide() end) end
+	if key == "C" and IsControlKeyDown() then C_Timer.After(0.1, CloseBox) end
 end
 
 local function Box()
@@ -73,19 +78,22 @@ local function Box()
 	box:SetScript("OnDragStart", box.StartMoving)
 	box:SetScript("OnDragStop", box.StopMovingOrSizing)
 	API.Skin(box, { window = true })
-	table.insert(UISpecialFrames, "DaylightAddonSkinsLink")
+	-- Escape, sounds, fade and the controller (Core.lua ns.Window; the name is Escape's fallback),
+	-- at Daylight UI's global scale.
+	ns.Window(box, "DaylightAddonSkinsLink", 6)
+	ns.Scaled(box, 1)
 	box.title = API.Text(box, "head", "LEFT")
 	box.title:SetPoint("TOPLEFT", PAD, -PAD)
 	box.title:SetPoint("RIGHT", box, "RIGHT", -40, 0)
 	box.sub = API.Text(box, "body", "LEFT")
 	box.sub:SetPoint("TOPLEFT", box.title, "BOTTOMLEFT", 0, -8)
 	box.sub:SetPoint("RIGHT", box, "RIGHT", -PAD, 0)
-	local close = API.Close(box, function() box:Hide() end)
+	local close = API.Close(box, CloseBox)
 	close:SetPoint("TOPRIGHT", -10, -10)
 	box.input = API.Input(box, { height = 28 })
 	box.input:SetPoint("BOTTOMLEFT", PAD, PAD)
 	box.input:SetPoint("BOTTOMRIGHT", -PAD, PAD)
-	box.input:HookScript("OnEscapePressed", function() box:Hide() end)
+	box.input:HookScript("OnEscapePressed", CloseBox)
 	box.input:HookScript("OnKeyDown", CopiedSoon)
 
 	-- The report: many lines, in a dark well that scrolls.
@@ -104,7 +112,7 @@ local function Box()
 	text:SetAutoFocus(false)
 	text:SetFont(API.Font(), 12, "")
 	text:SetWidth(400)
-	text:SetScript("OnEscapePressed", function() box:Hide() end)
+	text:SetScript("OnEscapePressed", CloseBox)
 	text:SetScript("OnKeyDown", CopiedSoon)
 	-- (Read only: whatever is typed, the report comes back, all of it picked.)
 	text:SetScript("OnTextChanged", function(self, user)
@@ -227,22 +235,21 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 local function Tip(owner, item)
-	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
-	GameTooltip:SetText(item.label, 1, 1, 1)
-	if item.tip then GameTooltip:AddLine(item.tip, nil, nil, nil, true) end
-	-- A pack off after an error: what it was, and when it's tried again.
-	local rec = ns.Failed(item.key)
-	if rec then
-		local w = ns.Colors().WARN or { 1, 0.6, 0.2 }
-		GameTooltip:AddLine(L["This skin hit an error and is off for now:"], w[1], w[2], w[3], true)
-		GameTooltip:AddLine(rec.err, 1, 1, 1, true)
-		GameTooltip:AddLine(ns.RetryWhen(item.key), nil, nil, nil, true)
-		GameTooltip:AddLine(L["Right-click to try it again after a reload."], 0.6, 0.6, 0.6, true)
-	elseif item.notHere then
-		GameTooltip:AddLine(L["Not enabled on this character."], 0.6, 0.6, 0.6, true)
-	end
-	GameTooltip:AddLine(L["Takes hold after a reload."], 0.6, 0.6, 0.6, true)
-	GameTooltip:Show()
+	ns.TipLines(owner, function(t)
+		t.Line(item.label, "TITLE")
+		if item.tip then t.Line(item.tip, "TEXT", true) end
+		-- A pack off after an error: what it was, and when it's tried again.
+		local rec = ns.Failed(item.key)
+		if rec then
+			t.Line(L["This skin hit an error and is off for now:"], "WARN", true)
+			t.Line(rec.err, "VALUE", true)
+			t.Line(ns.RetryWhen(item.key), "TEXT", true)
+			t.Line(L["Right-click to try it again after a reload."], "pop", true)
+		elseif item.notHere then
+			t.Line(L["Not enabled on this character."], "OFF", true)
+		end
+		t.Line(L["Takes hold after a reload."], "LABEL", true)
+	end)
 end
 
 local function PaintCell(c)
@@ -254,13 +261,13 @@ local function PaintCell(c)
 		Ink(c.name, c.item.missing and "TEXT" or "VALUE", c.item.missing and 0.55 or 1)
 	end
 	if c.link then
-		local r, g, b = API.Accent()
 		if c.link.hot then
+			ns.Untrack(c.link.text)
 			c.link.text:SetTextColor(1, 1, 1)
 		else
-			c.link.text:SetTextColor(r, g, b)
+			Ink(c.link.text, "pop")
 		end
-		c.link.line:SetColorTexture(r, g, b, 0.8)
+		ns.Tint(c.link.line, "pop", 0.8)
 	end
 end
 
@@ -312,10 +319,7 @@ local function MakeCell(row, item)
 			self.hot = true
 			self.line:Show()
 			PaintCell(c)
-			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-			GameTooltip:SetText(item.label, 1, 1, 1)
-			GameTooltip:AddLine(L["Not installed. Click to copy its CurseForge link."], nil, nil, nil, true)
-			GameTooltip:Show()
+			ns.Tip(self, item.label, L["Not installed. Click to copy its CurseForge link."])
 		end)
 		link:SetScript("OnLeave", function(self)
 			self.hot = false
@@ -457,8 +461,7 @@ function ns.LookList(addons)
 		c.switch.SetOn(ok and v == true)
 		local picked = Picked({ ns.lookPickDefault })
 		if c.entry.addon == picked then
-			local r, g, b = API.Accent()
-			c.name:SetTextColor(r, g, b)
+			Ink(c.name, "pop")
 		elseif c.hot then
 			Ink(c.name, "VALUE")
 		else
@@ -481,10 +484,8 @@ function ns.LookList(addons)
 				Paint(c)
 			end)
 			c.switch:HookScript("OnEnter", function(self)
-				GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-				GameTooltip:SetText(string.format(L["Custom Settings for %s"], e.label), 1, 1, 1)
-				GameTooltip:AddLine(L["On: this addon uses the settings on this page. Off: it follows Daylight UI."], nil, nil, nil, true)
-				GameTooltip:Show()
+				ns.Tip(self, string.format(L["Custom Settings for %s"], e.label),
+					L["On: this addon uses the settings on this page. Off: it follows Daylight UI."])
 			end)
 			c.switch:HookScript("OnLeave", function() GameTooltip:Hide() end)
 			local pick = CreateFrame("Button", nil, c)
@@ -500,7 +501,9 @@ function ns.LookList(addons)
 			pick:SetScript("OnEnter", function() c.hot = true; Paint(c) end)
 			pick:SetScript("OnLeave", function() c.hot = false; Paint(c) end)
 			pick:SetScript("OnClick", function()
-				if DUI.Sound then pcall(DUI.Sound.Play, "click") end
+				-- (DaylightUI.Sound.Play isn't in API.md: DaylightUI/Sound.lua:158-180, so checked.)
+				local sound = type(DUI.Sound) == "table" and DUI.Sound.Play
+				if type(sound) == "function" then pcall(sound, "click") end
 				ns.Guard(function() DUI:Set(ADDON, ns.LOOK_PICK, e.addon) end)
 				for _, other in ipairs(cells) do Paint(other) end
 			end)
@@ -546,7 +549,20 @@ local LOOK_ROWS = {
 	{ "Daylight UI Windows", { "windowAlpha", "windowTint", "windowTintColor", "borderPx", "borderAlpha" } },
 }
 
-local function GeneralGet(key) return DUI:Get("general", key) end
+-- Read through API.GetSetting (public); DUI:Get / DUI:Set aren't in API.md (DaylightUI/Core.lua:814,
+-- :915), so they're checked and pcall'd. There is no public setter for "general": no DUI:Set, no change.
+local function GeneralGet(key)
+	local ok, v = pcall(API.GetSetting, "general", key)
+	if ok then return v end
+	if type(DUI.Get) ~= "function" then return nil end
+	ok, v = pcall(DUI.Get, DUI, "general", key)
+	if ok then return v end
+	return nil
+end
+
+local function GeneralSet(key, v)
+	if type(DUI.Set) == "function" then pcall(DUI.Set, DUI, "general", key, v) end
+end
 
 -- A copy of one of DaylightUI's rows, on DaylightUI's "general" settings instead of ours.
 local function Borrow(item)
@@ -555,8 +571,8 @@ local function Borrow(item)
 	local key = item.key
 	copy.key, copy.since = nil, nil
 	copy.noSearch = true   -- (found on DaylightUI's own page)
-	copy.get = function() return DUI:Get("general", key) end
-	copy.set = function(v) DUI:Set("general", key, v) end
+	copy.get = function() return GeneralGet(key) end
+	copy.set = function(v) GeneralSet(key, v) end
 	-- (No default: "Reset page" on our page must never reset DaylightUI's own look.)
 	-- (Its own rules read DaylightUI's settings, not ours.)
 	for _, name in ipairs({ "disabled", "hidden" }) do

@@ -1,7 +1,7 @@
 -- ALL THE THINGS (folder "AllTheThings"): its list windows, its text dialog, its tabs on the auction
 -- house and the profession window and the box beside its tooltips in the Daylight UI look.
 -- Presentation only: nothing of its data, filters, rows' order or settings is changed (but for the
--- one hand-over below). Built against ALL THE THINGS 5.4.14, checked again for 5.4.15 (the Forever build: AllTheThings.toc,
+-- one hand-over below). Built against ALL THE THINGS 5.4.14, checked again for 5.4.18 (the Forever build: AllTheThings.toc,
 -- src/UI/Window Definitions.lua, src/base.lua, src/UI/Game Tooltip.lua, src/UI/Windows/Auctions.lua,
 -- src/UI/Windows/Retail/Tradeskills.lua, src/Settings).
 --

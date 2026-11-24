@@ -1655,6 +1655,186 @@ me.On("SettingChanged", function(scope, path)
 	end
 end)
 
+-- ---------------------------------------------------------------------------------------------
+-- This plugin's own windows (the choice window, the copy box) and texts in Daylight UI's look
+-- ---------------------------------------------------------------------------------------------
+-- Roles: an ink of API.Colors() (TITLE VALUE TEXT LABEL OFF GOOD WARN BAD DAMAGE MONEY,
+-- DaylightUI/API.lua:1066-1074), or "pop" for the accent (API.Accent).
+do
+	local inks = setmetatable({}, { __mode = "k" })     -- region -> { role, alpha, how }
+	local scaled = setmetatable({}, { __mode = "k" })   -- frame -> its own scale (number or function)
+
+	local function RoleColor(role, inkSet)
+		if role == "pop" then
+			local ok, r, g, b = pcall(API.Accent)
+			if ok and type(r) == "number" then return r, g or r, b or r end
+			return 1, 1, 1
+		end
+		local c = type(inkSet) == "table" and (inkSet[role] or inkSet.TEXT)
+		if type(c) == "table" then return c[1] or 1, c[2] or 1, c[3] or 1 end
+		return 1, 1, 1
+	end
+
+	local function Paint(region, e, inkSet)
+		local r, g, b = RoleColor(e.role, inkSet)
+		local a = e.alpha or 1
+		if e.how == "text" then region:SetTextColor(r, g, b, a)
+		elseif e.how == "vertex" then region:SetVertexColor(r, g, b, a)
+		else region:SetColorTexture(r, g, b, a) end
+	end
+
+	local function Track(region, e)
+		inks[region] = e
+		pcall(Paint, region, e, ns.Colors())
+	end
+
+	-- A font string in a role's color, now and after every look change. Again on the same one: a
+	-- new role. ns.Untrack(region) before coloring it by hand.
+	function ns.Ink(fs, role, alpha)
+		if type(fs) ~= "table" or type(fs.SetTextColor) ~= "function" then return end
+		Track(fs, { role = role or "TEXT", alpha = alpha, how = "text" })
+	end
+	-- A texture the same way (SetColorTexture; vertex: SetVertexColor, for one with its own art).
+	function ns.Tint(tex, role, alpha, vertex)
+		if type(tex) ~= "table" or type(tex.SetVertexColor) ~= "function" then return end
+		Track(tex, { role = role or "TEXT", alpha = alpha, how = vertex and "vertex" or "color" })
+	end
+	function ns.Untrack(region) if region then inks[region] = nil end end
+
+	-- Hover tips in Daylight UI's tooltip roles (DaylightUI/Tips.lua:1-15): the title in TITLE, the
+	-- text in TEXT, a click hint in the accent. fn(t) for longer ones: t.Line(text, role, wrap).
+	function ns.TipLines(owner, fn, anchor)
+		local tip = GameTooltip
+		if not tip or type(owner) ~= "table" or type(fn) ~= "function" then return end
+		tip:SetOwner(owner, anchor or "ANCHOR_RIGHT")
+		local inkSet = ns.Colors()
+		local t = {}
+		function t.Line(text, role, wrap)
+			local r, g, b = RoleColor(role or "TEXT", inkSet)
+			tip:AddLine(tostring(text or ""), r, g, b, wrap and true or false)
+		end
+		Guard(fn, t)
+		tip:Show()
+	end
+	function ns.Tip(owner, title, text, hint, anchor)
+		ns.TipLines(owner, function(t)
+			if title then t.Line(title, "TITLE") end
+			if text then t.Line(text, "TEXT", true) end
+			if hint then t.Line(hint, "pop", true) end
+		end, anchor)
+	end
+
+	-- Daylight UI's global scale (general.scale, "every DaylightUI frame and window",
+	-- DaylightUI/DB.lua:43) times a window's own. Only for windows that float free: one docked to a
+	-- Daylight UI or game frame has that frame's scale already.
+	local function GlobalScale()
+		local ok, v = pcall(API.GetSetting, "general", "scale")
+		return ok and type(v) == "number" and v > 0 and v or 1
+	end
+	function ns.Scale(own) return (tonumber(own) or 1) * GlobalScale() end
+	local function ApplyScale(frame, own)
+		if type(own) == "function" then
+			local ok, v = pcall(own)
+			own = ok and v or 1
+		end
+		if InCombatLockdown() and frame:IsProtected() then return end
+		local s = ns.Scale(own)
+		if math.abs((frame:GetScale() or 1) - s) > 0.001 then frame:SetScale(s) end
+	end
+	-- A free-floating window at its own scale times Daylight UI's, now and whenever either changes.
+	function ns.Scaled(frame, own)
+		if type(frame) ~= "table" or type(frame.SetScale) ~= "function" then return end
+		scaled[frame] = own or 1
+		pcall(ApplyScale, frame, scaled[frame])
+	end
+
+	local function Restyle()
+		local ok, inkSet = pcall(API.Colors)
+		if ok and type(inkSet) == "table" then
+			for region, e in pairs(inks) do pcall(Paint, region, e, inkSet) end
+		end
+		for frame, own in pairs(scaled) do pcall(ApplyScale, frame, own) end
+	end
+	me.On("StyleChanged", Restyle)
+	me.On("Login", Restyle)
+	me.On("SettingChanged", function(scope, path)
+		if scope == "general" and path == "scale" then
+			for frame, own in pairs(scaled) do pcall(ApplyScale, frame, own) end
+		end
+	end)
+
+	-- Escape, the open and close sounds, the appear fade and the controller (B closes) in one:
+	-- Daylight UI's own window wiring, DaylightUI.Motion.Window (DaylightUI/Motion.lua:203-238;
+	-- Escape through a stand-in in UISpecialFrames, DUI.Pad.Follow at :225). It's not in API.md:
+	-- only from Daylight UI 2.2.5, where it was read, only after a type check, and pcall'd.
+	local newEnough
+	local function NewEnough()
+		if newEnough ~= nil then return newEnough end
+		local get = A and A.GetAddOnMetadata
+		local ok, v = false, nil
+		if type(get) == "function" then ok, v = pcall(get, "DaylightUI", "Version") end
+		local have = {}
+		if ok and type(v) == "string" then for n in v:gmatch("%d+") do have[#have + 1] = tonumber(n) end end
+		-- (No numbers: a copy from source, which counts as the newest.)
+		newEnough = true
+		local want = { 2, 2, 5 }
+		if #have > 0 then
+			for i = 1, #want do
+				local h = have[i] or 0
+				if h ~= want[i] then
+					newEnough = h > want[i]
+					break
+				end
+			end
+		end
+		return newEnough
+	end
+	local function Inside(name, ...)
+		if not NewEnough() then return nil end
+		local t = rawget(DUI, name)
+		if type(t) ~= "table" then return nil end
+		for i = 1, select("#", ...) do
+			if type(t[select(i, ...)]) ~= "function" then return nil end
+		end
+		return t
+	end
+
+	-- Once per window. escName: the window's own name for UISpecialFrames, used only when
+	-- Motion.Window can't wire it. DUI.Pad.Follow is not safe to call twice on a frame
+	-- (DaylightUI/Pad.lua:1093-1104 hooks OnShow / OnHide each time): followed frames are marked.
+	function ns.Window(frame, escName, rise)
+		if type(frame) ~= "table" or frame.__gloweyWin then return end
+		local M = not frame.__gloweyFollowed and Inside("Motion", "Window", "Vanish", "Shown")
+		if M and pcall(M.Window, frame, rise or 6, false) then
+			frame.__gloweyWin = "motion"
+			frame.__gloweyFollowed = true
+			return
+		end
+		frame.__gloweyWin = "own"
+		if escName and type(UISpecialFrames) == "table" then table.insert(UISpecialFrames, escName) end
+		-- (A Motion.Window that broke part way may have followed it already: __duiWired.)
+		local P = not frame.__gloweyFollowed and not frame.__duiWired and Inside("Pad", "Follow")
+		if P and pcall(P.Follow, frame, function() frame:Hide() end) then frame.__gloweyFollowed = true end
+	end
+	-- Closes it: faded out with Daylight UI's close sound when wired so, else hidden.
+	function ns.CloseWindow(frame)
+		if type(frame) ~= "table" then return end
+		local M = frame.__gloweyWin == "motion" and Inside("Motion", "Vanish")
+		if M and pcall(M.Vanish, frame) then return end
+		frame:Hide()
+	end
+	-- Shown and not on its way out (a toggle's test).
+	function ns.WindowShown(frame)
+		if type(frame) ~= "table" or not frame:IsShown() then return false end
+		local M = frame.__gloweyWin == "motion" and Inside("Motion", "Shown")
+		if M then
+			local ok, v = pcall(M.Shown, frame)
+			if ok then return v and true or false end
+		end
+		return true
+	end
+end
+
 -- A flat one-pixel backdrop (the usual WHITE8X8 box) turned into a quiet darker well.
 function ns.Soften(frame, alpha)
 	if not Usable(frame) or not frame.GetBackdrop or not frame:GetBackdrop() then return end

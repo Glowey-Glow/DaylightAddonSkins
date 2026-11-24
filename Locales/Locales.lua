@@ -12,8 +12,23 @@
 -- differs). Saved things stay English: setting keys, dropdown keys, slash words, addon names.
 local _, ns = ...
 
-local LOCALE = GetLocale and GetLocale() or "enUS"
-if LOCALE == "esMX" then LOCALE = "esES" end
+-- The language of the plugin's text: Daylight UI's own pick (its Home > Language, since 2.2.5), on
+-- from its ADDON_LOADED, which comes before this plugin loads (DaylightUI/Locales/Locales.lua:16-20,
+-- Core.lua:984-992); its saved pick should it not be on yet; else the game's. enGB reads enUS, esMX
+-- esES. The game's own words (GAME below) stay in the game's language.
+local CLIENT = GetLocale and GetLocale() or "enUS"
+local FOLD = { enGB = "enUS", esMX = "esES" }
+local HAVE = { enUS = true, deDE = true, esES = true, frFR = true, ruRU = true, koKR = true, zhCN = true }
+local LOCALE
+do
+	local D = rawget(_G, "DaylightUI")
+	local pick = type(D) == "table" and D.LOCALE or nil
+	local db = rawget(_G, "DaylightUIDB")
+	local saved = type(db) == "table" and db.language
+	if type(saved) == "string" and saved ~= "auto" and type(D) == "table" and pick == D.CLIENT_LOCALE then pick = saved end
+	pick = type(pick) == "string" and (FOLD[pick] or pick) or nil
+	LOCALE = (pick and HAVE[pick]) and pick or (FOLD[CLIENT] or CLIENT)
+end
 ns.LOCALE = LOCALE
 
 -- DaylightUI's translation of `key`, or nil (its table answers a miss with the key itself; rawget
@@ -33,7 +48,8 @@ end
 -- global. English clients keep ours. Left out on purpose: same words in another sense (Guide,
 -- Controls, Border, Appearance, Hostile NPCs), and Friendly NPCs, whose game word would not match
 -- its Hostile and Neutral neighbors.
-local ENGLISH = LOCALE:sub(1, 2) == "en"
+-- (Not on an English game, nor for text picked in another language than the game's.)
+local ENGLISH = CLIENT:sub(1, 2) == "en" or LOCALE ~= (FOLD[CLIENT] or CLIENT)
 local GAME = {
 	["%s, %s"] = "LIST_DELIMITER",
 	["Always"] = "ALWAYS",

@@ -260,12 +260,7 @@ local function HeadButton(row, text, func, tip)
 	b:SetSize(math.max(96, w + 28), 24)
 	b:SetScript("OnClick", func)
 	if tip then
-		b:HookScript("OnEnter", function(self)
-			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-			GameTooltip:SetText(text, 1, 1, 1)
-			GameTooltip:AddLine(tip, nil, nil, nil, true)
-			GameTooltip:Show()
-		end)
+		b:HookScript("OnEnter", function(self) ns.Tip(self, text, tip) end)
 		b:HookScript("OnLeave", function() GameTooltip:Hide() end)
 	end
 	return b
