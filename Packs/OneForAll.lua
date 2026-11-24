@@ -1,7 +1,9 @@
 -- OneForAll: its main window and every popup (confirmations, bug report, Discord, craft list,
 -- trainer list, low ranks, quest chain, weight editor, profiles, talent code, Library Books,
 -- welcome, what's new, nearby alerts, copy chat, bags full, flight timer, the world map menu,
--- the dropdown menu, and since 6.2.12 Guild Games with its invite and "your turn" popups). It draws them all through two helpers of its kit (OneForAll.UI.FramedPanel:
+-- the dropdown menu, since 6.2.12 Guild Games with its invite and "your turn" popups, and since 6.2.14 the dungeon
+-- tracker, OneForAllRunTracker, with its wing, settings and loot popups; its own Opacity slider then has no say over
+-- DaylightUI's shell). It draws them all through two helpers of its kit (OneForAll.UI.FramedPanel:
 -- the dark rounded ground and its line; OneForAll.UI.WindowFrame: the gold ring and corner
 -- glows), so those two are followed here and what they drew is swapped for DaylightUI's shell.
 -- The main window draws its own ground (decorateWindow, kept private): found by name.
@@ -347,7 +349,8 @@ local RELOAD = { reload = true }
 
 -- (From an audit of OneForAll 6.2.10 against every DaylightUI module, checked again for 6.2.11 and
 -- 6.2.12: its new junk list key, gray map quests, walking routes and Guild Games have no
--- DaylightUI twin. 6.2.13: its per-service gossip skips, below. Left out: its NPC tooltip quests, which turn themselves off while Questie is loaded; its chat font size, which has no
+-- DaylightUI twin. 6.2.13: its per-service gossip skips, below. 6.2.14-6.2.16: its dungeon tracker and own window
+-- colors have none either. Left out: its NPC tooltip quests, which turn themselves off while Questie is loaded; its chat font size, which has no
 -- off to give back.)
 ns.Handover(KEY, {
 	ready = function() return type(_G.OneForAllDB) == "table" end,

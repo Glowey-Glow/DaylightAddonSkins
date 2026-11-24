@@ -6,7 +6,8 @@
 -- Dressed here: its current settings window (QuestieStandaloneSettings: shell, side tabs with
 -- DaylightUI's hover wash and the accent outline following each click, the controls on each tab
 -- including the play-sound buttons, the color swatches and the gold rules, each tab's scroll bar
--- even when its canvas is built over several frames), before Questie 12.12 its right-click menus
+-- even when its canvas is built over several frames, and from 12.13 its Search box, label and
+-- "No matching options" line, each tab built again as you type), before Questie 12.12 its right-click menus
 -- (LibUIDropDownMenu's lists: the tracker menu, Townsfolk; their rows' hover, radio and check marks,
 -- expand arrows and color swatches; from 12.12 they are the game's own menus, which DaylightUI's
 -- window skins dress as they do every game menu), its own popups (QuestiePopup, not the game's StaticPopup: shell, buttons, edit
@@ -254,22 +255,38 @@ local function DressControl(Kit, control)
 end
 
 -- One canvas's own pieces, in either window: its scroll bar (<canvas>_ScrollScrollBar), the big
--- gold title ("Questie • Icon Options") and the gold rule under its header. All are made before
--- its first control, so they are there by the pass after it.
+-- gold title ("Questie • Icon Options"; gone from 12.13, which keeps only the subtitle) and the
+-- gold rule under its header. All are made before its first control, so they are there by the
+-- pass after it.
+-- From 12.13 a tab is built on a hidden frame of its own (canvas.pendingContent) and swapped in
+-- as canvas.content only once the build is done (QuestieOptionsEngine.lua:325-393), and its
+-- window's search builds every shown tab again, scroll bar and all, on each letter typed
+-- (SetSearchText, :547). So the frame being built is looked over too, and true is returned while
+-- one is still being built: the caller looks again on the next frame, until the finished one is
+-- in place (with its "No matching options" line, canvas.noResults, :366-370, made then).
 local function CanvasChrome(Kit, canvas, controls)
 	if not ns.Usable(canvas) then return end
 	local name = canvas:GetName()
+	-- (A rebuild makes the bar again under the same name: the global is always the newest.)
 	local bar = name and _G[name .. "_ScrollScrollBar"]
 	if controls and ns.Usable(bar) and ns.Once(bar) then ns.Guard(Kit.ScrollBar, bar) end
-	local content = canvas.content
-	if not ns.Usable(content) then return end
-	Hairlines(content:GetRegions())
-	for _, region in ipairs({ content:GetRegions() }) do
-		if region:GetObjectType() == "FontString" then
-			if region:GetFontObject() == _G.GameFontNormalHuge then Ink(region, "VALUE") end
-			ns.FollowFont(region, KEY)
+	for _, content in ipairs({ canvas.content or false, canvas.pendingContent or false }) do
+		if ns.Usable(content) then
+			Hairlines(content:GetRegions())
+			for _, region in ipairs({ content:GetRegions() }) do
+				if region:GetObjectType() == "FontString" then
+					if region:GetFontObject() == _G.GameFontNormalHuge then Ink(region, "VALUE") end
+					ns.FollowFont(region, KEY)
+				end
+			end
 		end
 	end
+	local none = canvas.noResults
+	if ns.Usable(none) and ns.Once(none) then
+		Ink(none, "TEXT")
+		ns.FollowFont(none, KEY)
+	end
+	return ns.Usable(canvas.pendingContent) and canvas:IsVisible() or false
 end
 
 -- Its pages in the game's Settings window: each is built, a few rows a frame, the first time it is
@@ -280,9 +297,19 @@ local function BlizzPass()
 	local Kit = ns.Kit
 	if not Kit or not ns.Enabled(KEY) then wipe(blizzPending) return end
 	local controls = ns.Controls(KEY)
+	local again
 	for canvas in pairs(blizzPending) do
 		blizzPending[canvas] = nil
-		ns.Guard(CanvasChrome, Kit, canvas, controls)
+		-- (Still being built, 12.13: looked at again next frame, once it's in place.)
+		local ok, building = ns.Guard(CanvasChrome, Kit, canvas, controls)
+		if ok and building then
+			again = again or {}
+			again[#again + 1] = canvas
+		end
+	end
+	if again then
+		for _, canvas in ipairs(again) do blizzPending[canvas] = true end
+		ns.Queue("Questie:blizzPages", BlizzPass, KEY)
 	end
 end
 local function QueueBlizz(canvas)
@@ -339,7 +366,9 @@ ns.Watch(KEY, "QuestieStandaloneSettings", function(frame, Kit)
 	ns.Guard(Kit.Window, frame)
 	local controls = ns.Controls(KEY)
 	-- Side tabs, and each tab's scroll bar (QuestieOptionsTab_Popup_<tab>_ScrollScrollBar).
+	local building = false
 	local function tabs()
+		building = false
 		for _, child in ipairs({ frame:GetChildren() }) do
 			if ns.Usable(child) and child.Background and child.Selected and child.Icon then
 				if ns.Once(child) then
@@ -366,9 +395,17 @@ ns.Watch(KEY, "QuestieStandaloneSettings", function(frame, Kit)
 				-- The tab's canvas: its scroll bar, big gold title and the gold rule under its header.
 				local key = string.match(child:GetName() or "", "_Tab_(.+)$")
 				local canvas = key and _G["QuestieOptionsTab_Popup_" .. key]
-				if canvas then CanvasChrome(Kit, canvas, controls) end
+				if canvas and CanvasChrome(Kit, canvas, controls) then building = true end
 			end
 		end
+		-- Its search (12.13, QuestieOptionsWindow.lua:28-52): a "Search" label in the game's gold
+		-- (set once, as it's made) and an InputBoxTemplate box, both on the window itself. The box
+		-- is dressed by the walk on every show (a template box); its words and the label's here.
+		local label, box = frame.searchLabel, frame.searchBox
+		if ns.Usable(label) and ns.Once(label) then Ink(label, "LABEL") end
+		if ns.Usable(label) then ns.FollowFont(label, KEY) end
+		if ns.Usable(box) then ns.FollowFont(box, KEY) end
+		if building and QueueTabs then QueueTabs() end
 	end
 	-- (fonts: its title, tab names and page words, followed on every show.)
 	ns.DressOnShow(frame, { fonts = true }, tabs)

@@ -11,7 +11,8 @@
 --     nine-slice border, the header plate and the tiled dialog ground): border and plate off, the
 --     window shell instead (DaylightUI's Ace3 look already gave it one; this pack adds one if not),
 --     the area name on the left of the title row in the value ink (HFWM sets its font and spot
---     again each time it shows a cave: put back each time), the X DaylightUI's, the window's ground
+--     again each time it shows a cave: put back each time), the X DaylightUI's, its maximize /
+--     restore pair (1.4.14) DaylightUI's bare chevrons, as on the world map, the window's ground
 --     following HFWM's "Cave map opacity" (it was the dialog ground's). Its depth slider (a vertical
 --     slider on the SliderBar backdrop with the scroll bar knob) as DaylightUI's slider; the height
 --     window on it (the knob stretched, with two edge grips) as a bar in the scroll thumb's colors,
@@ -371,7 +372,17 @@ local function Sweep(f)
 	end
 	for i = 1, select("#", f:GetChildren()) do
 		local col = select(i, f:GetChildren())
-		if Kind(col) == "Frame" then
+		-- 1.4.14's maximize / restore pair left of the X (MaximizeMinimizeButtonFrameTemplate,
+		-- CaveRenderer.lua:1854): bare chevrons, as DaylightUI dresses the world map's own pair.
+		if Kind(col) == "Frame" and Kind(col.MaximizeButton) == "Button" and Kind(col.MinimizeButton) == "Button" then
+			if not seen[col] then
+				seen[col] = true
+				if Controls() then
+					Guard(Kit.BareButton, col.MaximizeButton, "up")
+					Guard(Kit.BareButton, col.MinimizeButton, "down")
+				end
+			end
+		elseif Kind(col) == "Frame" then
 			for j = 1, select("#", col:GetChildren()) do
 				local c = select(j, col:GetChildren())
 				local kind = Kind(c)
@@ -391,6 +402,43 @@ local function Sweep(f)
 			if not dropBase[text] then dropBase[text] = select(2, text:GetFont()) end
 			Fit(text, text:GetWidth(), dropBase[text])
 		end
+	end
+end
+
+-- The dialog ground: gone, its alpha (the cave map opacity) put on the shell's ground. HFWM sets
+-- that alpha at the end of every cave it shows, after making what the cave needs. Up to 1.4.13 it
+-- was a texture of the window itself; since 1.4.14 it's one of the art's viewport (`content`, a
+-- frame of the window made after the window's first dress: CaveRenderer.lua:409 LayoutDialogFill,
+-- CaveRenderer.lua:1888), so it's looked for on the window and its frames on every cave shown
+-- until found.
+local caveGround = setmetatable({}, { __mode = "k" })   -- window -> its dialog ground, hooked
+
+local function GroundIn(f, Kit, ...)
+	for i = 1, select("#", ...) do
+		local r = select(i, ...)
+		if IsTexture(r) and FileKind(r) == "ground" then
+			caveGround[f] = r
+			local alpha = r:GetAlpha()
+			Kit.Erase(r)
+			Ground(f, alpha)
+			hooksecurefunc(r, "SetAlpha", function(_, a)
+				if not On() then return end
+				Ground(f, a)
+				Guard(Sweep, f)
+			end)
+			return true
+		end
+	end
+	return false
+end
+
+local function CaveGround(f)
+	local Kit = ns.Kit
+	if caveGround[f] or not Kit then return end
+	if GroundIn(f, Kit, f:GetRegions()) then return end
+	for i = 1, select("#", f:GetChildren()) do
+		local c = select(i, f:GetChildren())
+		if Kind(c) == "Frame" and GroundIn(f, Kit, c:GetRegions()) then return end
 	end
 end
 
@@ -431,23 +479,8 @@ local function Cave(w)
 			Guard(Kit.Title, f, title)
 			titleBusy = false
 		end
-		-- The dialog ground: gone, its alpha (the cave map opacity) put on the shell's ground. HFWM
-		-- sets that alpha at the end of every cave it shows, after making what the cave needs.
-		for i = 1, select("#", f:GetRegions()) do
-			local r = select(i, f:GetRegions())
-			if IsTexture(r) and FileKind(r) == "ground" then
-				local alpha = r:GetAlpha()
-				Kit.Erase(r)
-				Ground(f, alpha)
-				hooksecurefunc(r, "SetAlpha", function(_, a)
-					if not On() then return end
-					Ground(f, a)
-					Guard(Sweep, f)
-				end)
-				break
-			end
-		end
 	end
+	CaveGround(f)
 	titleBusy = true
 	Words(title, "VALUE")
 	-- A long area name in a narrow cave window: a size or two smaller, never cut off.

@@ -6,12 +6,11 @@ A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its 
 
 ---
 
-## New in 1.18.9
-- **Checked against Daylight UI 2.2.2** and today's releases of every supported addon.
-- **AtlasLoot Continued's new Atlas Nav look** (its default from 12987) is left as AtlasLoot draws it, instead of the Daylight UI look fighting it. The legacy look is dressed as before.
-- **New windows dressed:** LFG Forever's delist button, Dungeon Journal's controller reset question and item-location note, Shortest Path Forever's Quests tab, Spoken's controller prompts and Compendium filter.
-- **OneForAll 6.2.13's skip-the-talk switches** (vendors, bankers, trainers and more) join the Daylight UI Override list, since Daylight UI already skips gossip.
-- **Small touches:** a gold hover on Mastercraft's craft orders board is now your accent, and Questie 12.12's menus take Daylight UI's menu look.
+## New in 1.18.10
+- **Checked against Daylight UI 2.2.5** and today's releases of every supported addon. Addon Skins now sits under the DaylightUI Plugins heading in the AddOns list.
+- **Fixed for new versions:** High Fidelity World Map 1.4.14's cave window (its ground, opacity, depth slider and floor menu), LayerSwap 1.14.49's status lines measured in your font, and DoesItDie 0.10.0's scrolling option pages.
+- **New windows dressed:** Questie 12.13's settings search, LayerSwap's event box, OneForAll's Dungeon tracker, High Fidelity World Map's maximize / restore buttons.
+- **Dungeon Journal 2.1.4:** its new "Best done together with:" line keeps its warning color.
 ---
 
 ## Addons it skins

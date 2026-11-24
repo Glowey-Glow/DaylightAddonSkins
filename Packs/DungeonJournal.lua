@@ -726,7 +726,11 @@ local function RedLevel(fs, text)
 end
 
 -- The page's red lines, by the keys the journal keeps them under.
-local WARNINGS = { "questSummonNote", "questWarningText", "questChainNotice", "questObjectiveNoteText" }
+-- (2.1.4) "Best done together with:" (frame.questSubWarning, Journal.lua:3556-3697, red 0.75, 0, 0;
+-- its quest button beside it, frame.questSubWarningCard, is a backdrop button DaylightUI's journal
+-- skin dresses like the page's other rows) is held the same way.
+local WARNINGS = { "questSummonNote", "questWarningText", "questChainNotice", "questObjectiveNoteText",
+	"questSubWarning" }
 
 -- (2.1.0) A required item that comes from the dungeon whose page this is has a gold edge round its
 -- card. DaylightUI's journal skin swaps that for one of its plain outlines, like any box: lit in

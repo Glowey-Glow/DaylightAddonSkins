@@ -1,5 +1,17 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.10
+- Checked against Daylight UI 2.2.5 (from 2.2.2: 2.2.3, 2.2.4 and 2.2.5). Nothing to change: dressed windows, tooltips, the bag marks and the overlap window work as before.
+- Sits under the DaylightUI Plugins heading in the AddOns list.
+- Dungeon Journal 2.1.4: the new red "Best done together with:" line on a quest's page (the Mallet of Zul'Farrak) keeps a warning color under Daylight UI's journal skin, like the journal's other warnings. Its quest button beside it is dressed by Daylight UI's journal skin.
+- Questie 12.13.0: its settings window's new Search box and label take your font and Daylight UI's look. Each tab, now built out of sight and swapped in when done (and built again on every letter typed in the search), keeps its thin rule, scroll bar and your font, and the "No matching options" line is in the text color.
+- High Fidelity World Map 1.4.14: the cave window's ground moved, so on the first cave of a session its tiled dialog ground showed again, "Cave map opacity" stopped reaching the Daylight UI window and the depth slider and floor menu stayed undressed. Fixed: the ground is found where it now lives, on every cave until found. The new maximize / restore pair is Daylight UI's bare chevrons, as on the world map.
+- LayerSwap 1.14.49: the new event box (what just happened, in the layer list's place) is in your font and Daylight UI's colors, its green, orange and blue marks kept. Its lines that grow to fit their words are now measured in your font, so long status lines are no longer cut short.
+- DoesItDie 0.10.0: each options tab is now a scrolling page; its scroll bar's thumb keeps the size of the page after the Daylight UI look goes on.
+- OneForAll 6.2.16: its new Dungeon tracker window takes the Daylight UI window like its others. Its own Opacity slider has no effect under the Daylight UI window.
+- Checked against today's updates of the addons you have installed: Keep or Toss 2.5.1: nothing to change.
+- Checked against today's releases of the addons you may not have installed: ALL THE THINGS 5.4.17, AtlasLoot Continued 12993, Auctionator 352, Forever Leveling BiS 1.4.7, Kerzo Classic Quest Log 6.6.2, Mastercraft 2.1.1, Shortest Path Forever 1.45.4 and Spoken 3.12.1: nothing to change. The other supported addons have no new release.
+
 ## 1.18.9
 - Checked against Daylight UI 2.2.2 (from 2.1.3: 2.2, 2.2.1 and 2.2.2). Nothing to change: dressed windows, tooltips, the bag marks and the overlap window work as before, including with its new way of holding the game's spellbook, profession and Auction House windows out of sight.
 - AtlasLoot Continued 12987: its new Atlas Nav look (now its default) is left as AtlasLoot draws it: the window, Favourites, What's New, the theme chooser and its new settings window. Before, the Daylight UI look was laid over Nav's own, so the two fought (a box inside a box, light words on its light panels). With the legacy look (/al style legacy) everything is dressed as before.

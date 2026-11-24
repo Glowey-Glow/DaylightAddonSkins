@@ -1,8 +1,9 @@
 -- DoesItDie: the options window and the learned-ticks viewer, both flat one-pixel backdrops: their
--- shells, template buttons, check boxes, text boxes and sliders, its tabs (the picked one's words
+-- shells, template buttons, check boxes, text boxes and sliders (the tab pages' scroll bars of
+-- 0.10.0 too), its tabs (the picked one's words
 -- and underline in the accent), its dropdown list (the current entry in the accent) and the game's
 -- gold and gray words in DaylightUI's inks (green, red, spell and school colors kept).
--- Its marker, skull and nameplate pieces are the addon's display and are never touched: the options
+-- Its marker, skull, execute icon and nameplate pieces are the addon's display and are never touched: the options
 -- window hosts live copies of them on its mock frames, so those are skipped whole.
 local _, ns = ...
 if not ns.ok then return end
@@ -43,11 +44,19 @@ local function Ink(Kit, frame, skip, depth)
 	end
 end
 
--- Every slider below a frame: its own plain Slider with the game's thumb.
+-- Every slider below a frame: its own plain Slider with the game's thumb. Since 0.10.0 each tab is
+-- a scrolling page (Options.lua:779 addScrollPage) with a vertical Slider as its bar, the thumb
+-- sized to the page by the page's own OnShow / OnSizeChanged (layout). ns.Slider gives a vertical
+-- thumb a set height, so the page's layout is run once more to put the thumb's size back.
 local function Sliders(frame, skip, depth)
 	if not ns.Usable(frame) or (skip and skip[frame]) or depth > 8 then return end
 	if frame:GetObjectType() == "Slider" then
 		ns.Slider(frame)
+		local page = frame:GetParent()
+		if frame:GetOrientation() == "VERTICAL" and ns.Usable(page) and page:GetObjectType() == "ScrollFrame" then
+			local layout = page:GetScript("OnSizeChanged")
+			if type(layout) == "function" then pcall(layout, page) end
+		end
 		return
 	end
 	for _, c in ipairs({ frame:GetChildren() }) do Sliders(c, skip, depth + 1) end

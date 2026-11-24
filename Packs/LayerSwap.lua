@@ -21,7 +21,10 @@
 --     box (LayerSwap's options) don't change it. Its "Ask your
 --     guild" entry (LayerSwapPanelGuildButton, shown only in a guild): its title on font objects of
 --     ours (the label ink, the accent under the mouse; LayerSwap sets them once, as it builds the
---     entry), its "Guild chat reaches every layer" line in your font and the text ink.
+--     entry), its "Guild chat reaches every layer" line in your font and the text ink. Its event
+--     box (1.14.42, in the layer list's place: what just happened) in your font and DaylightUI's
+--     inks, its green, orange or blue marks kept; its lines that grow to fit (1.14.42) are measured
+--     in your font.
 --   * Its layer menu and settings menu (LayerSwapMenu, LayerSwapSettingsMenu): DaylightUI's menu
 --     shell, rows in your font and the text ink, ages in the dim ink. Grayed rows stay grayed.
 --   * Its mini bar (LayerSwapMini): a thin DaylightUI edge round it, your font and the text ink.
@@ -31,6 +34,8 @@
 --     (1.14.39, LayerSwapMiniSwap: two arrows, or a square while a press would stop) is in
 --     LayerSwap's gold, white under the mouse: the label ink and the accent here, the dim ink
 --     while it's off. LayerSwap paints the sign again every second, so ours goes on after each.
+--     From 1.14.45 that field is gone: the logo is the Swap button (LayerSwapMiniSwap names the
+--     logo since) and keeps LayerSwap's own colors, its plates swapping while a request runs.
 --   * Its settings menu gets one row of ours at the bottom, "Layer button: Always / On hover / Off"
 --     (Shift + click, like its own switches): the minimap button's setting on this addon's page.
 --   * Its options page (Options, AddOns, LayerSwap): DaylightUI's switches, buttons and text inks
@@ -246,7 +251,32 @@ local function Panel(p, Kit)
 		Font(p[key])
 		Ink(p[key], role)
 	end
-	FitStatus(p.status, statusRoom)
+	-- From 1.14.42 LayerSwap grows the status and host lines (and its event box) to the height their
+	-- words need (Layer.fit), measured on a hidden string of its own (p.measure) that it gives each
+	-- measured line's font object first (Layer.textH: SetFontObject, then SetText). Your font goes on
+	-- that string after each SetFontObject, so it measures the words as they are drawn here; the
+	-- status line is then never stepped down.
+	local measure = p.measure
+	if ns.Usable(measure) and measure.SetFontObject then
+		ns.HookOnce(measure, "SetFontObject", function(m)
+			if ns.Enabled(KEY) then Font(m) end
+		end, KEY)
+	else
+		FitStatus(p.status, statusRoom)
+	end
+	-- Its event box (1.14.42, p.ev: what just happened, in the list's place): the heading bright, the
+	-- lines in the text ink, the hour's count dim. The time at the heading's right, the icon and the
+	-- hour's pips keep LayerSwap's green, orange or blue (set at every paint, Layer.paintEvent).
+	local ev = p.ev
+	if type(ev) == "table" then
+		Font(ev.head)
+		Ink(ev.head, "VALUE")
+		Font(ev.tag)
+		Font(ev.body)
+		Ink(ev.body, "TEXT")
+		Font(ev.foot)
+		Ink(ev.foot, "OFF")
+	end
 	Font(p.evict)
 	for _, row in ipairs(type(p.rows) == "table" and p.rows or {}) do
 		Font(row.left)
