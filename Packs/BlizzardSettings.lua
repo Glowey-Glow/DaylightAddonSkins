@@ -56,8 +56,10 @@
 --     the wheel over a list), which the game never sets off from its own code.
 --   * The window's own OnShow and OnHide (the outermost frame the game shows, so these run last,
 --     after all of the game's) only start and stop a light timer. Rows are dressed from that timer
---     (a fresh call of its own, out of combat, every 0.1 s while the window is open, and on the
---     next frame after a scroll with the wheel), long after the game has built them.
+--     (a fresh call of its own, out of combat, every 0.1 s while the window is in use: the mouse
+--     over it, a button held, the keyboard in its search, and a second after; started again by a
+--     click, the wheel, the mouse coming onto it or a key bound; and on the next frame after a
+--     scroll with the wheel), long after the game has built them.
 --   * Looks only: textures and words. The game's own tables are only read (which rows a list shows,
 --     which category is open); nothing of the game's is replaced or written to, and what this pack
 --     keeps is in its own tables.
@@ -89,6 +91,7 @@ if hasReady then ns.Target(READY, L["Dungeon Ready Dialog"], { controls = true }
 local function weak() return setmetatable({}, { __mode = "k" }) end
 
 local panel                -- SettingsPanel, once dressed
+local Wake                 -- (below: the passes started again while the window is in use)
 local controls = true      -- whether the Options window's controls are dressed (its page's switch)
 
 local Usable = ns.Usable
@@ -486,7 +489,7 @@ local function Stepper(btn, dir)
 		steppers[btn] = s
 		s.chevron = Kit.BareButton(btn, dir)
 		-- (After the Kit's own: these run last and set the color this pack wants.)
-		ns.ScriptOnce(btn, "OnEnter", function(self) s.hover = true; PaintStepper(self) end, SETTINGS)
+		ns.ScriptOnce(btn, "OnEnter", function(self) s.hover = true; PaintStepper(self); Wake() end, SETTINGS)
 		ns.ScriptOnce(btn, "OnLeave", function(self) s.hover = false; PaintStepper(self) end, SETTINGS)
 	end
 	-- (Its unnamed arrow art was put out of sight by the Kit once; the named pieces the game sets
@@ -572,7 +575,7 @@ local function TabLook(tab)
 	line:Hide()
 	local t = { label = label, line = line }
 	tabs[tab] = t
-	ns.ScriptOnce(tab, "OnEnter", function(self) t.hover = true; PaintTab(self) end, SETTINGS)
+	ns.ScriptOnce(tab, "OnEnter", function(self) t.hover = true; PaintTab(self); Wake() end, SETTINGS)
 	ns.ScriptOnce(tab, "OnLeave", function(self) t.hover = false; PaintTab(self) end, SETTINGS)
 	PaintTab(tab)
 end
@@ -883,7 +886,7 @@ local function CategoryRow(row)
 			wash:SetAllPoints(row)
 			catLooks[row] = { fill = fill }
 			-- The game sets the words' font object again as the mouse comes and goes: put back at once.
-			ns.ScriptOnce(row, "OnEnter", PaintCategory, SETTINGS)
+			ns.ScriptOnce(row, "OnEnter", function(self) PaintCategory(self) Wake() end, SETTINGS)
 			ns.ScriptOnce(row, "OnLeave", PaintCategory, SETTINGS)
 		end
 		PaintCategory(row)
@@ -1001,11 +1004,67 @@ local function PassSoon()
 	ns.Queue("BlizzardSettings:pass", SafePass, SETTINGS)
 end
 
+-- The timer runs while the window is in use: the mouse over it or a button held down, the keyboard
+-- in one of its boxes (the search), and for a moment after (GRACE). Then it stops, and the next
+-- use starts it again: a click anywhere (GLOBAL_MOUSE_DOWN), the wheel over a list, the mouse
+-- coming onto the window or one of its hooked controls (also the controller's cursor), a key bound
+-- or a setting changed (UPDATE_BINDINGS, CVAR_UPDATE). All from events or from the mouse, never
+-- from the game's own code. (Was every 0.1 s for as long as the window stood open.)
+local GRACE = 1            -- seconds the passes go on once the window is left alone
 local ticker
+local idle = 0
+
+local function FocusInPanel()
+	local focus = _G.GetCurrentKeyBoardFocus
+	local f = type(focus) == "function" and focus() or nil
+	for _ = 1, 30 do
+		if not f then return false end
+		if f == panel then return true end
+		f = f.GetParent and f:GetParent()
+	end
+	return false
+end
+
+local function InUse()
+	return panel:IsMouseOver() or _G.IsMouseButtonDown() or FocusInPanel()
+end
+
+local function Stop()
+	if ticker then
+		ticker:Cancel()
+		ticker = nil
+	end
+end
+
+local function Tick()
+	SafePass()
+	if not (panel and panel:IsShown()) then Stop() return end
+	if InUse() then
+		idle = 0
+	else
+		idle = idle + TICK
+		if idle >= GRACE then Stop() end
+	end
+end
+
+local wakeEvents = CreateFrame("Frame")
+function Wake()
+	if not (panel and panel:IsShown()) or not ns.Enabled(SETTINGS) then return end
+	idle = 0
+	if not ticker then ticker = C_Timer.NewTicker(TICK, Tick) end
+end
+wakeEvents:SetScript("OnEvent", Wake)
+local function WheelPass()
+	PassSoon()
+	Wake()
+end
+local WAKE_EVENTS = { "GLOBAL_MOUSE_DOWN", "UPDATE_BINDINGS", "CVAR_UPDATE" }
+
 local function Opened()
 	if not ns.Enabled(SETTINGS) then return end
 	PassSoon()
-	if not ticker then ticker = C_Timer.NewTicker(TICK, SafePass) end
+	for _, e in ipairs(WAKE_EVENTS) do wakeEvents:RegisterEvent(e) end
+	Wake()
 	-- Watchdog: a second after opening, the passes must have run (unless a fight holds them back).
 	local before = passes
 	C_Timer.After(1, function()
@@ -1015,10 +1074,8 @@ local function Opened()
 	end)
 end
 local function Closed()
-	if ticker then
-		ticker:Cancel()
-		ticker = nil
-	end
+	Stop()
+	for _, e in ipairs(WAKE_EVENTS) do wakeEvents:UnregisterEvent(e) end
 end
 
 -- Each part of the window is dressed on its own (Try1): one part that fails can't keep the rest,
@@ -1098,6 +1155,8 @@ local function DressPanel(p)
 	-- after the wheel scrolls a list (the rows it brings in are dressed on the next frame).
 	p:HookScript("OnShow", Opened)
 	p:HookScript("OnHide", Closed)
+	-- (The mouse coming onto the window: the game never sets this off from its own code.)
+	p:HookScript("OnEnter", Wake)
 	local cats, container = p.CategoryList, p.Container
 	local boxes = {}
 	if Usable(cats) and Usable(cats.ScrollBox) then boxes[#boxes + 1] = cats.ScrollBox end
@@ -1107,7 +1166,7 @@ local function DressPanel(p)
 	for _, box in ipairs(boxes) do
 		-- (Only where the game already handles the wheel: a script of ours on a box without one would
 		-- take the wheel from the frame under it.)
-		if box:GetScript("OnMouseWheel") then ns.ScriptOnce(box, "OnMouseWheel", PassSoon, SETTINGS) end
+		if box:GetScript("OnMouseWheel") then ns.ScriptOnce(box, "OnMouseWheel", WheelPass, SETTINGS) end
 	end
 
 	Try1(DressFrame, p)

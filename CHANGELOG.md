@@ -1,6 +1,9 @@
 # Addon Skins (DaylightUI Plugin)
 
-## Unreleased
+## 1.19.0
+- No more checking several times a second while nothing happens. Addon Skins looked for windows to dress twice a second for as long as you played; now it looks only right after something that can open one (a click, an addon loading, a loading screen, a merchant, trainer, Auction House or loot window, the game opening a panel, or a new window being made), for a quarter second and then a few single looks. The Auto Skinner's 2-second check is gone the same way, and so are the menu-font watcher's five looks a second while a game menu is open.
+- Packs that kept watching on a timer now follow their addon's own changes instead: Guildy, Mastercraft, Shortest Path Forever (its tracker dock was re-measured four times a second), the game's Options window (ten times a second while open), Forever Leveling BiS and the LayerSwap minimap button.
+- The conflict question at login no longer re-checks every 3 seconds while Daylight UI is busy or you're in a fight: it asks again after the fight or your next click.
 - New: Curator. Its album and every page in it (inventory, albums, social, contracts, achievements, profile, quests, talents, inns, discovery, Winter Veil, statistics, boosters), the Exchange (all four pages, the sheet, the picker, the price popup), the merchant, the reseller, the Ruby Counter, the inn counter and bet, golden quests, the bank, restoration and copy panels, the card view, news, gift, search, leads, the tour, the options and the small windows: the Daylight UI window, buttons, tabs, side tabs, dropdowns, checkboxes, bars, lists and scroll bars, your font face and inks. The cards, boxes, scenes, celebrations, rarity colors and the gold Claim buttons stay as Curator draws them, and text keeps Curator's own sizes so nothing it fits is cut short. The skin never touches Curator's card data, so Curator's own guard never stops your rewards.
 
 ## 1.18.14

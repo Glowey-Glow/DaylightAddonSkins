@@ -1237,7 +1237,7 @@ end
 -- pack has been handed the Kit. DaylightUI's skins load ahead of this plugin (OptionalDeps) and
 -- use the same Kit; DaylightUI.Skins.Kit is its door for plugins. "Login" is the second chance.
 local function GuardRowsNow()
-	local skins = type(DaylightUI) == "table" and DaylightUI.Skins
+	local skins = type(_G.DaylightUI) == "table" and _G.DaylightUI.Skins
 	if type(skins) ~= "table" or type(skins.Kit) ~= "function" then return end
 	local ok, Kit = pcall(skins.Kit)
 	if ok then GuardRows(Kit) end
@@ -1293,24 +1293,37 @@ function ns.Pack(addon, label, fn, caps)
 end
 
 -- ---------------------------------------------------------------------------------------------
--- Frames made late (on a window's first open): looked for by name until they turn up
+-- Frames made late (on a window's first open): looked for, only after something that can make one
 -- ---------------------------------------------------------------------------------------------
 
 -- The fast path is the rule: a pack hooks the call that makes or opens a window and dresses it
 -- right there (ns.WatchNow() runs every pending watch at once, for hooks that only know "something
--- may have been made"). The watches below are the safety net. They look every frame for a short
--- while after something that can make a window (a click anywhere, an addon loading, a loading
--- screen, a pack's hook asking): a window made then is found in that same frame, before the game
--- draws it, so it never shows undressed. The rest of the time they look twice a second: most of
--- them wait the whole session for a window that's never opened, and a look every frame at all of
--- them, for hours, added up. Each look is a name lookup or a small function per waiting window.
+-- may have been made"). The watches below are the safety net. Nothing runs while nothing happens:
+-- they look every frame for a short while after something that can make or open a window (a click
+-- anywhere, an addon loading, a loading screen, a window the game opens, a pack's hook asking),
+-- and for a moment after a frame is made (the CreateFrame hook below: a window a keybind or a
+-- slash command makes, with no click). A window made then is found in that same frame, before the
+-- game draws it, so it never shows undressed. A watch whose frame is found leaves the list; once
+-- the burst is over (or no watch is left) the looking frame hides and costs nothing. Each look is
+-- a name lookup or a small function per waiting window.
 local watches = {}
 local watcher = CreateFrame("Frame")
 watcher:Hide()
 local ticking = false
 local BURST = 2      -- seconds of a look every frame after a trigger
-local SLOW = 0.5     -- seconds between looks otherwise
-local burstLeft, sinceLook = 0, 0
+local MADE = 0.25    -- seconds of a look every frame after a frame was made
+local burstLeft = 0
+local names = {}     -- frame name -> how many watches wait for it (the CreateFrame hook's test)
+local getters = 0    -- how many watches wait on a function instead of a name
+
+local function Listed(w, by)
+	if type(w.get) == "string" then
+		local n = (names[w.get] or 0) + by
+		names[w.get] = n > 0 and n or nil
+	else
+		getters = getters + by
+	end
+end
 
 -- A watch for an addon that isn't there (not installed, switched off in the addon list, or one that
 -- couldn't load and isn't loaded on demand): its window never comes this session. Asked once per
@@ -1354,6 +1367,7 @@ local function Tick()
 			-- Its addon is switched off (a switch takes hold after a reload), or isn't there: not
 			-- looked for again.
 			table.remove(watches, i)
+			Listed(w, -1)
 		else
 			local get, frame = w.get
 			if type(get) == "string" then
@@ -1364,6 +1378,7 @@ local function Tick()
 			end
 			if frame and (ready or ns.Enabled(w.key)) then
 				table.remove(watches, i)
+				Listed(w, -1)
 				Found(w, frame)
 			end
 		end
@@ -1371,20 +1386,34 @@ local function Tick()
 	ticking = false
 	if #watches == 0 then watcher:Hide() end
 end
-watcher:SetScript("OnUpdate", function(_, elapsed)
-	if burstLeft > 0 then
-		burstLeft = burstLeft - elapsed
-	else
-		sinceLook = sinceLook + elapsed
-		if sinceLook < SLOW then return end
+
+-- Shown only for a burst: a look every frame for its first EVERY seconds (a window a click makes
+-- comes then, found before it's drawn), then one look at each of LATER's marks (one an addon
+-- makes a moment later), not every frame (Perfy, 2026-11-25: 2 s of looks every frame after each
+-- click or frame made kept this running a third of the time). Hidden the frame it runs out (Tick
+-- hides it too, with no watch left).
+local EVERY = 0.25
+local LATER = { 0.5, 1, 2 }
+local age, nextMark = 0, 1
+watcher:SetScript("OnUpdate", function(self, elapsed)
+	burstLeft = burstLeft - elapsed
+	age = age + elapsed
+	if burstLeft <= 0 then self:Hide() end
+	if age <= EVERY then
+		Tick()
+	elseif LATER[nextMark] and age >= LATER[nextMark] then
+		while LATER[nextMark] and age >= LATER[nextMark] do nextMark = nextMark + 1 end
+		Tick()
+	elseif burstLeft <= 0 then
+		Tick()
 	end
-	sinceLook = 0
-	Tick()
 end)
 
--- Something that may make a window: a look every frame for the next while.
-local function Burst()
-	burstLeft = BURST
+-- Something that may make a window: looks for the next `seconds` (BURST), as above.
+local function Burst(seconds)
+	seconds = type(seconds) == "number" and seconds or BURST
+	if seconds > burstLeft then burstLeft = seconds end
+	age, nextMark = 0, 1
 	if ns.loggedIn and #watches > 0 then watcher:Show() end
 end
 
@@ -1392,7 +1421,9 @@ end
 -- fn(frame, Kit) runs once, when it exists. The fallback: pair it with a hook on the call that
 -- makes the window (and ns.WatchNow() or the dressing called from that hook).
 function ns.Watch(key, get, fn)
-	watches[#watches + 1] = { key = key, get = get, fn = fn }
+	local w = { key = key, get = get, fn = fn }
+	watches[#watches + 1] = w
+	Listed(w, 1)
 	if ns.loggedIn then Burst() end
 end
 
@@ -1405,12 +1436,42 @@ function ns.WatchNow()
 	end
 end
 
--- The triggers: a click anywhere (most windows open from one), an addon loading, a loading screen.
+-- The triggers: a click anywhere (most windows open from one), an addon loading, a loading screen,
+-- a window the game opens for an NPC (a merchant, a trainer, the auction house: also opened with
+-- the interact key, no click) or for loot.
 local triggers = CreateFrame("Frame")
 triggers:RegisterEvent("GLOBAL_MOUSE_UP")
 triggers:RegisterEvent("ADDON_LOADED")
 triggers:RegisterEvent("PLAYER_ENTERING_WORLD")
-triggers:SetScript("OnEvent", Burst)
+triggers:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
+triggers:RegisterEvent("LOOT_OPENED")
+triggers:SetScript("OnEvent", function() Burst() end)
+
+-- A window the game's panel manager opens (a keybind's character or spellbook window, a panel an
+-- addon opens the game's way): Blizzard_UIParentPanelManager Shared/UIParentPanelManager.lua:871.
+-- A post-hook: it runs after the game's call and only starts our looking frame.
+if type(_G.ShowUIPanel) == "function" then
+	hooksecurefunc("ShowUIPanel", function() Burst() end)
+end
+
+-- A frame made: when it's one a watch waits for by name, or any frame while a watch waits on a
+-- function (what it returns is often a field set as the window is built), a short burst of looks.
+-- This is what finds a window first made by a keybind or a slash command, with no click before
+-- it. A post-hook, so the game's own call is untouched; the test is a table lookup. Frames made
+-- by addons that kept their own copy of CreateFrame before this file loaded aren't seen here
+-- (the other triggers still are). ns.OnFrameMade(fn): fn(kind, name, parent) on each one too
+-- (Auto.lua); it must be as cheap.
+local madeFns = {}
+function ns.OnFrameMade(fn)
+	if type(fn) == "function" then madeFns[#madeFns + 1] = fn end
+end
+-- (A function watch only for a top-level frame, parent none or UIParent, as windows are: some of
+-- those watches wait all session, and the many frames made inside windows, pools and nameplates,
+-- in a fight too, must not start looks.)
+hooksecurefunc("CreateFrame", function(kind, name, parent)
+	if (name ~= nil and names[name]) or (getters > 0 and (parent == nil or parent == UIParent)) then Burst(MADE) end
+	for i = 1, #madeFns do madeFns[i](kind, name, parent) end
+end)
 
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")

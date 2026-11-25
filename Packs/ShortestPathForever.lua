@@ -1060,13 +1060,74 @@ local function Column()
 		if host:GetAlpha() ~= a then host:SetAlpha(a) end
 	end
 
-	C_Timer.NewTicker(0.25, function() ns.Guard(Tick) end)
-	ns.Guard(Tick)
+	-- Looked at again in the next update after whatever can move, size, fade or show either side:
+	-- the column's own layout (ForeverCore sets its size, place and scale), the tracker's holder
+	-- (placed, faded, scaled, shown, hidden; every update while it's dragged) and its list (sized
+	-- as it grows or glides, placed when it flips to grow upward), the screen's scale. Nothing runs
+	-- in between. (Was a look four times a second for the whole session.)
+	local driver = CreateFrame("Frame")
+	driver:Hide()
+	local dragging = false
+	local function TickSoon() driver:Show() end
+
+	for _, method in ipairs({ "SetHeight", "SetWidth", "SetSize", "SetPoint", "SetScale" }) do
+		-- (Hooked directly: the column can hold a quest's secure item button, and ns.HookOnce
+		-- refuses a protected frame.)
+		if type(host[method]) == "function" then hooksecurefunc(host, method, TickSoon) end
+	end
+
+	local hookedHolder, hookedList
+	local function HookTracker(holder)
+		if not ns.Usable(holder) then return end
+		if hookedHolder ~= holder then
+			hookedHolder = holder
+			for _, method in ipairs({ "SetPoint", "SetAlpha", "SetScale" }) do
+				hooksecurefunc(holder, method, TickSoon)
+			end
+			hooksecurefunc(holder, "StartMoving", function()
+				dragging = true
+				TickSoon()
+			end)
+			hooksecurefunc(holder, "StopMovingOrSizing", function()
+				dragging = false
+				TickSoon()
+			end)
+			holder:HookScript("OnShow", TickSoon)
+			holder:HookScript("OnHide", TickSoon)
+		end
+		local list = TrackerList(holder)
+		if ns.Usable(list) and hookedList ~= list then
+			hookedList = list
+			list:HookScript("OnSizeChanged", TickSoon)
+			hooksecurefunc(list, "SetPoint", TickSoon)
+		end
+	end
+
+	local scaleWatch = CreateFrame("Frame")
+	scaleWatch:RegisterEvent("UI_SCALE_CHANGED")
+	scaleWatch:RegisterEvent("DISPLAY_SIZE_CHANGED")
+	scaleWatch:RegisterEvent("PLAYER_ENTERING_WORLD")
+	scaleWatch:SetScript("OnEvent", TickSoon)
+
+	-- (The tracker's holder may be made, or its list found, after the column: hooked when seen.)
+	local function Look()
+		ns.Guard(HookTracker, _G.DaylightUIQuestTracker)
+		ns.Guard(Tick)
+	end
+	driver:SetScript("OnUpdate", function(self)
+		-- (A drag ends with the button let go, whatever ends it.)
+		if dragging and not (_G.IsMouseButtonDown() and hookedHolder and hookedHolder:IsVisible()) then dragging = false end
+		if not dragging then self:Hide() end
+		Look()
+	end)
+
+	Look()
 	ns.me.On("StyleChanged", function()
 		ForgetQuests()
 		wipe(last)
 		ns.Guard(PaintBox)
 		ns.Guard(Restyle, host)
+		TickSoon()
 	end)
 	ns.me.On("SettingChanged", function(scope)
 		if scope == "Quests" or scope == "general" or scope == "DaylightAddonSkins" then
@@ -1074,25 +1135,41 @@ local function Column()
 			wipe(last)
 			ns.Guard(PaintBox)
 			ns.Guard(Restyle, host)
+			TickSoon()
 		end
 	end)
 end
 
 -- A second after login, as ever. From Shortest Path 1.43.6 the column is made when its ForeverCore
--- starts (at login; after the fight, for a reload made in one): looked for once a second until it
--- is there, ten minutes at most. (Not a watch: this runs with the skin switched off too, to give
--- the column back.)
+-- starts (at login; after the fight, for a reload made in one). (Not a watch: this runs with the
+-- skin switched off too, to give the column back.)
+-- ForeverCore's loader (ForeverCoreLoader.OnReady, Core/Loader.lua) says when its copy has started
+-- and made the column: looked for from then, once a second for a few seconds at most. With no
+-- loader (a ForeverCore older than any seen) the look once a second runs from login as before;
+-- with no ForeverCore loaded at all it doesn't run.
 ns.me.On("Login", function()
-	local tries = 0
-	local function look()
-		if ns.Usable(_G.ForeverTrackerCompanion) and type(_G.ForeverTrackerHost) == "table" then
-			ns.Guard(Column)
-			return
-		end
-		tries = tries + 1
-		if tries < 600 then C_Timer.After(1, look) end
+	local done = false
+	local function Found()
+		if done then return true end
+		if not (ns.Usable(_G.ForeverTrackerCompanion) and type(_G.ForeverTrackerHost) == "table") then return false end
+		done = true
+		ns.Guard(Column)
+		return true
 	end
-	C_Timer.After(1, look)
+	local function Look(tries)
+		if Found() or tries <= 0 then return end
+		C_Timer.After(1, function() Look(tries - 1) end)
+	end
+	local loader = rawget(_G, "ForeverCoreLoader")
+	if type(loader) == "table" and type(loader.OnReady) == "function" then
+		C_Timer.After(1, function()
+			if Found() then return end
+			pcall(loader.OnReady, function() C_Timer.After(0, function() Look(10) end) end)
+		end)
+		return
+	end
+	if rawget(_G, "ForeverCore") == nil and rawget(_G, "ForeverTrackerHost") == nil then return end
+	C_Timer.After(1, function() Look(600) end)
 end)
 
 

@@ -241,36 +241,55 @@ end
 -- First load, and any login with a conflict not answered yet: a moment after the world shows (the
 -- addons' settings are read by then), out of a fight, and never on top of a window of Daylight
 -- UI's own or of another Daylight plugin's guide (DaylightBusy, above). Nothing to ask: nothing
--- waits. Otherwise it looks again every few seconds for as long as it takes (a handful of
--- lookups a time), so the window still comes in this session once the screen is free; a session
--- that ends first leaves the conflicts unanswered, and they are asked at the next login.
+-- waits. Held back, it asks again only after something that can free the screen: a fight's end,
+-- or a click (Daylight UI's windows and the guides are closed with one), a second later. No
+-- standing timer: the window still comes in this session once the screen is free; a session that
+-- ends first leaves the conflicts unanswered, and they are asked at the next login.
 -- After any wait the screen must stay free for QUIET seconds first: Daylight UI's welcome looks
 -- again every 5 s while its window is busy with something else (2.0 Welcome.lua:23, 546-554) and
 -- its portrait question every 3 s behind the tour's question (2.0 Socket.lua:417-423), so the
 -- next one of those gets to open before this does.
-local FIRST, AGAIN, QUIET = 6, 3, 6
+local FIRST, SETTLE, QUIET = 6, 1, 6
 ns.me.On("Login", function()
 	local waited, freeSince, any = false, nil, nil
-	local function ask()
+	local timed = false
+	local wake = CreateFrame("Frame")
+	local ask
+	-- One look, `delay` seconds from now (one at a time: a look already set covers this one).
+	local function Soon(delay)
+		if timed then return end
+		timed = true
+		C_Timer.After(delay, function()
+			timed = false
+			ask()
+		end)
+	end
+	wake:SetScript("OnEvent", function() Soon(SETTLE) end)
+	local function Stop() wake:UnregisterAllEvents() end
+	ask = function()
 		-- (Opened by hand meanwhile: the player is at it.)
-		if frame and ns.WindowShown(frame) then return end
+		if frame and ns.WindowShown(frame) then return Stop() end
 		-- (Read once here; ns.ShowChoices reads them again as it opens.)
 		if any == nil then any = #ns.Conflicts(false) > 0 end
-		if not any then return end
+		if not any then return Stop() end
 		if InCombatLockdown() or DaylightBusy() then
+			-- Held back: asked again after a fight's end or a click (above).
 			waited, freeSince = true, nil
-			C_Timer.After(AGAIN, ask)
+			wake:RegisterEvent("PLAYER_REGEN_ENABLED")
+			wake:RegisterEvent("GLOBAL_MOUSE_UP")
 			return
 		end
 		if waited then
 			local now = GetTime()
 			freeSince = freeSince or now
 			if now - freeSince < QUIET then
-				C_Timer.After(AGAIN, ask)
+				-- (Once: it's shown then, or held back again.)
+				Soon(QUIET - (now - freeSince))
 				return
 			end
 		end
+		Stop()
 		ns.ShowChoices(false)
 	end
-	C_Timer.After(FIRST, ask)
+	Soon(FIRST)
 end)

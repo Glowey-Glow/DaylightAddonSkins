@@ -8,9 +8,9 @@
 -- Here, while a game menu is open, a frame of ours looks over its texts and gives any that lost it
 -- DaylightUI's menu font object back (the one DaylightUI made for that size, so the look is exactly
 -- its own). It looks every frame for a moment after the menu opens, after a click and when the
--- mouse moves onto another row (a refresh happens on a click, before that frame's OnUpdate, so the
--- text is back before it's drawn), and a few times a second otherwise (a wheel scroll, a change
--- the game makes by itself): not every frame for as long as a menu stays open. Nothing is hooked
+-- mouse moves onto another row or scrolls the list under it (a refresh happens on a click, before
+-- that frame's OnUpdate, so the text is back before it's drawn), and not at all otherwise: an open
+-- menu the mouse rests on, or has left, costs one mouse-focus compare a frame. Nothing is hooked
 -- or made on the menu itself; with no menu open the frame is hidden and costs nothing. Only while
 -- DaylightUI's Skins module is on.
 local _, ns = ...
@@ -258,10 +258,10 @@ end
 
 -- When to look: every frame for a moment after a menu opens (DaylightUI's skin dresses it a frame
 -- later, and paints the language pictures over then), after a click (a tick refreshes the menu)
--- and when the mouse moves onto something else (a row's hover); a few times a second otherwise.
+-- and when the mouse moves onto something else (a row's hover, a wheel scroll moving the rows
+-- under it); never in between.
 local BURST = 0.25         -- seconds of a look every frame after one of those
-local SLOW = 0.2           -- seconds between looks otherwise
-local burstLeft, sinceLook = 0, 0
+local burstLeft = 0
 local lastFocus
 local Foci = _G.GetMouseFoci
 local Focus = _G.GetMouseFocus
@@ -285,13 +285,10 @@ watcher:SetScript("OnUpdate", function(self, elapsed)
 		lastFocus = on
 		burstLeft = BURST
 	end
-	if burstLeft > 0 then
-		burstLeft = burstLeft - elapsed
-	else
-		sinceLook = sinceLook + elapsed
-		if sinceLook < SLOW then return end
-	end
-	sinceLook = 0
+	-- (Between bursts: only the focus compare above. A menu closed meanwhile is let go by
+	-- MenuProxy.OnClose, below, which hides this frame with none left.)
+	if burstLeft <= 0 then return end
+	burstLeft = burstLeft - elapsed
 	local any = false
 	if stale then ReadInks() end
 	for menu in pairs(open) do
@@ -325,6 +322,9 @@ clicks:RegisterEvent("GLOBAL_MOUSE_UP")
 clicks:SetScript("OnEvent", function() if watcher:IsShown() then Burst() end end)
 registry:RegisterCallback("MenuProxy.OnClose", function(_, menu)
 	if type(menu) == "table" then open[menu] = nil end
-	if not next(open) then pcall(DropCovers) end
+	if not next(open) then
+		pcall(DropCovers)
+		watcher:Hide()
+	end
 end, owner)
 if ns.me and ns.me.On then ns.me.On("StyleChanged", function() stale = true wipe(menuFonts) end) end

@@ -201,7 +201,7 @@ end
 -- Its windows among root and what is in it, `depth` levels down (parents first, so a dialog knows
 -- its window is dressed).
 local Scan
--- (The children as the game hands them back, with no table made: this runs twice a second.)
+-- (The children as the game hands them back, with no table made: this runs after every click.)
 local function ScanChildren(depth, ...)
 	for i = 1, select("#", ...) do
 		local child = select(i, ...)
@@ -241,31 +241,35 @@ function HookClicks(f, depth, look)
 end
 
 -- Its side panels, dialogs and lists are made on their first open, while the window is up, by a
--- click on one of its buttons: each of them looks again straight after its click. Looked for
--- twice a second as well while it is shown (for one opened some other way, and to reach buttons
--- made since), and not at all while it is hidden.
+-- click on one of its buttons: each of them looks again straight after its click (and hooks the
+-- buttons that click made). Also looked at once in the next update after any mouse button is let
+-- go while it is shown (for one opened some other way, and to reach buttons made since); nothing
+-- runs in between, and nothing at all while it is hidden. (Was a look twice a second while shown.)
 local function Main(frame)
 	if not On() then return end
-	local ticker
+	local Look
 	local function Clicked()
-		if On() then ns.Guard(Scan, frame, 2) end
+		if On() then ns.Guard(Look) end
 	end
-	local function Look()
+	function Look()
 		Scan(frame, 2)
 		HookClicks(frame, 5, Clicked)
 	end
+	local soon = CreateFrame("Frame")
+	soon:Hide()
+	soon:SetScript("OnUpdate", function(self)
+		self:Hide()
+		if On() and frame:IsShown() then ns.Guard(Look) end
+	end)
+	local clicks = CreateFrame("Frame")
+	clicks:SetScript("OnEvent", function() soon:Show() end)
 	frame:HookScript("OnShow", Guarded(function()
 		Look()
-		if not ticker then ticker = C_Timer.NewTicker(0.5, Guarded(Look)) end
+		clicks:RegisterEvent("GLOBAL_MOUSE_UP")
 	end))
-	frame:HookScript("OnHide", function()
-		if ticker then
-			ticker:Cancel()
-			ticker = nil
-		end
-	end)
+	frame:HookScript("OnHide", function() clicks:UnregisterEvent("GLOBAL_MOUSE_UP") end)
 	Look()
-	if frame:IsShown() and not ticker then ticker = C_Timer.NewTicker(0.5, Guarded(Look)) end
+	if frame:IsShown() then clicks:RegisterEvent("GLOBAL_MOUSE_UP") end
 end
 
 -- My gear beside the character window: on a holder of its own in the window in sight, the game's

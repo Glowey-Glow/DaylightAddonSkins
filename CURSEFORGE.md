@@ -6,17 +6,14 @@ A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its 
 
 ---
 
-## New in 1.18.14
-- **TrueshotLodge 1.60.1.47:** the window is dressed again (its new Target button had made it protected), and so is the new Database Search tab.
-- **Forever Fishing:** the window frame stays under each window's words when you switch between its windows.
-- **LayerSwap:** the minimap button reads "Layer: Current" or "Layer: New" on WoW Forever instead of "Layer: ?".
-- **ALL THE THINGS, Spoken, Forever Leveling BiS:** the new Information settings page, the profile Export / Import window and the tracker's wish-list picker are dressed.
-- Checked against today's updates of Daylight UI, Guildy, LFG Forever and ten more.
+## New in 1.19.0
+- **New: Curator.** Its album and every page in it, the Exchange, the merchant, reseller, counters, bank, restoration and the small windows take the Daylight UI look. The cards, boxes, scenes and rarity colors stay as Curator draws them, and its card data is never touched, so its guard never stops your rewards.
+- **Smoother:** no more checking for windows several times a second while you play. Addon Skins now looks only right after something that can open a window, and the Guildy, Mastercraft, Shortest Path Forever, Options, Forever Leveling BiS and LayerSwap skins follow their addon's changes instead of a timer.
 ---
 
 ## Addons it skins
 
-ALL THE THINGS · Altoholic · Auctionator · BugSack · Camping Kit · Dialogue UI · DoesItDie · Dungeon Journal · Forever Fishing · Forever Leveling BiS · Guildy · High Fidelity World Map · Journey Guides · Keep or Toss · Kerzo Classic Quest Log · Kerzo Quest Expansion · LayerSwap · Leatrix Plus · LFG Forever · LootTriage · Mastercraft · OneForAll · OpenMap · Polestar · Questie · RareScanner · Shortest Path Forever · Spoken · Total RP 3 · TrueshotLodge
+ALL THE THINGS · Altoholic · Auctionator · BugSack · Camping Kit · Curator · Dialogue UI · DoesItDie · Dungeon Journal · Forever Fishing · Forever Leveling BiS · Guildy · High Fidelity World Map · Journey Guides · Keep or Toss · Kerzo Classic Quest Log · Kerzo Quest Expansion · LayerSwap · Leatrix Plus · LFG Forever · LootTriage · Mastercraft · OneForAll · OpenMap · Polestar · Questie · RareScanner · Shortest Path Forever · Spoken · Total RP 3 · TrueshotLodge
 
 Only the ones you have installed are skinned; the rest are skipped. Nothing to set up: each takes the Daylight UI look the next time you open its windows.
 

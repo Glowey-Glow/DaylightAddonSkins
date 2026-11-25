@@ -364,11 +364,15 @@ local function CheckSoon()
 	newSoon = false
 	Check()
 end
-clicks:SetScript("OnEvent", function()
+-- A look at frames made since, on the next frame (once, however often it's asked in a frame).
+local function CheckNext()
 	if caughtUp and not newSoon then
 		newSoon = true
 		C_Timer.After(0, CheckSoon)
 	end
+end
+clicks:SetScript("OnEvent", function()
+	CheckNext()
 	if again or not next(dressed) then return end
 	for frame in pairs(dressed) do
 		if Call(frame, "IsVisible") and Call(frame, "IsMouseOver") then
@@ -508,24 +512,36 @@ local function Walk(budget, done)
 end
 
 -- Once the world is up: the whole interface, 2,000 frames a frame (about 28,000 here). Then a
--- look at what's new every 2 seconds, and right after any click (a menu or window a click made:
--- found the next frame).
+-- look at what's new only after something that can make a window, on the next frame: a click (a
+-- menu or window a click made), a frame made at the top (UIParent's child or one with no parent:
+-- a window a keybind or a slash command made, through Core.lua's CreateFrame hook), an addon
+-- loading, a loading screen. No standing timer: nothing runs while nothing happens.
 function Check()
 	if caughtUp then Walk(BUDGET) end
+end
+
+if ns.OnFrameMade then
+	ns.OnFrameMade(function(_, _, parent)
+		if caughtUp and not newSoon and (parent == nil or parent == UIParent) then CheckNext() end
+	end)
 end
 
 local events = CreateFrame("Frame")
 events:RegisterEvent("PLAYER_ENTERING_WORLD")
 events:RegisterEvent("PLAYER_REGEN_ENABLED")
+events:RegisterEvent("ADDON_LOADED")
 events:SetScript("OnEvent", function(self, event)
 	if event == "PLAYER_ENTERING_WORLD" then
-		self:UnregisterEvent("PLAYER_ENTERING_WORLD")
-		C_Timer.After(1, function()
-			Walk(2000, function()
-				caughtUp = true
-				C_Timer.NewTicker(2, Check)
+		if caughtUp then
+			CheckNext()
+		elseif not self.started then
+			self.started = true
+			C_Timer.After(1, function()
+				Walk(2000, function() caughtUp = true end)
 			end)
-		end)
+		end
+	elseif event == "ADDON_LOADED" then
+		CheckNext()
 	else
 		for frame in pairs(waiting) do
 			waiting[frame] = nil

@@ -7,9 +7,10 @@
 --     minimap off, the game's round map has no corner for it). It steps up above the game's queue
 --     eye while that shows in the same corner. A click does what a click on LayerSwap's mini bar
 --     does: left, its panel; right, its layer menu (here, under the button); shift + right, its
---     settings menu (here, beside the button). The layer is read once a second from LayerSwap's
---     own minimap launcher (its broker object, the only part of it open to other addons), so
---     nothing of LayerSwap's is changed; in a dungeon or raid it says so instead.
+--     settings menu (here, beside the button). The layer is read from LayerSwap's own minimap
+--     launcher (its broker object, the only part of it open to other addons) after each event
+--     LayerSwap reads a layer on, so nothing of LayerSwap's is changed; in a dungeon or raid it
+--     says so instead.
 --   * Its panel (LayerSwapPanel): DaylightUI's window shell in place of its flat ground and blue
 --     outline, DaylightUI's close button and buttons (Mini bar, Swap layer, Host), its headings in
 --     the label ink, the layer bright, the rest in DaylightUI's text inks and your font. LayerSwap
@@ -301,6 +302,7 @@ end
 local dock, dockText          -- the Layer button on the minimap and its words (made below)
 local rowsDone = setmetatable({}, { __mode = "k" })
 local dockMenu                -- the menu this button opened (kept up while it shows), or nil
+local DockCheckSoon           -- (below: the button's goal looked at again a moment later)
 
 local function MenuRows(menu)
 	for _, b in ipairs(type(menu.items) == "table" and menu.items or {}) do
@@ -364,7 +366,10 @@ local function MenuShown(menu)
 end
 
 local function MenuHidden(menu)
-	if dockMenu == menu then dockMenu = nil end
+	if dockMenu == menu then
+		dockMenu = nil
+		if DockCheckSoon then DockCheckSoon() end
+	end
 	OutsideWatch()
 end
 
@@ -453,7 +458,6 @@ end
 -- while lit, at their level over the map, fading in and out over the map in their time.
 local DOCK_H, DOCK_INSET, DOCK_PAD, DOCK_LEVEL = 24, 4, 8, 5
 local DOCK_BG = 0.6
-local DOCK_READ = 1
 local function DockBorder(px) return math.max(3, math.floor(px * 0.5 + 0.5)) end
 
 local dockGoal = 1
@@ -557,9 +561,14 @@ local function DockGoal()
 	return ((mm and mm:IsMouseOver() == true) or dock:IsMouseOver() == true) and 1 or 0
 end
 
--- Nothing runs every frame. The goal (shown, or faded in hover mode) is looked at when the mouse
--- goes onto or off the map or this button; the layer's name, the queue eye and the goal once a
--- second while the button shows (a ticker, stopped while it's hidden).
+-- Nothing runs every frame, and nothing on a timer while the layer is known. The goal (shown, or
+-- faded in hover mode) is looked at when the mouse goes onto or off the map or this button, and
+-- when its menu closes. The layer's name is read again a moment after each event LayerSwap reads
+-- a layer on (the ones it listens to itself: a unit targeted, moused over or come into view, a
+-- creature speaking, a zone, a transfer between layers, a group joined or left), and as the
+-- taxi starts and lands ("in flight"); while it says no layer yet ("..." or "?") once a second as
+-- well, for as long as LayerSwap keeps looking (its own look stops after 240 s). The queue eye is
+-- followed by its own showing, hiding and sizing. All of it only while the button shows.
 local function DockCheck()
 	if not (dock and dock:IsShown()) then return end
 	local goal = DockGoal()
@@ -569,20 +578,94 @@ local function DockCheck()
 	end
 end
 -- (A moment later: the mouse has landed on whatever is next.)
-local function DockCheckSoon() C_Timer.After(0, DockCheck) end
+DockCheckSoon = function() C_Timer.After(0, DockCheck) end
 
-local dockTicker
+local UNKNOWN_FOR = 240      -- seconds the layer is looked for while unknown (LayerSwap's POLL_FOR)
+local unknownTicker, unknownSince
 local function DockTick()
 	DockRead()
 	if EyeLift() ~= dockLift then DockPlace() end
 	DockCheck()
 end
+
+local function Unknown()
+	local word = dockText and dockText:GetText()
+	return word == string.format(L["Layer: %s"], "...") or word == string.format(L["Layer: %s"], "?")
+end
+
+local function StopUnknown()
+	if unknownTicker then
+		unknownTicker:Cancel()
+		unknownTicker = nil
+	end
+	unknownSince = nil
+end
+
+-- Read now; while the layer is unknown, once a second until it's known (or LayerSwap gives up).
+local function DockReadNow()
+	if not (dock and dock:IsShown()) then return end
+	DockTick()
+	if not Unknown() then
+		StopUnknown()
+		return
+	end
+	unknownSince = unknownSince or GetTime()
+	if GetTime() - unknownSince > UNKNOWN_FOR then
+		if unknownTicker then unknownTicker:Cancel() unknownTicker = nil end
+		return
+	end
+	if not unknownTicker then unknownTicker = C_Timer.NewTicker(1, function() ns.Guard(DockReadNow) end) end
+end
+
+-- (After LayerSwap's own handler of the same event has read it; one read for a burst of them.)
+local readQueued = false
+local function DockReadSoon()
+	if readQueued then return end
+	readQueued = true
+	C_Timer.After(0.25, function()
+		readQueued = false
+		ns.Guard(DockReadNow)
+	end)
+end
+
+-- A new zone, a transfer or a group change starts LayerSwap's look for a layer over.
+local RESTART = { ZONE_CHANGED_NEW_AREA = true, PLAYER_ENTERING_WORLD = true, LOADING_SCREEN_DISABLED = true,
+	SHARD_TRANSFER = true, GROUP_JOINED = true, GROUP_LEFT = true }
+local READ_EVENTS = { "ZONE_CHANGED_NEW_AREA", "PLAYER_ENTERING_WORLD", "LOADING_SCREEN_DISABLED",
+	"SHARD_TRANSFER", "SHARD_TRANSFER_CANCELLED", "GROUP_ROSTER_UPDATE", "GROUP_JOINED", "GROUP_LEFT",
+	"NAME_PLATE_UNIT_ADDED", "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT", "PLAYER_SOFT_INTERACT_CHANGED",
+	"PLAYER_SOFT_FRIEND_CHANGED", "PLAYER_SOFT_ENEMY_CHANGED", "PLAYER_FOCUS_CHANGED", "GOSSIP_SHOW",
+	"MERCHANT_SHOW", "QUEST_GREETING", "QUEST_DETAIL", "CHAT_MSG_MONSTER_SAY", "CHAT_MSG_MONSTER_YELL",
+	"CHAT_MSG_MONSTER_EMOTE", "PLAYER_CONTROL_LOST", "PLAYER_CONTROL_GAINED" }
+local readEvents = CreateFrame("Frame")
+readEvents:SetScript("OnEvent", function(_, event)
+	if RESTART[event] then unknownSince = nil end
+	DockReadSoon()
+end)
+
+local eyeHooked = false
+local function HookEye()
+	local eye = _G.QueueStatusButton
+	if eyeHooked or not ns.Usable(eye) then return end
+	eyeHooked = true
+	local function moved() if dock and dock:IsShown() and EyeLift() ~= dockLift then DockPlace() end end
+	ns.ScriptOnce(eye, "OnShow", moved, KEY)
+	ns.ScriptOnce(eye, "OnHide", moved, KEY)
+	ns.ScriptOnce(eye, "OnSizeChanged", moved, KEY)
+end
+
+local dockListening = false
 local function DockTicking(on)
-	if on and not dockTicker then
-		dockTicker = C_Timer.NewTicker(DOCK_READ, DockTick)
-	elseif not on and dockTicker then
-		dockTicker:Cancel()
-		dockTicker = nil
+	if on and not dockListening then
+		dockListening = true
+		-- (As LayerSwap registers them: one this client lacks is skipped.)
+		for _, e in ipairs(READ_EVENTS) do pcall(readEvents.RegisterEvent, readEvents, e) end
+		HookEye()
+		DockReadNow()
+	elseif not on and dockListening then
+		dockListening = false
+		readEvents:UnregisterAllEvents()
+		StopUnknown()
 	end
 end
 
@@ -654,9 +737,10 @@ local function BuildDock()
 	dock:SetScript("OnClick", DockClick)
 	dock:SetScript("OnEnter", DockEnter)
 	dock:SetScript("OnLeave", DockLeave)
-	dock:SetScript("OnShow", function() DockTicking(true) DockTick() end)
+	dock:SetScript("OnShow", function() DockTicking(true) end)
 	dock:SetScript("OnHide", function() DockTicking(false) end)
-	mm:HookScript("OnEnter", DockCheckSoon)
+	-- (The mouse coming onto the map: the button about to be looked at reads the layer again too.)
+	mm:HookScript("OnEnter", function() DockCheckSoon() DockReadSoon() end)
 	mm:HookScript("OnLeave", DockCheckSoon)
 	DockPlace()
 	DockRead()

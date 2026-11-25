@@ -414,6 +414,7 @@ end
 -- A UIPanelButtonTemplate button of Guildy's (W.Button, W.IconButton, W.DropButton).
 local seenButton = setmetatable({}, { __mode = "k" })
 local QueueMain   -- (below: every click on a control of Guildy's)
+local HoverHook   -- (below: a hover that may make Guildy's member card or score panel)
 
 -- Guildy sizes its buttons to their words as they're set (W.Button's SetText hook), some only up to a
 -- cap past which it cuts the words off with "..." (the bank's tab buttons at 120 px, "Only" at 200,
@@ -729,6 +730,7 @@ local function Each(f)
 	if not seenFrame[f] then
 		seenFrame[f] = true
 		Guard(Piece, f)
+		Guard(HoverHook, f)
 	end
 	if f.GetNumChildren then Children(f) end
 	if f.GetRegions then Regions(f:GetObjectType() == "Button", f:GetRegions()) end
@@ -1353,22 +1355,59 @@ function QueueMain()
 end
 
 -- The fallback, while Guildy's window or options are open and some of its frames haven't been
--- seen yet: a look at the screen's child count each frame (frames shown from a hover, a name's
--- right-click in the chat, a menu's row). Gone once all are found.
+-- seen yet: one look at the screen's new children in the next update (still before it's drawn)
+-- after each thing that makes them: a mouse button let go anywhere (a name's right-click in the
+-- chat, a menu's row, a dialog's button) and a hover on one of Guildy's own frames (the member
+-- card and the score panel are made by their owner's OnEnter). Nothing runs in between; the mouse
+-- event is listened to only while a window is open, and never again once all are found.
+local function Spotted()
+	local main, options = _G.GuildyFrame, _G.GuildyOptions
+	local open = (Usable(main) and main:IsVisible()) or (Usable(options) and options:IsVisible())
+	return open and Kit and On() and foundCount < KINDS
+end
+
 local spotter = CreateFrame("Frame")
 spotter:Hide()
 spotter:SetScript("OnUpdate", function(self)
-	local main, options = _G.GuildyFrame, _G.GuildyOptions
-	local open = (Usable(main) and main:IsVisible()) or (Usable(options) and options:IsVisible())
-	if not open or not Kit or not On() or foundCount >= KINDS then
-		self:Hide()
-		return
-	end
-	LookNew()
+	self:Hide()
+	if Spotted() then Guard(LookNew) end
+end)
+
+local clicks = CreateFrame("Frame")
+local listening = false
+local function Listen(on)
+	if on == listening then return end
+	listening = on
+	if on then clicks:RegisterEvent("GLOBAL_MOUSE_UP") else clicks:UnregisterEvent("GLOBAL_MOUSE_UP") end
+end
+clicks:SetScript("OnEvent", function()
+	if Spotted() then spotter:Show() else Listen(false) end
 end)
 
 local function Spotting()
-	if foundCount < KINDS then spotter:Show() end
+	if foundCount >= KINDS then
+		Listen(false)
+		return
+	end
+	Listen(true)
+	spotter:Show()
+end
+
+-- A hover on one of Guildy's frames with an OnEnter of its own: looked at right after, while the
+-- member card or the score panel is still to be found (hooked as frames are first seen). Run after
+-- the owner's own OnEnter, so what it made is there already.
+local hoverHooked = setmetatable({}, { __mode = "k" })
+local function HoverLook()
+	if not (found.card and found.score) and Spotted() then Guard(LookNew) end
+end
+function HoverHook(f)
+	if hoverHooked[f] or (found.card and found.score) then return end
+	if (f.IsProtected and f:IsProtected()) or not (f.HasScript and f:HasScript("OnEnter")) then return end
+	if type(f:GetScript("OnEnter")) ~= "function" then return end
+	hoverHooked[f] = true
+	-- (Plain HookScript: ns.ScriptOnce keeps one OnEnter hook per pack, and tabs and segmented
+	-- buttons already have theirs.)
+	f:HookScript("OnEnter", HoverLook)
 end
 
 -- (Guildy hides itself when it shows the game's window in its place, and makes or places that
@@ -1383,6 +1422,7 @@ local function MainHidden()
 	if not On() then return end
 	HostClosed()
 	returnLook:Show()
+	if not Spotted() then Listen(false) end
 end
 
 -- The bottom tabs hang below the window: a panel behind them (the window's look) from its left

@@ -954,7 +954,7 @@ local function Sidebar(f)
 	end
 end
 
-local Poll   -- (below: starts the look at the screen's child count again)
+local Poll   -- (below: starts looking at what's made on the screen again)
 
 local function Host(f)
 	if hosts[f] then return false end
@@ -1145,9 +1145,15 @@ local function Among(list)
 	end
 end
 
+-- Its pop-ups (and named windows) are made on the screen by its own code, from many of its events
+-- (a toast, a network prompt, the mail helper), and nothing of it is reachable from outside: a frame
+-- made on the screen (CreateFrame's own call, hooked after it) is looked for in the next update,
+-- once it's built. Nothing runs in between, and nothing at all once all four are found (or
+-- switched off in its settings).
 local watcher = CreateFrame("Frame")
 watcher:Hide()
 local lastCount = -1
+local allDone = false
 local function LookNow()
 	if not On() then return end
 	local n = UIParent:GetNumChildren()
@@ -1156,12 +1162,34 @@ local function LookNow()
 		Among({ UIParent:GetChildren() })
 		Names()
 	end
-	if AllFound() then watcher:Hide() end
+	allDone = AllFound()
 end
-watcher:SetScript("OnUpdate", function() Guard(LookNow) end)
+watcher:SetScript("OnUpdate", function(self)
+	self:Hide()
+	Guard(LookNow)
+end)
 
+-- (Its pop-ups: unnamed backdrop frames on the screen; its windows: named Mastercraft*.)
+local function Created(_, name, parent, template)
+	if allDone or parent ~= UIParent then return end
+	if type(name) == "string" then
+		if name:sub(1, 11) ~= "Mastercraft" then return end
+	elseif template ~= "BackdropTemplate" then
+		return
+	end
+	if On() then watcher:Show() end
+end
+
+local createHooked = false
 Poll = function()
-	if On() and not AllFound() then watcher:Show() end
+	if not On() then return end
+	allDone = AllFound()
+	if allDone then return end
+	if not createHooked then
+		createHooked = true
+		hooksecurefunc("CreateFrame", Created)
+	end
+	watcher:Show()
 end
 
 -- From a call that opens its windows: every one there is now, at once.
