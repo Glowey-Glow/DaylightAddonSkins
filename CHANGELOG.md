@@ -1,5 +1,8 @@
 # Addon Skins (DaylightUI Plugin)
 
+## Unreleased
+- New: Curator. Its album and every page in it (inventory, albums, social, contracts, achievements, profile, quests, talents, inns, discovery, Winter Veil, statistics, boosters), the Exchange (all four pages, the sheet, the picker, the price popup), the merchant, the reseller, the Ruby Counter, the inn counter and bet, golden quests, the bank, restoration and copy panels, the card view, news, gift, search, leads, the tour, the options and the small windows: the Daylight UI window, buttons, tabs, side tabs, dropdowns, checkboxes, bars, lists and scroll bars, your font face and inks. The cards, boxes, scenes, celebrations, rarity colors and the gold Claim buttons stay as Curator draws them, and text keeps Curator's own sizes so nothing it fits is cut short. The skin never touches Curator's card data, so Curator's own guard never stops your rewards.
+
 ## 1.18.14
 - TrueshotLodge 1.60.1.47: its window is dressed again. The pet profile's new Target button is one of the game's protected buttons, and it made the whole window protected outside fights, so the skin left all of it as TrueshotLodge draws it. The window is dressed again out of combat (the Target button itself stays the game's). The new Database Search tab is dressed too: its six filter menus, its column heads and its lines, and the Map button's "Instance" word. The creature details pane also gets its look when the window first opens on Database Search.
 - Forever Fishing 0.9.251: after you switch between its windows (Journal, Settings, Session Goals, the Tracker), the Daylight UI window frame stays under each window's own words and art. Forever Fishing's new window stacking had lifted it over them.

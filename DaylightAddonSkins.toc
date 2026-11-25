@@ -3,13 +3,13 @@
 ## IconTexture: Interface\AddOns\DaylightAddonSkins\Media\icon.png
 ## Category: DaylightUI Plugins
 ## Group: DaylightAddonSkins
-## Notes: A plugin for Daylight UI: dresses the windows of your other addons (Keep or Toss, DoesItDie, Camping Kit, LootTriage, OpenMap, Spoken, Forever Fishing, Polestar, Forever Leveling BiS, Journey Guides, OneForAll, Questie, Dialogue UI, Shortest Path Forever, Dungeon Journal, Total RP 3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFG Forever, Guildy, Mastercraft, High Fidelity World Map, Details!, AtlasLoot Continued, Pawn, ALL THE THINGS, Auctionator, Altoholic, Leatrix Plus), and the game windows Daylight UI leaves bare, in the Daylight UI look. Needs Daylight UI and its Window Skins module.
+## Notes: A plugin for Daylight UI: dresses the windows of your other addons (Keep or Toss, DoesItDie, Camping Kit, LootTriage, OpenMap, Spoken, Forever Fishing, Polestar, Forever Leveling BiS, Journey Guides, OneForAll, Questie, Dialogue UI, Shortest Path Forever, Dungeon Journal, Total RP 3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFG Forever, Guildy, Mastercraft, High Fidelity World Map, Details!, AtlasLoot Continued, Pawn, ALL THE THINGS, Auctionator, Altoholic, Leatrix Plus, Curator), and the game windows Daylight UI leaves bare, in the Daylight UI look. Needs Daylight UI and its Window Skins module.
 ## Author: Glowey
 ## X-License: All Rights Reserved
 ## X-Curse-Project-ID: 1799579
 ## Version: @project-version@
 ## Dependencies: DaylightUI
-## OptionalDeps: DaylightUI_Skins, DaylightUI_Bags, CampingKit, DoesItDie, KeepOrToss, LootTriage, OpenMap, Spoken, ForeverFishing, Polestar, ForeverLevelingBiS, Journey, OneForAll, Questie, DialogueUI, ShortestPathForever, ForeverCore, ForeverDungeonJournal, totalRP3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFGForever, Guildy, Details, AtlasLootContinued, AtlasLootContinued_Favourites, Pawn, AllTheThings, Auctionator, AddonFactory, Altoholic
+## OptionalDeps: DaylightUI_Skins, DaylightUI_Bags, CampingKit, DoesItDie, KeepOrToss, LootTriage, OpenMap, Spoken, ForeverFishing, Polestar, ForeverLevelingBiS, Journey, OneForAll, Questie, DialogueUI, ShortestPathForever, ForeverCore, ForeverDungeonJournal, totalRP3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFGForever, Guildy, Details, AtlasLootContinued, AtlasLootContinued_Favourites, Pawn, AllTheThings, Auctionator, AddonFactory, Altoholic, Curator
 ## SavedVariables: DaylightAddonSkinsDB
 # Mastercraft stays out of OptionalDeps: its pack sets Mastercraft's style before Mastercraft loads.
 # Leatrix_Plus stays out of OptionalDeps: its pack writes handed-over settings into LeaPlusDB before Leatrix Plus reads them.
@@ -68,6 +68,11 @@ Packs\AllTheThings.lua
 Packs\Auctionator.lua
 Packs\Altoholic.lua
 Packs\LeatrixPlus.lua
+Packs\Curator.lua
+Packs\CuratorAlbum.lua
+Packs\CuratorMarket.lua
+Packs\CuratorScenes.lua
+Packs\CuratorWindows.lua
 Auto.lua
 Grid.lua
 Status.lua
