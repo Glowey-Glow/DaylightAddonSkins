@@ -14,6 +14,7 @@
 # Mastercraft stays out of OptionalDeps: its pack sets Mastercraft's style before Mastercraft loads.
 # Leatrix_Plus stays out of OptionalDeps: its pack writes handed-over settings into LeaPlusDB before Leatrix Plus reads them.
 
+ErrorTag.lua
 Locales\Locales.lua
 Locales\deDE.lua
 Locales\frFR.lua
