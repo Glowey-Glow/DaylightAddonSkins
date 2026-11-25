@@ -6,9 +6,9 @@ A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its 
 
 ---
 
-## New in 1.18.12
-- **The game's Auction House window, given back by Daylight UI,** is laid out at its own size again: the "Daylight UI window" link no longer spans the whole header, and the list's columns stay inside the window.
-- **Lighter:** less work every frame and on every click; skins for addons you don't have no longer wait for them.
+## New in 1.18.13
+- **No more hitches every few seconds:** the search for other addons' windows sometimes went through every frame in the game at once (over 100 ms, every 8 to 10 seconds). It now keeps its place properly, skips what it has seen and spreads any big look over several frames.
+- **Lighter after each click:** windows not made yet are looked for with less work.
 ---
 
 ## Addons it skins

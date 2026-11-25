@@ -1,5 +1,9 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.13
+- No more hitches every few seconds. The search for other addons' windows (the Auto Skinner's, which runs even with all its switches off) is meant to look only at frames made since its last look, but it often kept its place on one of the game's buff icons, which the game later no longer finds. Then it went through every frame in the game again at once: about 27,000 frames, a hitch of over 100 ms every 8 to 10 seconds. It now never keeps its place on a buff icon, skips frames it has already looked at, and does at most a set amount of work in one frame, finishing on the next ones.
+- Windows that haven't been made yet are looked for with less work after each click: whether each one's skin is on is asked once, not on every frame.
+
 ## 1.18.12
 - The game's Auction House window, once Daylight UI hands it back (you picked the game's window, or a fight started), is laid out at its own size again. While Daylight UI's window stood in for it, the game's was kept tiny and as wide as Daylight UI's, and two things stayed that way: the "Daylight UI window" link on its header grew across the whole header and past its left edge (a click anywhere there swapped windows), and the list's columns ran past the window (Available outside it). The link is sized to its words again and the lists' columns laid out again at the window's width.
 - Lighter: less work every frame and on every click. Waiting windows are looked for a few times a second instead of every frame (every frame for a moment after a click), skins for addons you don't have no longer wait for them, open game menus and the AtlasLoot Continued, ALL THE THINGS and Guildy windows are kept up for less, and the game's item buttons and chat tabs pass through quicker.

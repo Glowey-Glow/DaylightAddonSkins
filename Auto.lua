@@ -437,30 +437,81 @@ local function Consider(frame)
 end
 
 -- Every frame the game has made, in the order it made them (EnumerateFrames), from where the last
--- look stopped: each look sees only frames made since. budget = at most this many now (the first
--- look, over the whole interface, is spread over a few frames); true once caught up.
-local cursor
+-- look stopped: each look sees only frames made since, at most `budget` frames in one frame (one
+-- with more to see goes on the next frame), so no look holds a frame up, whatever turns up.
+-- The place kept between looks is the last steady frame passed, never one of the game's buff
+-- buttons (Blizzard_AuraContainer's AuraButtons: made in batches as auras show, IsShown a secret):
+-- EnumerateFrames(button) a while later doesn't find the button and starts over from the first
+-- frame, and a look from one walked every frame in the game again: about 27,000 frames, a hitch of
+-- 100+ ms every 8-10 s (Perfy trace, 2026-11-24). The few buttons after the place kept are passed
+-- again each look, and `seen` makes any frame passed again a table lookup, a start-over included.
+local STEADY, UNSTEADY = 1, 2
+local seen = setmetatable({}, { __mode = "k" })   -- frame -> STEADY / UNSTEADY, once looked at
+local cursor   -- the place kept between looks (a steady frame)
+local pos      -- where a look cut short by its budget goes on, the next frame
+
+local function Unsteady(frame)
+	local isShown = frame.IsShown
+	if type(isShown) == "function" then
+		local ok, v = pcall(isShown, frame)
+		if ok and Secret(v) then return true end
+	end
+	local loc = Call(frame, "GetSourceLocation")
+	return type(loc) == "string" and loc:find("Blizzard_AuraContainer", 1, true) ~= nil
+end
+
+-- true once caught up; false = more to see (`pos` holds the place).
 local function Step(budget)
-	if not ns.Enabled() then return true end
+	if not ns.Enabled() then pos = nil return true end
+	local start = pos or cursor
+	pos = nil
 	local frame
-	if cursor then frame = EnumerateFrames(cursor) else frame = EnumerateFrames() end
+	if start then frame = EnumerateFrames(start) else frame = EnumerateFrames() end
 	local n = 0
 	while frame do
-		-- (Moved past before it's looked at: one that errors is not looked at again.)
-		cursor = frame
-		Consider(frame)
+		local kind = seen[frame]
+		if not kind then
+			kind = Unsteady(frame) and UNSTEADY or STEADY
+			-- (Marked and moved past before it's looked at: one that errors is not looked at again.)
+			seen[frame] = kind
+			if kind == STEADY then cursor = frame end
+			Consider(frame)
+		elseif kind == STEADY then
+			cursor = frame
+		end
 		n = n + 1
-		if budget and n >= budget then return false end
+		if n >= budget then
+			pos = frame
+			return false
+		end
 		frame = EnumerateFrames(frame)
 	end
 	return true
+end
+
+-- A look, spread over frames: `budget` frames a frame until caught up, then done() (once).
+local BUDGET = 1500
+local walking = false
+local function Walk(budget, done)
+	if walking then return end
+	walking = true
+	local function Go()
+		local ok, finished = ns.Guard(Step, budget)
+		if ok and not finished then
+			C_Timer.After(0, Go)
+			return
+		end
+		walking = false
+		if done then done() end
+	end
+	Go()
 end
 
 -- Once the world is up: the whole interface, 2,000 frames a frame (about 28,000 here). Then a
 -- look at what's new every 2 seconds, and right after any click (a menu or window a click made:
 -- found the next frame).
 function Check()
-	if caughtUp then ns.Guard(Step) end
+	if caughtUp then Walk(BUDGET) end
 end
 
 local events = CreateFrame("Frame")
@@ -470,14 +521,9 @@ events:SetScript("OnEvent", function(self, event)
 	if event == "PLAYER_ENTERING_WORLD" then
 		self:UnregisterEvent("PLAYER_ENTERING_WORLD")
 		C_Timer.After(1, function()
-			local first
-			first = C_Timer.NewTicker(0, function()
-				local ok, done = xpcall(Step, geterrorhandler(), 2000)
-				if not ok or done then
-					first:Cancel()
-					caughtUp = true
-					C_Timer.NewTicker(2, Check)
-				end
+			Walk(2000, function()
+				caughtUp = true
+				C_Timer.NewTicker(2, Check)
 			end)
 		end)
 	else

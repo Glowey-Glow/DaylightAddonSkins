@@ -1344,7 +1344,13 @@ local function Tick()
 	ticking = true
 	for i = #watches, 1, -1 do
 		local w = watches[i]
-		if ready and (not ns.Enabled(w.key) or NeverComes(w)) then
+		-- (Its switch asked once, the first look after login: a switch takes hold after a reload.
+		-- Asking every watch's switch on every frame of a burst was most of this loop's time; only
+		-- a pack turned off by an error since is still looked for each time.)
+		if ready and not w.on then
+			w.on = ns.Enabled(w.key) and not NeverComes(w) or nil
+		end
+		if ready and (not w.on or failedNow[w.key]) then
 			-- Its addon is switched off (a switch takes hold after a reload), or isn't there: not
 			-- looked for again.
 			table.remove(watches, i)
