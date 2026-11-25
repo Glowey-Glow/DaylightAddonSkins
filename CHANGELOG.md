@@ -1,5 +1,14 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.18.14
+- TrueshotLodge 1.60.1.47: its window is dressed again. The pet profile's new Target button is one of the game's protected buttons, and it made the whole window protected outside fights, so the skin left all of it as TrueshotLodge draws it. The window is dressed again out of combat (the Target button itself stays the game's). The new Database Search tab is dressed too: its six filter menus, its column heads and its lines, and the Map button's "Instance" word. The creature details pane also gets its look when the window first opens on Database Search.
+- Forever Fishing 0.9.251: after you switch between its windows (Journal, Settings, Session Goals, the Tracker), the Daylight UI window frame stays under each window's own words and art. Forever Fishing's new window stacking had lifted it over them.
+- LayerSwap 1.14.56: the minimap layer button reads "Layer: Current" or "Layer: New" on WoW Forever, where LayerSwap now names your layer that way, instead of "Layer: ?".
+- ALL THE THINGS 5.4.19: on its rebuilt Information settings page, the checkbox words are in your text color again, and its group headings get your heading color and a plain + / - in place of the round gold buttons.
+- Spoken 3.13.0: the new profile Export / Import window gets the Daylight UI window.
+- Forever Leveling BiS 1.5.0: the wish-list picker opened from the on-screen tracker's title is dressed like the one in the main window.
+- Checked against today's updates, nothing else to change: Daylight UI 2.2.7, Guildy 1.15.0, LFG Forever 2.7.0, and (from CurseForge) AtlasLoot Continued 13001, Camping Kit 1.11.2, Details!, DoesItDie 0.10.1, Journey 4.00.14, Kerzo Classic Quest Log 6.6.3, Kerzo Quest Expansion 2.1.2, Questie 12.14.0, RareScanner 1.60.1.12 and Shortest Path Forever 1.45.8.
+
 ## 1.18.13
 - No more hitches every few seconds. The search for other addons' windows (the Auto Skinner's, which runs even with all its switches off) is meant to look only at frames made since its last look, but it often kept its place on one of the game's buff icons, which the game later no longer finds. Then it went through every frame in the game again at once: about 27,000 frames, a hitch of over 100 ms every 8 to 10 seconds. It now never keeps its place on a buff icon, skips frames it has already looked at, and does at most a set amount of work in one frame, finishing on the next ones.
 - Windows that haven't been made yet are looked for with less work after each click: whether each one's skin is on is asked once, not on every frame.

@@ -317,6 +317,9 @@ ns.Pack("Spoken", "Spoken", function(Kit)
 	ns.Watch(KEY, "SpokenContributeBox", function(frame) ns.PlainWindow(frame) end)
 	ns.Watch(KEY, "SpokenGatheredLines", function(frame) ns.PlainWindow(frame) end)
 	ns.Watch(KEY, "SpokenMinimapMenu", function(frame) ns.PlainWindow(frame) end)
+	-- (3.13.0: the profile Export / Import window, made on its first use; Import shows it from a
+	-- local function, so it's watched for, not hooked.)
+	ns.Watch(KEY, "SpokenProfileTransfer", function(frame) ns.PlainWindow(frame) end)
 
 	-- (Its controller dialog: looked for right after the calls that make and show it, so it's
 	-- dressed before it's drawn. Only ever made there: no watch, which a player without the

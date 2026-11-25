@@ -6,9 +6,12 @@ A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its 
 
 ---
 
-## New in 1.18.13
-- **No more hitches every few seconds:** the search for other addons' windows sometimes went through every frame in the game at once (over 100 ms, every 8 to 10 seconds). It now keeps its place properly, skips what it has seen and spreads any big look over several frames.
-- **Lighter after each click:** windows not made yet are looked for with less work.
+## New in 1.18.14
+- **TrueshotLodge 1.60.1.47:** the window is dressed again (its new Target button had made it protected), and so is the new Database Search tab.
+- **Forever Fishing:** the window frame stays under each window's words when you switch between its windows.
+- **LayerSwap:** the minimap button reads "Layer: Current" or "Layer: New" on WoW Forever instead of "Layer: ?".
+- **ALL THE THINGS, Spoken, Forever Leveling BiS:** the new Information settings page, the profile Export / Import window and the tracker's wish-list picker are dressed.
+- Checked against today's updates of Daylight UI, Guildy, LFG Forever and ten more.
 ---
 
 ## Addons it skins

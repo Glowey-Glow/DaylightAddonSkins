@@ -103,6 +103,12 @@ local OUTLINE_FONTS = {
 	TrueshotLodgeOutlineButtonNormalFont = "TEXT",
 	TrueshotLodgeOutlineButtonHighlightFont = "VALUE",
 	TrueshotLodgeOutlineButtonDisableFont = "OFF",
+	-- (1.60.1.47 Database Search: its Map button's smaller "Instance" word, its sortable column heads.)
+	TrueshotLodgeSearchTopInstanceNormalFont = "TEXT",
+	TrueshotLodgeSearchTopInstanceHighlightFont = "VALUE",
+	TrueshotLodgeSearchTopInstanceDisableFont = "OFF",
+	TrueshotLodgeSearchTopHeaderNormalFont = "LABEL",
+	TrueshotLodgeSearchTopHeaderHighlightFont = "VALUE",
 }
 local fontBase = {}
 
@@ -608,9 +614,100 @@ end
 local seen = setmetatable({}, { __mode = "k" })
 local paged = setmetatable({}, { __mode = "k" })
 local AUTO = { rows = false, skip = skip }
-local DRESS_OPTS = { skip = skip, checks = false, scrollBars = false }
+local DRESS_OPTS = { skip = skip, checks = false, scrollBars = false, implicit = true }
 local Queue
 local Visit
+local LateDetails
+
+-- 1.60.1.47: the pet profile's Target button (TrueshotLodgeTargetButton, tab-pet.lua) is a secure
+-- action button, and holding it makes its pane, the profile and the window itself protected out
+-- of combat (TrueshotLodge moves it to UIParent as a fight starts). Those are still dressed out
+-- of combat; the button and anything explicitly protected are never touched, and a frame that
+-- is protected in a fight waits for its end.
+local function Shut(f)
+	if not f.IsProtected then return false end
+	local p, explicit = f:IsProtected()
+	if not p then return false end
+	return explicit or InCombatLockdown()
+end
+
+local fightWait = false
+local function AfterFight()
+	fightWait = false
+	if Queue then Queue() end
+end
+local function WaitFight()
+	if fightWait or not InCombatLockdown() then return end
+	fightWait = true
+	ns.OutOfCombat(AfterFight)
+end
+
+-- Queue on a frame's showing: ns.ScriptOnce for an open frame; one only protected by holding the
+-- Target button (refused there) is hooked directly, out of combat.
+local showHooked = setmetatable({}, { __mode = "k" })
+local function OnShowQueue(f)
+	if ns.ScriptOnce(f, "OnShow", Queue, KEY) or showHooked[f] or Shut(f) then return end
+	if not (f.HasScript and f:HasScript("OnShow")) then return end
+	showHooked[f] = true
+	f:HookScript("OnShow", function() if ns.Enabled(KEY) then Queue() end end)
+end
+
+local function SkipSecure()
+	local target = _G.TrueshotLodgeTargetButton
+	if Usable(target) then skip[target] = true end
+end
+
+-- The Database Search tab (1.60.1.47, tab-search.lua): its six filter menus are the game's old
+-- dropdowns (UIDropDownMenuTemplate), which the walk leaves; its column heads' bronze rule and
+-- the bronze column dividers a faint hairline, and the heads written in tan in the label ink.
+local SEARCH_MENUS = { "Family", "Class", "Diet", "Tame", "Ability", "Zone" }
+local searchDone = setmetatable({}, { __mode = "k" })
+local function Faint(f)
+	for i = 1, f:GetNumRegions() do
+		local r = select(i, f:GetRegions())
+		if IsTexture(r) then
+			r:SetColorTexture(1, 1, 1, 0.1)
+		elseif Usable(r) and r:GetObjectType() == "FontString" then
+			local text = r:GetText()
+			if type(text) == "string" and string.find(text, "|c", 1, true) then
+				r:SetText((string.gsub(string.gsub(text, "|c%x%x%x%x%x%x%x%x", ""), "|r", "")))
+				Ink(r, "LABEL")
+			end
+		end
+	end
+end
+local function SearchTop(frame)
+	if not ns.Controls(KEY) then return end
+	for _, name in ipairs(SEARCH_MENUS) do
+		local dd = _G["TrueshotLodgeSearchTop" .. name]
+		if Usable(dd) and not searchDone[dd] then
+			searchDone[dd] = true
+			skip[dd] = true
+			ns.Guard(ns.OldDropdown, dd)
+		end
+	end
+	for i = 1, frame:GetNumChildren() do
+		local c = select(i, frame:GetChildren())
+		if Usable(c) and not searchDone[c] and c:GetObjectType() == "Frame" then
+			local heads = c.buttons
+			if type(heads) == "table" and heads.name and heads.zone then
+				searchDone[c] = true
+				Faint(c)
+			elseif c:GetNumChildren() == 0 and c:GetNumRegions() >= 3 then
+				-- (The dividers: a frame of 1 px wide lines and nothing else.)
+				local lines = true
+				for j = 1, c:GetNumRegions() do
+					local r = select(j, c:GetRegions())
+					if not IsTexture(r) or math.abs((r:GetWidth() or 0) - 1) > 0.01 then lines = false break end
+				end
+				if lines then
+					searchDone[c] = true
+					Faint(c)
+				end
+			end
+		end
+	end
+end
 
 -- Each child once from a single GetChildren (a select over a fresh GetChildren per child is n² calls).
 local function VisitEach(depth, ...)
@@ -621,7 +718,10 @@ end
 
 function Visit(f, depth)
 	if depth > 10 or skip[f] or not Usable(f) then return end
-	if f.IsProtected and f:IsProtected() then return end
+	if Shut(f) then
+		WaitFight()
+		return
+	end
 	if not seen[f] then
 		seen[f] = true
 		Piece(f)
@@ -634,7 +734,7 @@ function Visit(f, depth)
 	if n == 0 then return end
 	if depth >= 1 and depth <= 4 and not paged[f] and f:GetObjectType() == "Frame" and f.HookScript then
 		paged[f] = true
-		ns.ScriptOnce(f, "OnShow", Queue, KEY)
+		OnShowQueue(f)
 	end
 	VisitEach(depth + 1, f:GetChildren())
 end
@@ -646,6 +746,9 @@ local function AfterCombat()
 end
 
 local function Pass(frame)
+	SkipSecure()
+	SearchTop(frame)
+	if LateDetails then LateDetails(frame) end
 	Visit(frame, 0)
 	if ns.Controls(KEY) then
 		if Kit.Walking(frame) then
@@ -887,6 +990,25 @@ local function Title(frame)
 end
 
 local dressed = false
+-- The details pane is told by where it hangs (under the list), but from 1.60.1.47 the Database
+-- Search tab hangs it off the window instead: when the window first opens on that tab, it's
+-- looked for again on later passes.
+local listPane, detailsDone
+function LateDetails(frame)
+	if detailsDone or not Usable(listPane) then return end
+	for i = 1, frame:GetNumChildren() do
+		local c = select(i, frame:GetChildren())
+		if Usable(c) and c:GetObjectType() == "Frame" and c ~= frame.NineSlice and not skip[c] then
+			local _, rel = c:GetPoint(1)
+			if rel == listPane then
+				detailsDone = true
+				Details(c)
+				return
+			end
+		end
+	end
+end
+
 local function Dress(frame, K)
 	if dressed or not Usable(frame) then return end
 	dressed = true
@@ -941,6 +1063,7 @@ local function Dress(frame, K)
 		end
 	end
 
+	listPane = list
 	-- The panes: the list and the details, and the halves of the Stable tab and the pet profile.
 	for i = 1, frame:GetNumChildren() do
 		local c = select(i, frame:GetChildren())
@@ -951,11 +1074,14 @@ local function Dress(frame, K)
 				if Usable(g) and g:GetObjectType() == "Frame" then Panel(g) end
 			end
 			local _, rel = c:GetPoint(1)
-			if list and rel == list then Details(c) end
+			if list and rel == list then
+				Details(c)
+				detailsDone = true
+			end
 		end
 	end
 
-	ns.ScriptOnce(frame, "OnShow", Queue, KEY)
+	OnShowQueue(frame)
 	Pass(frame)
 	Queue()
 end
@@ -963,6 +1089,11 @@ end
 local function Now()
 	local frame = _G.TrueshotLodgeFrame
 	if not Usable(frame) or not ns.Enabled(KEY) then return end
+	-- (Protected while it holds the Target button: dressed once the fight is over.)
+	if InCombatLockdown() and frame.IsProtected and frame:IsProtected() then
+		ns.OutOfCombat(function() ns.Guard(Now) end)
+		return
+	end
 	ns.WithKit(function(K) Dress(frame, K) end)
 end
 

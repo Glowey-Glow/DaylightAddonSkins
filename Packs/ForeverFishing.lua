@@ -234,6 +234,35 @@ ns.Watch(KEY, "ForeverFishingScanDeveloper", Report)
 ns.Watch(KEY, "ForeverFishingScanDiagnostics", Diagnostics)
 ns.Watch(KEY, function() return ns.Usable(FF.catchRecapPanel) and FF.catchRecapPanel or nil end, Recap)
 
+-- Its window stack (0.9.251, UI.lua SetFishingSurfaceLayer from BringFishingWindowForward): when
+-- a window moves to a new level, every child below the window is lifted to one above it, and
+-- DaylightUI's shells sit one below their frame (Style.lua Style.Skin). Lifted, a shell would
+-- cover the window's own words and art: each one in the windows it restacked goes back under
+-- its frame. (It restacks out of combat only.)
+local function SinkShells(frame, GetShell, depth)
+	local s = GetShell(frame)
+	if s and s.GetParent and s:GetParent() == frame then
+		local want = math.max(0, frame:GetFrameLevel() - 1)
+		if s:GetFrameLevel() ~= want then s:SetFrameLevel(want) end
+	end
+	if depth >= 8 then return end
+	for _, child in ipairs({ frame:GetChildren() }) do
+		if ns.Usable(child) then SinkShells(child, GetShell, depth + 1) end
+	end
+end
+
+if type(FF.BringFishingWindowForward) == "function" then
+	ns.HookOnce(FF, "BringFishingWindowForward", function(self)
+		if not ns.Enabled(KEY) or InCombatLockdown() then return end
+		local Style = type(_G.DaylightUI) == "table" and _G.DaylightUI.Style
+		local GetShell = type(Style) == "table" and Style.GetShell
+		if type(GetShell) ~= "function" then return end
+		for _, window in ipairs(type(self.floatingWindows) == "table" and self.floatingWindows or {}) do
+			if ns.Usable(window) then ns.Guard(SinkShells, window, GetShell, 0) end
+		end
+	end, KEY)
+end
+
 -- The fast path: the calls that make (and open) these windows dress them before they're drawn.
 for _, name in ipairs({ "ShowFishingBugReport", "ShowTraceWindow", "EnsureScanDiagnosticsUI", "ShowCameraDeveloper" }) do
 	if type(FF[name]) == "function" then ns.HookOnce(FF, name, ns.WatchNow, KEY) end

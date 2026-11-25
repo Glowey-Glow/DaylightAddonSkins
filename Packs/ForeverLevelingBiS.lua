@@ -337,6 +337,12 @@ ns.Watch(KEY, "ForeverLevelingBiSWishDock", function(frame)
 		Dress(frame, "window")
 	end
 end)
+-- The wish list picker (1.5.0) opened from the on-screen tracker's title is put on the tracker
+-- (WishLists.lua WS.ShowMenu, TopWindow), which no other watch reaches: looked for after that click.
+ns.Watch(KEY, "ForeverLevelingBiSWishList", function(frame)
+	if not On() or not ns.Usable(frame.pick) then return end
+	ns.ScriptOnce(frame.pick, "OnClick", function() if On() then ns.Guard(Scan, frame, 1) end end, KEY)
+end)
 -- (The button is made at login.)
 ns.Watch(KEY, "ForeverLevelingBiSMinimapButton", function(button)
 	ns.ScriptOnce(button, "OnClick", Opened, KEY)

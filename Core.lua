@@ -2273,11 +2273,21 @@ local function WalkRegions(key, ...)
 	end
 end
 
+-- A protected frame the walk stays out of. opts.implicit: a frame protected only by holding a
+-- secure child (IsProtected's second return false) is walked out of combat; its secure children
+-- themselves stay out.
+local function Shut(child, opts)
+	if not child.IsProtected then return false end
+	local p, explicit = child:IsProtected()
+	if not p then return false end
+	return explicit or not opts.implicit or InCombatLockdown()
+end
+
 local function WalkChildren(Kit, opts, depth, key, controls, fonts, ...)
 	local skip, soften = opts.skip, opts.soften
 	for i = 1, select("#", ...) do
 		local child = select(i, ...)
-		if Usable(child) and not (skip and skip[child]) and not (child.IsProtected and child:IsProtected()) then
+		if Usable(child) and not (skip and skip[child]) and not Shut(child, opts) then
 			local kind = child:GetObjectType()
 			local walk = true
 			if kind == "Button" then

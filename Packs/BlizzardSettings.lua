@@ -390,8 +390,13 @@ local function Check(cb)
 		PlaceFill(cb, c.host)
 		FillCheck(cb, c)
 	end
-	-- A checkbox's own words (the game's UICheckButtonTemplate on an addon's page).
+	-- A checkbox's own words (the game's UICheckButtonTemplate on an addon's page): the template's
+	-- Text, or a label of the addon's own beside it when that one is left empty (ALL THE THINGS
+	-- 5.4.19's Information page writes into cb.Label).
 	local label = cb.Text or cb.text
+	if Is(cb.Label, "FontString") and not (Is(label, "FontString") and (label:GetText() or "") ~= "") then
+		label = cb.Label
+	end
 	if Is(label, "FontString") then
 		FitFont(label)
 		InkLabel(label)
@@ -627,6 +632,47 @@ local function Fold(btn)
 	end
 end
 
+-- A group heading an addon draws on its page that folds open and shut: a plain button with its
+-- plus / minus icon (the game's round UI-PlusButton / UI-MinusButton art), a big title and a count
+-- (ALL THE THINGS 5.4.19's Information page). The round gold art gives way to the same plain + / -
+-- glyph as the game's own folds, the title in the heading ink. The addon sets the icon again on
+-- every refresh: the glyph follows it right away.
+local heads = weak()       -- heading -> its glyph
+local foldArt
+local function FoldMark(icon)
+	if not foldArt then
+		foldArt = ns.FileIDs({ ["Interface\\Buttons\\UI-PlusButton-Up"] = "+", ["Interface\\Buttons\\UI-MinusButton-Up"] = MINUS })
+	end
+	local ok, tex = pcall(icon.GetTexture, icon)
+	if not ok or tex == nil or Secret(tex) then return nil end
+	if type(tex) == "string" then tex = string.lower(tex) end
+	return foldArt[tex]
+end
+
+local function HeadMark(btn)
+	local g, icon = heads[btn], btn.Icon
+	if not g or not Is(icon, "Texture") then return end
+	local mark = ns.Enabled(SETTINGS) and FoldMark(icon) or nil
+	icon:SetAlpha(mark and 0 or 1)
+	g:SetShown(mark ~= nil)
+	if mark and g:GetText() ~= mark then g:SetText(mark) end
+end
+
+local function GroupHeading(btn)
+	if not heads[btn] then
+		local g = btn:CreateFontString(nil, "OVERLAY")
+		g:SetFontObject(GameFontHighlight)
+		g:SetPoint("CENTER", btn.Icon, "CENTER", 0, 0)
+		heads[btn] = g
+		hooksecurefunc(btn.Icon, "SetTexture", function() HeadMark(btn) end)
+	end
+	HeadMark(btn)
+	SetInkOf(heads[btn], ns.Colors().TEXT)
+	FitFont(btn.Title)
+	InkGame(btn.Title, true)
+	FitFont(btn.Count)
+end
+
 -- A key binding button (KeyBindingFrameBindingButtonTemplate, the game's silver stretch button):
 -- the game's art off, a flat dark box with a faint wash under the mouse, the words at the game's
 -- size in your font, "Not Bound" in the dim ink, and its "waiting for a key" highlight in the
@@ -753,6 +799,8 @@ function Piece(f, parent, canvas, depth)
 			if controls and not canvas then Try1(TabLook, f) Try1(PaintTab, f) end
 		elseif not canvas and (parent.Button1 == f or parent.Button2 == f or Is(f.SelectedHighlight, "Texture")) then
 			Try1(Bind, f)
+		elseif canvas and Is(f.Title, "FontString") and Is(f.Count, "FontString") and Is(f.Icon, "Texture") then
+			if controls then Try1(GroupHeading, f) end
 		elseif TextButton(f) then
 			if controls and not Kit.ButtonOf(f) then Try1(Kit.Button, f, panel) end
 		elseif not canvas and Is(f.Left, "Texture") and Is(f.Right, "Texture") and Is(f.Text, "FontString") then

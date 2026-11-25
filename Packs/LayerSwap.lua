@@ -488,6 +488,10 @@ local function LayerWord()
 	local line = lines and lines[2]
 	if type(line) ~= "string" then return string.format(L["Layer: %s"], "?") end
 	line = string.gsub(line, "%s%s%s.*$", "")          -- " Host on" after three spaces
+	-- (1.14.56, LayerSwap.lua Layer.title: where the client keeps layer numbers private, the
+	-- layer it's on is named by how it came, not by a letter.)
+	if line == "Current layer" then return string.format(L["Layer: %s"], L["Current"]) end
+	if line == "New layer" then return string.format(L["Layer: %s"], L["New"]) end
 	local rest = string.match(line, "^Layer%s+(.+)$")
 	if rest then return string.format(L["Layer: %s"], rest) end
 	-- (Not read yet; 1.14.34 says "In flight" there on a flight path with the layer unread.)
