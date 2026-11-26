@@ -1004,29 +1004,19 @@ local function PassSoon()
 	ns.Queue("BlizzardSettings:pass", SafePass, SETTINGS)
 end
 
--- The timer runs while the window is in use: the mouse over it or a button held down, the keyboard
--- in one of its boxes (the search), and for a moment after (GRACE). Then it stops, and the next
--- use starts it again: a click anywhere (GLOBAL_MOUSE_DOWN), the wheel over a list, the mouse
--- coming onto the window or one of its hooked controls (also the controller's cursor), a key bound
--- or a setting changed (UPDATE_BINDINGS, CVAR_UPDATE). All from events or from the mouse, never
--- from the game's own code. (Was every 0.1 s for as long as the window stood open.)
+-- The timer runs for a moment (GRACE) after each use of the window, and while a mouse button is
+-- held (a slider dragged). Then it stops, and the next use starts it again: a click anywhere
+-- (GLOBAL_MOUSE_DOWN), the wheel over a list, the mouse coming onto the window or one of its
+-- hooked controls (also the controller's cursor), a key typed in the search, a key bound or a
+-- setting changed (UPDATE_BINDINGS, CVAR_UPDATE). All from events or from the player, never from
+-- the game's own code. (Was every 0.1 s for as long as the window stood open; then for as long as
+-- the mouse rested on it or the search kept the keyboard: the rows change only on a use.)
 local GRACE = 1            -- seconds the passes go on once the window is left alone
 local ticker
 local idle = 0
 
-local function FocusInPanel()
-	local focus = _G.GetCurrentKeyBoardFocus
-	local f = type(focus) == "function" and focus() or nil
-	for _ = 1, 30 do
-		if not f then return false end
-		if f == panel then return true end
-		f = f.GetParent and f:GetParent()
-	end
-	return false
-end
-
 local function InUse()
-	return panel:IsMouseOver() or _G.IsMouseButtonDown() or FocusInPanel()
+	return _G.IsMouseButtonDown()
 end
 
 local function Stop()
@@ -1157,6 +1147,12 @@ local function DressPanel(p)
 	p:HookScript("OnHide", Closed)
 	-- (The mouse coming onto the window: the game never sets this off from its own code.)
 	p:HookScript("OnEnter", Wake)
+	-- (Typing in the search: keys only the player sends. Not OnTextChanged, which the game's own
+	-- code sets off as it clears the box.)
+	if Is(p.SearchBox, "EditBox") then
+		pcall(p.SearchBox.HookScript, p.SearchBox, "OnChar", Wake)
+		pcall(p.SearchBox.HookScript, p.SearchBox, "OnKeyDown", Wake)
+	end
 	local cats, container = p.CategoryList, p.Container
 	local boxes = {}
 	if Usable(cats) and Usable(cats.ScrollBox) then boxes[#boxes + 1] = cats.ScrollBox end

@@ -351,9 +351,13 @@ end
 local again = false
 local caughtUp = false   -- (the first look over the whole interface done: below)
 local Check              -- (a look at frames made since: below)
+-- (Only the windows the click was in: another window open beside it saw no click.)
+local clicked = {}
 local function DressShown()
 	again = false
-	for frame in pairs(dressed) do
+	for i = #clicked, 1, -1 do
+		local frame = clicked[i]
+		clicked[i] = nil
 		if Call(frame, "IsVisible") then Dress(frame) end
 	end
 end
@@ -375,11 +379,11 @@ clicks:SetScript("OnEvent", function()
 	CheckNext()
 	if again or not next(dressed) then return end
 	for frame in pairs(dressed) do
-		if Call(frame, "IsVisible") and Call(frame, "IsMouseOver") then
-			again = true
-			C_Timer.After(0, DressShown)
-			return
-		end
+		if Call(frame, "IsVisible") and Call(frame, "IsMouseOver") then clicked[#clicked + 1] = frame end
+	end
+	if clicked[1] then
+		again = true
+		C_Timer.After(0, DressShown)
 	end
 end)
 

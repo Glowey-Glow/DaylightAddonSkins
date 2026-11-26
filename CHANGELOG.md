@@ -1,5 +1,10 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.19.2
+- The game's Options window: rows are dressed for a moment after each click, scroll, key or hover onto a control, instead of ten times a second for as long as the mouse rested on the window.
+- Shortest Path Forever: the tracker's departure countdown restyles without making new tables each second, and leaves the section head alone when its words haven't changed.
+- Auto Skinner: a click re-dresses only the window it was in, not every dressed window open.
+
 ## 1.19.1
 - Addon Skins never adds a mouse hook to a frame of another addon that doesn't already take the mouse, so a skinned panel can't start catching hovers and clicks meant for what sits under it (data text panels, addon drawers).
 - An error in a skin while another addon's window opens or is hovered is caught, so that addon's own work goes on.

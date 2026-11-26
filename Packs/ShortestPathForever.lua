@@ -721,12 +721,37 @@ end
 local lines = setmetatable({}, { __mode = "k" })   -- section -> the line under its head
 
 -- A section's entries and lines, wherever they hang (the tracker keeps them in a contents frame).
-local function Entries(frame, depth, head, fn)
-	if depth > 4 then return end
-	for _, child in ipairs({ frame:GetChildren() }) do
+-- (Walked straight off GetChildren's answers: no table made. It runs on each tick of a
+-- departure's countdown.)
+local Entries
+local function EntriesOf(depth, head, fn, ...)
+	for i = 1, select("#", ...) do
+		local child = select(i, ...)
 		if ns.Usable(child) and child ~= head then
 			if child.HeaderText or child.Text or child.Dash then fn(child) end
 			Entries(child, depth + 1, head, fn)
+		end
+	end
+end
+function Entries(frame, depth, head, fn)
+	if depth > 4 then return end
+	EntriesOf(depth, head, fn, frame:GetChildren())
+end
+
+local headDone = setmetatable({}, { __mode = "k" })   -- head text -> the text as we last wrote it
+local ENTRY_KEYS = { "Text", "Dash" }
+local tr, tg, tb, orr, og, ob
+local function StyleEntry(item)
+	local name = item.HeaderText
+	if ns.Usable(name) then
+		NoteFont(name, "title")
+		if Plain(name) then name:SetTextColor(tr, tg, tb) end
+	end
+	for k = 1, 2 do
+		local fs = item[ENTRY_KEYS[k]]
+		if ns.Usable(fs) and fs.GetTextColor then
+			NoteFont(fs, "objective")
+			if Plain(fs) then fs:SetTextColor(orr, og, ob) end
 		end
 	end
 end
@@ -737,7 +762,8 @@ local function StyleSection(module, Kit)
 	if ns.Usable(head) then
 		if ns.Usable(head.Background) then head.Background:SetAlpha(0) end
 		local text = head.Text
-		if ns.Usable(text) then
+		-- (A head that still reads as we wrote it is left: a countdown's tick changes only lines.)
+		if ns.Usable(text) and not (headDone[text] ~= nil and text:GetText() == headDone[text]) then
 			local words = text:GetText()
 			-- (string.upper changes only a-z: words with other letters, "über", stay as they are
 			-- rather than come out half in capitals.)
@@ -748,6 +774,7 @@ local function StyleSection(module, Kit)
 			end
 			Ink(text, math.floor(QSize("header", 12) * zoom + 0.5))
 			if type(words) == "string" then PaintHead(text, words) else text:SetTextColor(HeaderColor()) end
+			headDone[text] = text:GetText() or false
 		end
 		local line = lines[module]
 		if not line then
@@ -766,22 +793,9 @@ local function StyleSection(module, Kit)
 	-- time it's needed).
 	local bar = module.scrollBar
 	if Kit and ns.Usable(bar) and ns.Controls(KEY) and ns.Once(bar) then ns.Guard(Kit.ScrollBar, bar) end
-	local tr, tg, tb = QColor("title", "VALUE")
-	local orr, og, ob = QColor("objective", "TEXT")
-	Entries(module, 0, head, function(item)
-		local name = item.HeaderText
-		if ns.Usable(name) then
-			NoteFont(name, "title")
-			if Plain(name) then name:SetTextColor(tr, tg, tb) end
-		end
-		for _, key in ipairs({ "Text", "Dash" }) do
-			local fs = item[key]
-			if ns.Usable(fs) and fs.GetTextColor then
-				NoteFont(fs, "objective")
-				if Plain(fs) then fs:SetTextColor(orr, og, ob) end
-			end
-		end
-	end)
+	tr, tg, tb = QColor("title", "VALUE")
+	orr, og, ob = QColor("objective", "TEXT")
+	Entries(module, 0, head, StyleEntry)
 end
 
 local styled = setmetatable({}, { __mode = "k" })
@@ -811,6 +825,8 @@ local function Sections(host)
 	end
 end
 local function Restyle(host)
+	-- (A look changed: every head is written again.)
+	for k in pairs(headDone) do headDone[k] = nil end
 	PaintFonts()
 	for module in pairs(styled) do
 		if ns.Usable(module) and module:GetParent() == host then Styled(module) end
