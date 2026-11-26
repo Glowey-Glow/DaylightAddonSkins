@@ -7,6 +7,12 @@
 -- DialogueUI-style narrator (drawn in DialogueUI's art on purpose), the minimap button, the
 -- Compendium's and the Places panel's parchment pages and list rows (dark ink on paper, redrawn on
 -- every render), and the settings pages, which sit inside the game's own Settings window.
+-- 3.13.1: the Contribute button on the world map's quest details (SpokenQuestsDetailsContributeButton,
+-- the game's red text button) is DaylightUI's button, dressed in the call that makes and shows it.
+-- Left on purpose there too: the subtitle's controls (move, previous, stop, skip, eject, report) are
+-- Spoken's own round glyph buttons in its portrait ring, the same ones its narrator windows and its
+-- quest log rows draw and keep; its menus (the Compendium's and the layout's dropdowns, right-click
+-- menus) are the game's own menus, which the game-window switch Dropdown Menus dresses.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -283,6 +289,15 @@ local function QuestsButton(name)
 	end
 end
 
+-- The quest details' Contribute (Spoken_Quests 3.13.1): made in QuestOverlayUI:UpdateDetailsPlayButton
+-- the first time the map's quest details show a quest, shown there in the same call. Its OnEnter is
+-- set again on every update, before it's shown: Kit.Button's hover hooks are wired again on show.
+local function DetailsContribute()
+	local Kit = ns.Kit
+	local button = _G.SpokenQuestsDetailsContributeButton
+	if Kit and ns.Usable(button) then TextButton(button, Kit) end
+end
+
 local function BookButton()
 	local readables = _G.SpokenReadables
 	return type(readables) == "table" and readables.playButton or nil
@@ -336,6 +351,16 @@ ns.Pack("Spoken", "Spoken", function(Kit)
 	ns.Watch(KEY, QuestsButton("DialogPlayButton"), TextButton)
 	ns.Watch(KEY, QuestsButton("ContributeButton"), TextButton)
 	ns.Watch(KEY, BookButton, TextButton)
+	-- (The quest details' Contribute: dressed after the call that makes it; Spoken_Quests loads
+	-- after Spoken, so its overlay is looked for as it loads. The watch by name is the safety net.)
+	ns.OnLoad("Spoken_Quests", function()
+		local vo = _G.VoiceOver
+		local overlay = type(vo) == "table" and rawget(vo, "QuestOverlayUI")
+		if type(overlay) == "table" and type(overlay.UpdateDetailsPlayButton) == "function" then
+			ns.HookOnce(overlay, "UpdateDetailsPlayButton", DetailsContribute, KEY)
+		end
+	end)
+	ns.Watch(KEY, "SpokenQuestsDetailsContributeButton", TextButton)
 
 	ns.Watch(KEY, "SpokenCompendiumWindow", function(frame)
 		if not ns.Usable(frame) or not ns.Once(frame) then return end

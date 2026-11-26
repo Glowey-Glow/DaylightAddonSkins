@@ -14,6 +14,8 @@
 -- its scroll bars, bubbles, tooltip lines and its accent, and its question boxes (W.Confirm's and
 -- W.Coach's, with a pointer notch and a pulsing halo of their own; their ground is a window's, so
 -- they're told apart by the marks the addon gives them and skipped).
+-- (1.6.2) The stat-weights editor's "Save your changes?" question (new in 1.6.1, on UIParent with
+-- no question-box mark, so no scan reached it) wears a window's shell from its first showing.
 -- Nothing is written to its saved settings.
 local _, ns = ...
 if not ns.ok then return end
@@ -174,6 +176,8 @@ local function Overlay(f)
 	return w and pw and abs(w - pw) < 1 and abs(h - ph) < 1
 end
 
+local Editor   -- (below: the stat-weights editor's unsaved-changes question)
+
 local function Dress(f, kind)
 	if dressed[f] then return end
 	dressed[f] = kind
@@ -195,7 +199,70 @@ local function Dress(f, kind)
 		else
 			ns.Shell(f, { window = true }, KEY)
 		end
+		if Editor then Editor(f) end
 	end
+end
+
+-- The stat-weights editor's question for changes not saved (1.6.1, WeightsEditor.lua Question and
+-- Ask): its own frame on UIParent (strata FULLSCREEN_DIALOG, the window's flat ground with an
+-- accent edge, its words and Save, Don't Save and Keep Editing buttons), made the first time it is
+-- needed and kept for the session. It has no isConfirm mark and sits outside every window, so no
+-- scan reaches it; the editor's calls that ask it are its own (out of reach), so it's looked for
+-- right after the editor's own moments that ask: a click in the window or a key in the editor
+-- (its x, Escape: asked over the editor, which then shows its dimming), the editor's hiding (asked
+-- in the middle of the screen), and a fight's end (asked by itself then, when the editor was hidden
+-- in it with changes). Once found it's dressed like a window (its buttons left alone, as in every
+-- other window) and looked for no more. The editor is told by its parts (its dimming, "Not saved"
+-- line and close button), found as it's dressed.
+local editor, question
+local fightWatch
+
+local function IsQuestion(c)
+	if c.keep == nil or c.drop == nil or c.save == nil then return false end
+	return ns.Usable(c) and c:GetObjectType() == "Frame" and not c:GetName() and c.GetBackdrop ~= nil
+		and ns.Usable(c.text) and ns.Usable(c.save) and ns.Usable(c.drop) and ns.Usable(c.keep)
+		and c:GetFrameStrata() == "FULLSCREEN_DIALOG"
+end
+
+local function QuestionAmong(...)
+	for i = 1, select("#", ...) do
+		local c = select(i, ...)
+		if type(c) == "table" and IsQuestion(c) then return c end
+	end
+end
+
+local function Asked()
+	if question and dressed[question] then return end
+	if not On() then return end
+	question = question or QuestionAmong(UIParent:GetChildren())
+	if not question then return end
+	Dress(question, "window")
+	if fightWatch then fightWatch:UnregisterAllEvents() end
+end
+
+-- Asked over the editor only with its dimming shown: one look then, none on its other keys and clicks.
+local function AskedOver()
+	if question and dressed[question] then return end
+	if editor and ns.Usable(editor.dim) and editor.dim:IsShown() then ns.Guard(Asked) end
+end
+
+function Editor(f)
+	if editor or not (ns.Usable(f.dim) and ns.Usable(f.close) and ns.Usable(f.dirty)
+		and f.dirty.GetObjectType and f.dirty:GetObjectType() == "FontString") then return end
+	editor = f
+	ns.ScriptOnce(f, "OnHide", function()
+		if not (question and dressed[question]) then ns.Guard(Asked) end
+	end, KEY)
+	ns.ScriptOnce(f, "OnKeyDown", AskedOver, KEY)
+	-- (Hidden in a fight with changes, it asks by itself once the fight is over, in a handler of
+	-- its own that may run before or after this one: looked for then, and on the next frame.)
+	fightWatch = CreateFrame("Frame")
+	fightWatch:RegisterEvent("PLAYER_REGEN_ENABLED")
+	fightWatch:SetScript("OnEvent", function()
+		if (question and dressed[question]) or f:IsVisible() then return end
+		ns.Guard(Asked)
+		C_Timer.After(0, function() ns.Guard(Asked) end)
+	end)
 end
 
 -- Its windows among root and what is in it, `depth` levels down (parents first, so a dialog knows
@@ -249,7 +316,11 @@ local function Main(frame)
 	if not On() then return end
 	local Look
 	local function Clicked()
-		if On() then ns.Guard(Look) end
+		if On() then
+			ns.Guard(Look)
+			-- (The editor's x, asking about changes not saved: above.)
+			AskedOver()
+		end
 	end
 	function Look()
 		Scan(frame, 2)

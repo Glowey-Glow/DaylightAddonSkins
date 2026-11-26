@@ -15,6 +15,12 @@
 -- (after each GameMenu.Mirror) gets DaylightUI's button look; the minimap button's round back is
 -- hidden while DaylightUI's drawer holds it. Left alone on purpose: where the world map's info
 -- bar (PolestarMapInfo) sits and whether it shows, and Polestar's optional minimap coordinates.
+-- (Checked against Polestar 0.4.3.1.) The guide window's edge tabs and its side strip are drawn
+-- in DaylightUI's tab look, open on the side that meets the window, the picked one in the
+-- accent, instead of a whole window shell each; a toast or tracker border set in Polestar's own
+-- settings stays off under the shell (it was put back after every paint); and Polestar Arcade's
+-- Tetris window (PolestarTetrisFrame) wears the shell, its buttons and words dressed, from its
+-- first opening (PolestarTetrisAPI.Open). Its board and blocks keep their own colors.
 local _, ns = ...
 if not ns.ok then return end
 
@@ -183,12 +189,57 @@ local function Unshell(f)
 	end
 end
 
+-- The guide window's edge tabs and its side strip (UI/TabStyles/TabStyles.lua, 0.4.3: each painted
+-- as a window of its own, f.psFootOf() naming the side that meets the window: 1 top, 2 bottom,
+-- 3 left, 4 right). A whole window shell on each made a row of separate boxes; they wear
+-- DaylightUI's tab look instead (Kit's lite "tab" shell: four edges and a ground, its edges in the
+-- same order), that side left open so each runs into the window, the picked tab's edge in the
+-- accent. The transparent guide window (psBare): none of it.
+local tabShells = setmetatable({}, { __mode = "k" })   -- tab or strip -> its tab look
+
+local function TabOff(f)
+	local s = tabShells[f]
+	if not s then return end
+	for i = 1, 4 do s.edges[i]:Hide() end
+	s.bg:Hide()
+end
+
+local function Tab(f)
+	local Kit = ns.Kit
+	if not Kit or type(Kit.Shell) ~= "function" or type(Kit.Paint) ~= "function" then return false end
+	-- (Laid out again on every paint: the window's own opacity, which Polestar copies on, psBgAlpha.)
+	local s = Kit.Shell(f, "tab", { bgAlpha = f.psBgAlpha })
+	if type(s) ~= "table" or type(s.edges) ~= "table" or #s.edges < 4 or not ns.Usable(s.bg) then return false end
+	tabShells[f] = s
+	HideHouse(f)
+	local okFoot, foot = pcall(f.psFootOf)
+	if not okFoot then foot = nil end
+	local bare = f.psBare and true or false
+	for i = 1, 4 do s.edges[i]:SetShown(not bare and i ~= foot) end
+	s.bg:SetShown(not bare)
+	if f.psActive then
+		ns.LightShell(s, { ns.AccentOf(KEY) }, KEY)
+	else
+		Kit.Paint(s, Kit.TAB_BORDER)
+	end
+	if shelled[f] == "on" then
+		shelled[f] = "bare"
+		ns.Shell(f, BARE, KEY)
+	end
+	return true
+end
+
 local function Window(f)
-	if not ns.Enabled(KEY) then return house(f) end
-	if not House() then
-		Unshell(f)
+	if not ns.Enabled(KEY) then
+		TabOff(f)
 		return house(f)
 	end
+	if not House() then
+		Unshell(f)
+		TabOff(f)
+		return house(f)
+	end
+	if type(f.psFootOf) == "function" and Tab(f) then return end
 	-- The transparent guide window: no ground at all.
 	if f.psBare then
 		house(f)
@@ -298,7 +349,40 @@ if type(T.OnChanged) == "function" then
 				if f == tip then TipLook(false) end
 			end
 		end
+		for f in pairs(tabShells) do TabOff(f) end
 	end)
+end
+
+-- A toast's or tracker's own border (Polestar's settings: a border color or thickness for its
+-- rare, transport, while-here and heads-up cards and its trackers, UI/Toasts.lua PaintGround) is
+-- drawn after every paint of the frame (its frame.psAfterPaint), over the shell. Its own step is
+-- kept and the border taken off again right after it, while the shell is on the frame.
+local Toasts = type(P.UI) == "table" and P.UI.Toasts or nil
+if type(Toasts) == "table" and type(Toasts.PaintGround) == "function" and type(T.Paint.hideBorder) == "function" then
+	local afterOf = setmetatable({}, { __mode = "k" })   -- frame -> { own = its step, fn = ours }
+	local function BorderOff(f)
+		if shelled[f] == "on" and On() then pcall(T.Paint.hideBorder, f) end
+	end
+	ns.HookOnce(Toasts, "PaintGround", function(f)
+		if type(f) ~= "table" then return end
+		local after = f.psAfterPaint
+		if type(after) ~= "function" then return end
+		local a = afterOf[f]
+		if not a then
+			a = {}
+			a.fn = function(x)
+				a.own(x)
+				BorderOff(x)
+			end
+			afterOf[f] = a
+		end
+		-- (It sets its own step again on every call: ours wraps the newest.)
+		if after ~= a.fn then
+			a.own = after
+			f.psAfterPaint = a.fn
+		end
+		BorderOff(f)
+	end, KEY)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -420,6 +504,49 @@ local Maps = P.Maps
 if type(Maps) == "table" and type(Maps.RefreshMinimapButton) == "function" then
 	ns.HookOnce(Maps, "RefreshMinimapButton", function() ns.WatchNow() end, KEY)
 end
+
+-- ---------------------------------------------------------------------------------------------
+-- Polestar Arcade's Tetris (Polestar_Arcade, load-on-demand: loaded when Play is pressed). Its
+-- window (PolestarTetrisFrame, games/tetris/Window.lua) is a tooltip-bordered backdrop of its own,
+-- not drawn by Polestar's theme, made on its first opening (PolestarTetrisAPI.Open, which every
+-- way in calls: the flight card, /polestar tetris, the guide menu): dressed right after that call,
+-- before it's drawn. Its backdrop off and DaylightUI's shell on, its three buttons (Pause / Resume /
+-- New Game, New Game, Close: the game's panel button template) in DaylightUI's button look, its
+-- words in the player's font, the game's gold in DaylightUI's inks (its title in the title ink).
+-- Its board, ghost and preview cells keep their own colors (the game itself).
+-- ---------------------------------------------------------------------------------------------
+
+local function TetrisInk(f)
+	if ns.Look(KEY, "daylightColors") == false or type(ns.Ink) ~= "function" then return end
+	for _, r in ipairs({ f:GetRegions() }) do
+		if ns.Usable(r) and r:GetObjectType() == "FontString" then
+			local cr, cg, cb = r:GetTextColor()
+			if type(cr) == "number" and math.abs(cr - 1) < 0.02 and math.abs(cg - 0.82) < 0.02 and cb < 0.03 then
+				-- (Its title is the one string in the top row; the rest are its labels and readouts.)
+				local _, _, _, _, y = r:GetPoint(1)
+				ns.Ink(r, (type(y) == "number" and y > -20) and "TITLE" or "TEXT")
+			end
+		end
+	end
+end
+
+local function Tetris()
+	local f = _G.PolestarTetrisFrame
+	if not ns.Usable(f) or not ns.Kit or not ns.Once(f) then return end
+	ns.NoBackdrop(f)
+	ns.Shell(f, { window = true }, KEY)
+	TetrisInk(f)
+	-- (Its buttons are made with it; fonts: every label in the player's font, again on each show.)
+	ns.DressOnShow(f, { fonts = true }, nil, KEY)
+end
+
+ns.OnLoad("Polestar_Arcade", function()
+	local api = _G.PolestarTetrisAPI
+	if type(api) ~= "table" or type(api.Open) ~= "function" then return end
+	ns.HookOnce(api, "Open", Tetris, KEY)
+	-- (Opened already before this pack's hook, after a reload with the Arcade loaded.)
+	if ns.Enabled(KEY) then ns.Guard(Tetris) end
+end)
 
 -- Windows made before this file ran (the guide window) are repainted at login, and everything
 -- follows when the DaylightUI look changes. One repaint a frame at most, however many asked.

@@ -37,7 +37,6 @@ ns.LINKS = {
 	["Leatrix_Plus"] = "https://www.curseforge.com/wow/addons/leatrix-plus",
 	["LFGForever"] = "https://www.curseforge.com/wow/addons/lfg-forever",
 	["LootTriage"] = "https://www.curseforge.com/wow/addons/loot-triage",
-	["Mastercraft"] = "https://www.curseforge.com/wow/addons/mastercraft",
 	["OneForAll"] = "https://www.curseforge.com/wow/addons/oneforall-forever",
 	["OpenMap"] = "https://www.curseforge.com/wow/addons/openmap",
 	["Pawn"] = "https://www.curseforge.com/wow/addons/pawn",

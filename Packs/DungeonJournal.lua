@@ -77,6 +77,10 @@
 --     DaylightUI's bar in the accent, not yellow. The controller's frame round the thing picked
 --     (Systems/GamePad.lua; a gold backdrop DaylightUI's journal skin hides like every backdrop in
 --     the journal): an edge and a faint wash in the accent, so the pick still shows.
+--   * 2.1.6: its own menus that replaced the game's or came new (a quest row's Share / Abandon,
+--     the PvP icon's Hide, Edit Mode's Reorder and View menus): the window shell, a faint white
+--     hover. Edit Mode's Reset UI question: the window shell. Its one-time Edit Mode note: the shell
+--     and OK like the Export note. The Honor & Ranks page's class list: the shell and a white wash.
 -- Left as it is in 2.1.1: the Export button beside Report and the Options' Export tab and search
 -- box (the journal and its settings window are DaylightUI's skin's), the teal tint of a dungeon
 -- chain step's page and its chain icon (they say where the step is done), the controller hints
@@ -909,7 +913,10 @@ end
 
 local MENU_NAMES = { "ForeverDungeonJournalRunLogMenu", "ForeverDungeonJournalTrackerMenu",
 	"ForeverDungeonJournalOnyxiaMenu", "ForeverDungeonJournalSleepingBagMenu", "ForeverDungeonJournalLFGMenu",
-	"ForeverDungeonJournalFavouriteContextMenu", "ForeverDungeonJournalTierMenu" }
+	"ForeverDungeonJournalFavouriteContextMenu", "ForeverDungeonJournalTierMenu",
+	-- (2.1.6)
+	"ForeverDungeonJournalQuestRowMenu", "ForeverDungeonJournalPvPMenu", "ForeverDungeonJournalOrderMenu",
+	"ForeverDungeonJournalViewMenu" }
 
 -- ---------------------------------------------------------------------------------------------
 -- Its own fonts: since 2.0.8 the journal draws its words with copies of the game's font objects
@@ -1144,6 +1151,29 @@ ns.Pack(KEY, nil, function(Kit)
 		AfterClick(frame.foreverFilterButton, "OnClick", Field("foreverHint"), Window)
 		-- (2.0.10: a right-click on the Tier Sets icon opens its Hide menu.)
 		AfterClick(frame.tierButton, "OnClick", Global("ForeverDungeonJournalTierMenu"), Menu)
+		-- (2.1.6: the PvP icon, made the first time the home page places it, and its Hide menu.)
+		AfterClick(frame.pvpButton, "OnClick", Global("ForeverDungeonJournalPvPMenu"), Menu)
+	end
+	-- (2.1.6) Edit Mode on the home page (Systems/HomeEdit.lua): its tool buttons are children of
+	-- the home panel with .fdjKey; Reorder's right-click menu, View's menu and Reset's question are
+	-- frames of their own on UIParent. Its one-time note (a tooltip-border box with an OK, inside the
+	-- journal and so see-through after DaylightUI's walk) is dressed like the Export note.
+	local editOpens = { reorder = "ForeverDungeonJournalOrderMenu", view = "ForeverDungeonJournalViewMenu" }
+	local function EditMode(frame)
+		local home = type(frame) == "table" and frame.homePanel
+		if not (ns.Usable(home) and home.GetChildren) then return end
+		for _, c in ipairs({ home:GetChildren() }) do
+			if type(c) == "table" then
+				local opens = c.fdjKey and editOpens[c.fdjKey]
+				if opens then
+					AfterClick(c, "OnClick", Global(opens), Menu)
+				elseif c.fdjKey == "reset" then
+					AfterClick(c, "OnClick", Global("ForeverDungeonJournalResetUIAsk"), Window)
+				elseif ns.Usable(c.ok) and c.arrow and c.glow and c:IsShown() then
+					ns.Guard(ExportNote, c, Kit)
+				end
+			end
+		end
 	end
 	-- The tracker's own openers: a right-click on it or its top opens its menu, its X the "tracker
 	-- closed" notice. (A right-click on a rare's portrait opens the menu too; those are left to the
@@ -1180,6 +1210,21 @@ ns.Pack(KEY, nil, function(Kit)
 	-- (2.1.3) The tracker's reset question with a controller connected (RunLogUI.lua:2143-2183): a
 	-- dialog-border window of its own, made and shown inside this call; its Yes / No the game's buttons.
 	After("AskResetTracker", Global("ForeverDungeonJournalResetAsk"), Window)
+	-- (2.1.6) A quest row's Share / Abandon menu, its own since 2.1.6 (was the game's).
+	After("ShowQuestRowMenu", Field("questRowMenu"), Menu)
+	-- (2.1.6) Run after every home page refresh: the PvP icon, Edit Mode's tools and its note.
+	After("ApplyHomeEditChrome", function(frame) return frame or _G.ForeverDungeonJournalFrame end, function(frame)
+		HomeIcons(frame)
+		EditMode(frame)
+	end)
+	After("ShowEditModeNote", Global("ForeverDungeonJournalFrame"), EditMode)
+	-- (2.1.6) The Honor & Ranks page's class list (a tick list under its Class button, inside the
+	-- journal): the shell and a white wash, like the Tier Sets page's Show Classes list.
+	After("OpenPvPRewards", function()
+		local page = _G.ForeverDungeonJournalPvPRewardsPage
+		local b = ns.Usable(page) and page.classMenu
+		return type(b) == "table" and b.menu or nil
+	end, TickMenu)
 	-- (2.1.3) "Click the item to see location" beside an item card on a quest's page with a picture
 	-- (Journal.lua:7242-7319): a tooltip-border box inside the journal, which DaylightUI's journal walk
 	-- leaves see-through (as the 2.1.1 Export note): the shell. Its red arrow and white words stay.
@@ -1262,6 +1307,7 @@ ns.Pack(KEY, nil, function(Kit)
 	-- that can be hooked: found by name in the frame it's made.)
 	ns.Watch(KEY, "ForeverDungeonJournalNotice", Window)
 	ns.Watch(KEY, "ForeverDungeonJournalResetAsk", Window)
+	ns.Watch(KEY, "ForeverDungeonJournalResetUIAsk", Window)
 	ns.Watch(KEY, function() return FDJ.foreverHint end, Window)
 	ns.Watch(KEY, "ForeverDungeonJournalTierPanel", TierPage)
 	ns.Watch(KEY, "ForeverDungeonJournalArrow", Arrow)

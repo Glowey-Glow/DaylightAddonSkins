@@ -1,10 +1,12 @@
 -- Shortest Path Forever: its Nearby services panel in the world map's quest log (its paper ground
 -- and border gone, DaylightUI's look on its search box, scroll bar, rows, section heads, map
 -- switches and side tab, and the Quests tab ForeverCore puts atop that column), its Journey stops and Farming tour windows, the windows ForeverCore
--- opens for it (report, issue, thanks; before ForeverCore 1.15 also the Forever addons link and
--- your Forever profile), ForeverCore's right-click menu (the tracker's header and lines) and, before
--- Shortest Path 1.42 (which dropped it), its "Journey" button under the minimap.
--- (Checked against Shortest Path 1.43.10, which carries ForeverCore 1.15.6 inside itself.)
+-- opens for it (report, issue, thanks), ForeverCore's right-click menu (the tracker's header and
+-- lines), and (1.45.11) its Quick Nearby button in the world map's top right corner, in
+-- DaylightUI's control look (its right-click menu is ForeverCore's, above).
+-- (Checked against Shortest Path 1.46.0, which carries ForeverCore inside itself. The Forever addons
+-- link and Forever profile windows, gone from ForeverCore 1.15, and the "Journey" button under the
+-- minimap, gone from Shortest Path 1.42, are no longer looked for.)
 -- Left alone: everything it draws on the world map and minimap (route lines, pins, docks,
 -- portals), the direction arrow and compass (on-screen guides with settings of their own), its
 -- settings (the game's Settings window). Its tracker sections: docked under DaylightUI's quest
@@ -352,7 +354,7 @@ local function Templated(frame, Kit)
 end
 
 for _, name in ipairs({ "ShortestPathForeverReport", "ShortestPathForeverIssue", "ForeverCreditsFrame",
-	"ForeverFamilyLink", STOPS, "ShortestPathForeverFarming", "ForeverCoreProfile" }) do
+	STOPS, "ShortestPathForeverFarming" }) do
 	ns.Watch(KEY, name, Templated)
 end
 
@@ -442,24 +444,66 @@ end, function(slash)
 	end
 end)
 
--- Its "Journey" button under the minimap (Settings: "Show options button on minimap", off by
--- default): a text button of the game's red-button template, DaylightUI's button look here. Where
--- it sits is Shortest Path's. It's made when its setting is on as the game starts, or later, when
--- the player turns it on: looked for then, never watched for all session.
-local function OptionsButton(Kit)
-	local btn = _G.ShortestPathForeverOptionsButton
-	if not ns.Usable(btn) or not ns.Enabled(KEY) or not ns.Controls(KEY) or not ns.Once(btn) then return end
-	ns.Guard(Kit.Button, btn)
-end
-ns.me.On("Login", function()
-	ns.WithKit(OptionsButton)
-	if type(Settings) == "table" and type(Settings.SetOnValueChangedCallback) == "function" then
-		pcall(Settings.SetOnValueChangedCallback, "ShortestPathForever_minimapButton", function()
-			-- (After Shortest Path's own answer to the change, which makes the button.)
-			ns.Queue("ShortestPathForever:optionsButton", function() ns.WithKit(OptionsButton) end, KEY)
-		end)
+-- Its Quick Nearby button (1.45.11, UI/MapButton.lua): an unnamed button of its own on the world
+-- map, in its top right corner, the game's square gray button art (common-button-square-gray-up
+-- and -down, its Background, set again as it is pressed and let go) under a Banker icon, and that
+-- art again as its hover (its Highlight). Left-click opens Nearby services, right-click
+-- ForeverCore's menu (dressed above). It's DaylightUI's control box here: its art at nothing, a
+-- neutral edge at rest, the accent under the mouse, a darker ground while pressed; the icon keeps
+-- its colors, as the map's other corner buttons do, and still moves as it's pressed. Made once
+-- as Shortest Path starts (by a call it keeps to itself, on a frame made with no parent first):
+-- watched for until then, and dressed before the map first opens. Nothing of ours is put on its
+-- showing or hiding (it sits under the world map: Shortest Path's #158).
+local QUICK_ART = "common-button-square-gray"
+
+local function IsQuick(b)
+	if not ns.Usable(b) or b:GetObjectType() ~= "Button" or b:GetName() or type(b.pressRegions) ~= "table" then
+		return false
 	end
-end)
+	local bg, icon = b.Background, b.Icon
+	if not (ns.Usable(bg) and bg.GetAtlas and ns.Usable(icon)) then return false end
+	local atlas = bg:GetAtlas()
+	return type(atlas) == "string" and string.sub(atlas, 1, #QUICK_ART) == QUICK_ART
+end
+
+local function QuickAmong(...)
+	for i = 1, select("#", ...) do
+		local b = select(i, ...)
+		if IsQuick(b) then return b end
+	end
+end
+
+local function QuickButton(b, Kit)
+	if not ns.Controls(KEY) or not ns.Once(b) then return end
+	if type(Kit.Shell) ~= "function" or type(Kit.Paint) ~= "function" then return end
+	Kit.Hide(b.Background)
+	if ns.Usable(b.Highlight) then Kit.Hide(b.Highlight) end
+	local s = Kit.Shell(b, "control")
+	if type(Kit.HoverWash) == "function" then Kit.HoverWash(b) end
+	local over, down = false, false
+	local function Paint()
+		if not ns.Enabled(KEY) then return end
+		Kit.Paint(s, over and { ns.AccentOf(KEY) } or Kit.CONTROL_BORDER)
+		local bg = type(s) == "table" and s.bg
+		if ns.Usable(bg) and bg.SetVertexColor then
+			local k = (down and type(Kit.PRESSED) == "number") and Kit.PRESSED or 1
+			bg:SetVertexColor(k, k, k, 1)
+		end
+	end
+	-- (Its own mouse scripts, each hooked once: none on its showing or hiding.)
+	ns.ScriptOnce(b, "OnEnter", function() over = true Paint() end, KEY)
+	ns.ScriptOnce(b, "OnLeave", function() over, down = false, false Paint() end, KEY)
+	ns.ScriptOnce(b, "OnMouseDown", function() down = true Paint() end, KEY)
+	ns.ScriptOnce(b, "OnMouseUp", function() down = false Paint() end, KEY)
+	Paint()
+end
+
+ns.Watch(KEY, function()
+	local map = _G.WorldMapFrame
+	return ns.Usable(map) and QuickAmong(map:GetChildren()) or nil
+end, QuickButton)
+-- (Made as Shortest Path starts, after ForeverCore is up: looked for at once then too.)
+WhenCore(function() ns.WatchNow() end)
 
 -- ForeverCore's "your ForeverCore is older" notice (1.15.6, Core/Loader.lua ShowNotice; before, the
 -- game's StaticPopup, which DaylightUI dresses): a small dialog in the game's dialog art with one
@@ -1252,7 +1296,9 @@ end)
 -- ForeverCore's own quest list ("Forever quest list", ForeverCoreDB.questList): its quests drawn
 -- in the Forever column, the same quests DaylightUI's tracker lists right above it. Read and set
 -- through ForeverCore's own calls, which redraw the column. ForeverCore 1.15 removed the list (and
--- TrackerQuests with it): there the entry is marked gone.
+-- TrackerQuests with it; still gone in the copy inside Shortest Path 1.46.0): there the entry is
+-- marked gone. Kept, never asked about, only so a record of it handed over before is cleared
+-- (giving it back is a no-op with no list left to switch on).
 local QUEST_LIST = "questList"
 local function ForeverQuests()
 	local core = _G.ForeverCore

@@ -958,6 +958,16 @@ local function CanvasPass()
 	CanvasPages(canvas, canvas:GetChildren())
 end
 
+-- One addon page on the canvas dressed now, for a pack that knows its page just built new rows
+-- (AllTheThings' Information page: its first show, a group folded open, a search), instead of
+-- waiting for the canvas pass to notice it.
+function ns.SettingsCanvasNow(page)
+	if not (panel and panel:IsShown()) or not ns.Enabled(SETTINGS) or not controls or InCombatLockdown() then return end
+	local container = panel.Container
+	local canvas = Usable(container) and container.SettingsCanvas
+	if Usable(canvas) and Usable(page) and page:IsShown() then Try1(Piece, page, canvas, true, 1) end
+end
+
 local headerTitle          -- the big name of the shown category, over the settings list
 local panelTitle
 

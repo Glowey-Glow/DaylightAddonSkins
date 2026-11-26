@@ -15,7 +15,7 @@
 -- The placement bar (KitCoreMoveBar, while placing the reminder panel): shell, buttons, the Snap
 -- tick in your accent, its text inked. The layout editing bar (KitCoreEditBar, Kit Core 23 on): the
 -- same.
--- Camping Kit 1.11.1 ships Kit Core 31, whose settings window is drawn anew: a search box in the
+-- Camping Kit 1.11.1 brought Kit Core 31 (1.11.2 ships Kit Core 35), whose settings window is drawn anew: a search box in the
 -- header, each sub-heading's rows on a card, short choices as a row of buttons (the picked one
 -- lit), color squares with a Custom... button, on/off chips, a table of tick boxes with rows that
 -- fold open, fold arrows, small dark buttons. All of them are made of the same few pieces (a dark

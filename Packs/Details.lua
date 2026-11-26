@@ -31,6 +31,17 @@
 --   open: dressed from post-hooks on Details' openers (OpenOptionsWindow, OpenBreakdownWindow,
 --   Reportar, CreatePluginWindowContainer) and on the framework's CreateSimplePanel /
 --   CreateTitleBar (only frames named "Details..."); ns.Watch only for the welcome window.
+-- Its two copy boxes (checked against Details 20261124), dressed from post-hooks on the calls that
+--   open them: the link box (DetailsCopy, a ButtonFrameTemplate window, from Details:CopyPaste)
+--   in Daylight UI's window shell and X, its text box Daylight UI's (its dialog-box edge off), its
+--   Ctrl+C picture kept; the value box (DetailsCopyValueFrame, from Details.ShowCopyValueFrame,
+--   built on its first use) its framework backdrop and ground off, Daylight UI's panel shell (a
+--   one-line box: no window title line), the value in the player's font.
+-- The Window Designer's live preview (a detached window, kept out of tabela_instancias) gets the
+--   shell and erased art through the same ChangeSkin hook, but not the meter settings: changing
+--   its row settings makes Details lay out new sample rows the designer hasn't stripped of their
+--   tooltip and click scripts (it only does that after its own edits), so it shows Details' own
+--   defaults plus the player's designer edits, as Details means it to.
 -- Its framework's own controls (flat buttons, switches, dropdowns, sliders, text boxes) take their
 --   colors from the framework's templates when they're made: the templates are recolored to
 --   Daylight UI's (dark fill, neutral edge, the accent for hover, picked and "on"), so every one
@@ -785,6 +796,36 @@ local function IsOurs(name)
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- Its copy boxes
+-- ---------------------------------------------------------------------------------------------
+
+-- The link box (frames/window_copy.lua: ButtonFrameTemplate, made at startup): the window shell
+-- and its X, the Ctrl+C picture (its "background" image) kept; the text box (the framework's text
+-- entry, a dialog-box edged EditBox) Daylight UI's.
+local function CopyWindow()
+	local Kit = ns.Kit
+	local f = _G.DetailsCopy
+	if not Kit or not Usable(f) or not On() or not ns.Once(f) then return end
+	Guard(Kit.Window, f, { keep = { "background" } })
+	local entry = type(f.text) == "table" and (f.text.editbox or f.text.widget) or nil
+	if Kind(entry) == "EditBox" and ns.Controls(KEY) then
+		ns.NoBackdrop(entry)
+		Guard(Kit.EditBox, entry)
+	end
+end
+
+-- The value box (core/windows.lua: a plain frame with the framework's standard backdrop and its
+-- __background fill, a bare EditBox filling it): the shell, the value in the player's font.
+local function CopyValue()
+	local f = _G.DetailsCopyValueFrame
+	if not Usable(f) or not On() or not ns.Once(f) then return end
+	ns.NoBackdrop(f)
+	if Kind(f.__background) == "Texture" then f.__background:SetAlpha(0) end
+	ns.Shell(f, nil, KEY)
+	if Kind(f.editBox) == "EditBox" then ns.FollowFont(f.editBox, KEY) end
+end
+
+-- ---------------------------------------------------------------------------------------------
 -- Its menus and tooltips (Cooltip)
 -- ---------------------------------------------------------------------------------------------
 
@@ -875,8 +916,9 @@ local function Hooks()
 		else
 			Guard(Decorate, instance)
 		end
-		-- A window not seen before (made now): its settings, next frame.
-		if not applying and DetailsReady() then
+		-- A window not seen before (made now): its settings, next frame. (Not the Window Designer's
+		-- preview, a detached window ApplyAll never reaches.)
+		if not applying and not instance.isDetachedInstance and DetailsReady() then
 			local p = Profile(false)
 			local id = instance.meu_id
 			if not (p and id and p.win[id]) then ApplySoon() end
@@ -907,6 +949,14 @@ local function Hooks()
 	end
 	if type(D.Reportar) == "function" then
 		hooksecurefunc(D, "Reportar", function() PanelNamed("DetailsReportWindow") end)
+	end
+	-- Its copy boxes: the link box (made at startup) on each opening, the value box on its first.
+	if type(D.CopyPaste) == "function" then
+		hooksecurefunc(D, "CopyPaste", function() Guard(CopyWindow) end)
+	end
+	Guard(CopyWindow)
+	if type(D.ShowCopyValueFrame) == "function" then
+		hooksecurefunc(D, "ShowCopyValueFrame", function() Guard(CopyValue) end)
 	end
 	ns.Watch(KEY, "DetailsWelcomeWindow", function(f) Panel(f) end)
 	if type(DF) == "table" then

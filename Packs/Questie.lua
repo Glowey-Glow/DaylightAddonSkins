@@ -7,19 +7,22 @@
 -- DaylightUI's hover wash and the accent outline following each click, the controls on each tab
 -- including the play-sound buttons, the color swatches and the gold rules, each tab's scroll bar
 -- even when its canvas is built over several frames, and from 12.13 its Search box, label and
--- "No matching options" line, each tab built again as you type), before Questie 12.12 its right-click menus
--- (LibUIDropDownMenu's lists: the tracker menu, Townsfolk; their rows' hover, radio and check marks,
--- expand arrows and color swatches; from 12.12 they are the game's own menus, which DaylightUI's
--- window skins dress as they do every game menu), its own popups (QuestiePopup, not the game's StaticPopup: shell, buttons, edit
+-- "No matching options" line, each tab built again as you type), its own popups (QuestiePopup, not the game's StaticPopup: shell, buttons, edit
 -- box), the objective type tutorial, its late tooltips (the minimap waypoint and gamepad map
--- tooltips), the debug offer window, the gold ring on its world map corner button (the shared
+-- tooltips, and from 12.15 the tracker's party-progress tooltip, QuestieTrackerQuestTooltip), its
+-- developer profiler window (12.15, QuestieProfilerFrame: shell, buttons, check boxes, search box,
+-- close buttons, size grip; its "profiler running" tag, QuestieProfilerIndicator, a small shell),
+-- the gold ring on its world map corner button (the shared
 -- ns.MapRings pass), and its own tracker while the player has picked Questie's over DaylightUI's
 -- (the shell in place of its backdrop, following Questie's own backdrop switch, color opacity and
 -- fader). Its pages in the game's Settings window (Esc > Options > AddOns > Questie and each page
 -- under it) get the same treatment as that window's tabs: the same controls, inks, rules, title
 -- and scroll bar, caught as each page is built over its first few frames.
+-- Its right-click menus are the game's own since 12.12 (QuestieMenuBuilder, Blizzard_Menu), which
+-- DaylightUI's window skins dress as they do every game menu; the old LibUIDropDownMenu lists and
+-- the debug offer window (gone in 12.10) are no longer looked for (checked against Questie 12.15.0).
 -- Left alone: its map and minimap icons, the tracker's lines and buttons (secure item buttons),
--- the menu trace entry's own red and green mark colors, the debug offer's inline gold title.
+-- the profiler's rows, bars and its own drawn scroll bar (a developer's readout).
 --
 -- "Hand over to DaylightUI" (off until turned on on its page): Questie's quest icons on nameplates
 -- step aside while DaylightUI's nameplates mark quest targets.
@@ -254,10 +257,10 @@ local function DressControl(Kit, control)
 	ns.Dress(control, { checks = false, scrollBars = false }, 0, KEY)
 end
 
--- One canvas's own pieces, in either window: its scroll bar (<canvas>_ScrollScrollBar), the big
--- gold title ("Questie • Icon Options"; gone from 12.13, which keeps only the subtitle) and the
--- gold rule under its header. All are made before its first control, so they are there by the
--- pass after it.
+-- One canvas's own pieces, in either window: its scroll bar (<canvas>_ScrollScrollBar), its
+-- header's words (the big gold title in GameFontNormalHuge went in 12.13, which keeps only the
+-- subtitle) and the gold rule under its header. All are made before its first control, so they
+-- are there by the pass after it.
 -- From 12.13 a tab is built on a hidden frame of its own (canvas.pendingContent) and swapped in
 -- as canvas.content only once the build is done (QuestieOptionsEngine.lua:325-393), and its
 -- window's search builds every shown tab again, scroll bar and all, on each letter typed
@@ -274,10 +277,7 @@ local function CanvasChrome(Kit, canvas, controls)
 		if ns.Usable(content) then
 			Hairlines(content:GetRegions())
 			for _, region in ipairs({ content:GetRegions() }) do
-				if region:GetObjectType() == "FontString" then
-					if region:GetFontObject() == _G.GameFontNormalHuge then Ink(region, "VALUE") end
-					ns.FollowFont(region, KEY)
-				end
+				if region:GetObjectType() == "FontString" then ns.FollowFont(region, KEY) end
 			end
 		end
 	end
@@ -435,184 +435,6 @@ local OptionsEngine = Module("QuestieOptionsEngine")
 if OptionsEngine and type(OptionsEngine.ShowFrame) == "function" then
 	ns.HookOnce(OptionsEngine, "ShowFrame", function() ns.WatchNow() end, KEY)
 end
-
--- ---------------------------------------------------------------------------------------------
--- Right-click menus: L_DropDownListQuestie1..n. The library shows one of its two backdrops on every
--- open; both are kept at nothing and the shell is the menu's ground. The first three are made as
--- the library loads, so they are there at login; the rest follow the library's CreateFrames.
--- (Before Questie 12.12 only. 12.12 dropped the library and opens the game's own menus
--- (QuestieMenuBuilder, Blizzard_Menu), which get DaylightUI's menu look from its window skins; the
--- trace entry's red and green, set by Questie on every draw, are kept there too. This part stands
--- aside then.)
--- ---------------------------------------------------------------------------------------------
-
--- Its rows: the quest-title hover bar becomes a faint white wash (the library only shows and hides
--- it); the gold radio and check marks are made gray (desaturated) and tinted, the ticked one in the
--- accent and the empty one gray. On every fill the library sets the marks' texture, desaturation
--- and color (white) again, so those two setters are followed on each mark: a white the library
--- asks for is turned into ours, any other color (the trace entry's red and green) is kept.
--- The expand arrow gray, the color swatch's gold hover ring white.
-local marks = setmetatable({}, { __mode = "k" })   -- mark texture -> true for the tick, false for the empty one
-local painting = false
-
-local function MarkColor(tex)
-	if marks[tex] then return Accent() end
-	return 0.55, 0.55, 0.55
-end
-
-local function PaintMark(tex)
-	painting = true
-	tex:SetDesaturated(true)
-	tex:SetVertexColor(MarkColor(tex))
-	painting = false
-end
-
-local function OnMarkDesaturated(tex, on)
-	if painting or on or not ns.Enabled(KEY) then return end
-	painting = true
-	tex:SetDesaturated(true)
-	painting = false
-end
-
-local function OnMarkColor(tex, r, g, b)
-	if painting or not ns.Enabled(KEY) then return end
-	if r == 1 and g == 1 and b == 1 then
-		painting = true
-		tex:SetVertexColor(MarkColor(tex))
-		painting = false
-	end
-end
-
-local function Mark(tex, ticked)
-	if not ns.Usable(tex) or marks[tex] ~= nil then return end
-	marks[tex] = ticked
-	PaintMark(tex)
-	ns.HookOnce(tex, "SetDesaturated", OnMarkDesaturated, KEY)
-	ns.HookOnce(tex, "SetVertexColor", OnMarkColor, KEY)
-end
-
-local function SwatchEnter(self)
-	if not ns.Enabled(KEY) then return end
-	local bg = self.SwatchBg or _G[(self:GetName() or "") .. "SwatchBg"]
-	if ns.Usable(bg) then bg:SetVertexColor(1, 1, 1) end
-end
-
-local function MenuButton(btn)
-	if not ns.Usable(btn) or not ns.Once(btn) then return end
-	local hl = btn.Highlight
-	if ns.Usable(hl) then
-		hl:SetTexture(nil)
-		hl:SetColorTexture(1, 1, 1, 0.08)
-		hl:SetBlendMode("BLEND")
-	end
-	Mark(btn.Check, true)
-	Mark(btn.UnCheck, false)
-	local arrow = btn.ExpandArrow
-	local tex = ns.Usable(arrow) and arrow.GetNormalTexture and arrow:GetNormalTexture()
-	if ns.Usable(tex) then
-		tex:SetDesaturated(true)
-		local c = ns.Colors().LABEL
-		if type(c) == "table" then tex:SetVertexColor(c[1], c[2], c[3]) else tex:SetVertexColor(0.7, 0.7, 0.7) end
-	end
-	local swatch = btn.ColorSwatch
-	ns.ScriptOnce(swatch, "OnEnter", SwatchEnter, KEY)
-end
-
--- The accent changed: the ticks follow.
-local function Repaint()
-	for tex in pairs(marks) do
-		if ns.Usable(tex) then PaintMark(tex) end
-	end
-end
-local function QueueRepaint()
-	if next(marks) == nil then return end
-	ns.Queue("Questie:marks", Repaint, KEY)
-end
-ns.me.On("StyleChanged", QueueRepaint)
-ns.me.On("SettingChanged", function(scope, path)
-	if scope ~= "DaylightAddonSkins" or type(path) ~= "string" then return end
-	if path == "followDaylight" or string.sub(path, 1, 12) == "look.Questie" then QueueRepaint() end
-end)
-
--- Its rows, as many as the list has made (more are made as a longer menu needs them).
-local function MenuRows(list)
-	local name = list:GetName()
-	if not name then return end
-	for j = 1, 64 do
-		local btn = _G[name .. "Button" .. j]
-		if not btn then break end
-		MenuButton(btn)
-	end
-end
-
--- Its rows' words (GameFontHighlightSmallLeft, set again on every fill) in the player's font once
--- the list is shown (the library fills it first and sizes it in its own OnShow, which runs before
--- this one); the list wider when a row no longer fits, as the library works out a row's width.
-local function MenuFonts(list)
-	if not ns.Enabled(KEY) or ns.PlainText(KEY) then return end
-	local name = list:GetName()
-	local count = list.numButtons
-	if not name or type(count) ~= "number" then return end
-	local lib = type(LibStub) == "table" and LibStub("LibUIDropDownMenuQuestie-4.0", true)
-	local widest = 0
-	for j = 1, count do
-		local btn = _G[name .. "Button" .. j]
-		if not btn then break end
-		ns.FollowFont(_G[name .. "Button" .. j .. "NormalText"], KEY)
-		if lib and type(lib.UIDropDownMenu_GetButtonWidth) == "function" then
-			local ok, w = pcall(lib.UIDropDownMenu_GetButtonWidth, lib, btn)
-			if ok and type(w) == "number" and w > widest then widest = w end
-		end
-	end
-	if list.noResize or type(list.maxWidth) ~= "number" or widest <= list.maxWidth then return end
-	for j = 1, count do
-		local btn = _G[name .. "Button" .. j]
-		if btn then btn:SetWidth(widest) end
-	end
-	list:SetWidth(widest + 25)
-end
-
-local function Menu(list)
-	if not ns.Usable(list) then return end
-	if ns.Once(list) then
-		for _, part in ipairs({ list.Backdrop, list.MenuBackdrop }) do
-			if ns.Usable(part) then part:SetAlpha(0) end
-		end
-		ns.Shell(list, nil, KEY)
-		ns.ScriptOnce(list, "OnShow", MenuFonts, KEY)
-		if list:IsShown() then MenuFonts(list) end
-	end
-	if ns.Controls(KEY) then MenuRows(list) end
-end
-
--- (Not looked for on 12.12 and later, where QuestieMenuBuilder opens the game's menus: the lists
--- never come, and the watch would wait on them for good.)
-local MenuBuilder = Module("QuestieMenuBuilder")
-local ownMenus = not (MenuBuilder and type(MenuBuilder.Show) == "function")
-if ownMenus then ns.Watch(KEY, "L_DropDownListQuestie1", function()
-	for i = 1, 8 do
-		local list = _G["L_DropDownListQuestie" .. i]
-		if not list then break end
-		Menu(list)
-	end
-	-- Deeper levels and more rows are made when a menu first needs them. (The library asks for
-	-- them on every row it adds: only a change in how many it has is looked over.)
-	local lib = type(LibStub) == "table" and LibStub("LibUIDropDownMenuQuestie-4.0", true)
-	if lib and type(lib.UIDropDownMenu_CreateFrames) == "function" then
-		local levels, buttons
-		ns.HookOnce(lib, "UIDropDownMenu_CreateFrames", function()
-			if not ns.Enabled(KEY) then return end
-			local l, b = _G.L_UIDROPDOWNMENUQUESTIE_MAXLEVELS, _G.L_UIDROPDOWNMENUQUESTIE_MAXBUTTONS
-			if l ~= nil and l == levels and b == buttons then return end
-			levels, buttons = l, b
-			for i = 1, 16 do
-				local list = _G["L_DropDownListQuestie" .. i]
-				if not list then break end
-				ns.Guard(Menu, list)
-			end
-		end, KEY)
-	end
-end) end
 
 -- ---------------------------------------------------------------------------------------------
 -- Questie's own popups: its dialog art kept at nothing under the shell, the edit box a quiet well.
@@ -790,6 +612,20 @@ if IconTooltip and type(IconTooltip.ShowOnTooltip) == "function" then
 	end, KEY)
 end
 
+-- The tracker's quest tooltip (12.15, Tracker/TrackerQuestTooltip.lua: a GameTooltipTemplate
+-- tooltip of its own, QuestieTrackerQuestTooltip, made on the first hover of a tracked quest's
+-- title in a group). Filled by the game's party-progress call (which DaylightUI's tooltip skin
+-- answers) or, for a quest only to share, by SetText and AddLine alone (which it doesn't wait
+-- for): given the same look as the two above right after TrackerQuestTooltip.Show, the only call
+-- that makes it, so it's dressed before it's drawn. Only made there, so never watched for.
+local QuestTip = Module("TrackerQuestTooltip")
+if QuestTip and type(QuestTip.Show) == "function" then
+	ns.HookOnce(QuestTip, "Show", function()
+		local tip = _G.QuestieTrackerQuestTooltip
+		if tip and not tipped[tip] then Tip(tip) end
+	end, KEY)
+end
+
 -- DaylightUI's tooltip opacity (from 2.0 its tooltip border size too) changed: the shells made
 -- here follow.
 ns.me.On("SettingChanged", function(scope, path)
@@ -799,22 +635,6 @@ ns.me.On("SettingChanged", function(scope, path)
 		if ns.Usable(tip) then ns.Guard(API.Skin, tip, look) end
 	end
 end)
-
--- ---------------------------------------------------------------------------------------------
--- The debug offer (only with its advanced debug option on): a chat link opens a small window with
--- the game's dialog backdrop, a panel button and an input box. Each offer makes a new frame under
--- the same name, so each one is dressed as its link opens it. (Questie 12.10.0 removed it in favor
--- of QuestieTrace, below; kept for older Questies.)
--- ---------------------------------------------------------------------------------------------
-
-local DebugOffer = Module("QuestieDebugOffer")
-if DebugOffer and type(DebugOffer.ShowOffer) == "function" then
-	ns.HookOnce(DebugOffer, "ShowOffer", function()
-		if not ns.Enabled(KEY) then return end
-		local frame = _G.QuestieDebugOfferFrame
-		if ns.Usable(frame) and ns.Kit then ns.Guard(ns.PlainWindow, frame, nil, KEY) end
-	end, KEY)
-end
 
 -- ---------------------------------------------------------------------------------------------
 -- QuestieTrace (comes with Questie, its own addon; the data sharing that took over from the debug
@@ -862,10 +682,89 @@ ns.Watch(KEY, "QuestieTraceExportFrame", function(frame)
 	ns.PlainWindow(frame, nil, KEY)
 end)
 
+-- ---------------------------------------------------------------------------------------------
+-- Its profiler (12.15, Modules/Profiler/QuestieProfilerUI.lua; a developer's tool, /questie
+-- profiler): the window (QuestieProfilerFrame: the game's tooltip-bordered backdrop, a header and a
+-- footer band, panel buttons, check boxes, a search box with its clear button, close buttons and
+-- a size grip) and its "profiler running" tag at the top of the screen (QuestieProfilerIndicator:
+-- a half-black fill under its words). Both are made by ProfilerUI's own calls, Create, Show and
+-- Hide (the tag by Show and Hide): dressed right after each, before either is drawn. The window
+-- takes DaylightUI's shell, its bands go (square fills over the shell's rounded corners), its
+-- template controls are dressed and its gold title and captions take DaylightUI's inks; the tag
+-- takes a small shell, its words the player's font in its own orange. Its rows, column heads,
+-- bars and its own drawn scroll bar stay as it draws them.
+-- ---------------------------------------------------------------------------------------------
+
+local profiled = setmetatable({}, { __mode = "k" })
+
+local function Gold(fs)
+	local r, g, b = fs:GetTextColor()
+	return type(r) == "number" and math.abs(r - 1) < 0.02 and math.abs(g - 0.82) < 0.02 and b < 0.03
+end
+
+-- Its gold words on the window and on its title bar (the frames, not the buttons: a button's
+-- words follow its font objects, set again on every hover): the title in GameFontNormal, the
+-- captions and chips in the small gold.
+local function ProfilerInks(...)
+	for i = 1, select("#", ...) do
+		local r = select(i, ...)
+		if ns.Usable(r) and r:GetObjectType() == "FontString" and Gold(r) then
+			Ink(r, r:GetFontObject() == _G.GameFontNormal and "VALUE" or "LABEL")
+		end
+	end
+end
+
+local function BandsOff(...)
+	for i = 1, select("#", ...) do
+		local r = select(i, ...)
+		if ns.Usable(r) and r:GetObjectType() == "Texture" and r:GetDrawLayer() == "BACKGROUND" then ns.Kill(r) end
+	end
+end
+
+local function Profiler()
+	if not ns.Kit then return end
+	local f = _G.QuestieProfilerFrame
+	if ns.Usable(f) and not profiled[f] then
+		profiled[f] = true
+		-- (Before the shell: its two bands are the window's only textures on that layer.)
+		BandsOff(f:GetRegions())
+		ProfilerInks(f:GetRegions())
+		for _, child in ipairs({ f:GetChildren() }) do
+			if ns.Usable(child) and child:GetObjectType() == "Frame" then ProfilerInks(child:GetRegions()) end
+		end
+		ns.PlainWindow(f, { closes = true, grips = true, fonts = true }, KEY)
+	end
+	local tag = _G.QuestieProfilerIndicator
+	if ns.Usable(tag) and not profiled[tag] then
+		profiled[tag] = true
+		BandsOff(tag:GetRegions())
+		ns.Shell(tag, nil, KEY)
+		local label = tag.label
+		if ns.Usable(label) and not ns.PlainText(KEY) then
+			ns.FollowFont(label, KEY)
+			-- (It sized itself to its words in the game's font: again in the player's.)
+			local w, h = label:GetStringWidth(), label:GetStringHeight()
+			if type(w) == "number" and w > 0 then tag:SetSize(w + 12, math.max(16, (h or 0) + 6)) end
+		end
+	end
+end
+
+local ProfilerUI = Module("ProfilerUI")
+if ProfilerUI then
+	for _, method in ipairs({ "Create", "Show", "Hide" }) do
+		if type(ProfilerUI[method]) == "function" then ns.HookOnce(ProfilerUI, method, Profiler, KEY) end
+	end
+end
+
 -- Loaded: the world map's corner buttons it adds (its Krowi button) lose the gold ring, the same
 -- shared pass the OpenMap and RareScanner packs ask for, now asked for by this pack too.
+-- (And the profiler's frames when they were made before this file ran: a profiled start makes and
+-- shows them as Questie starts.)
 ns.Pack(KEY, nil, function()
-	if ns.Enabled(KEY) then ns.FollowMapRings(KEY) end
+	if ns.Enabled(KEY) then
+		ns.FollowMapRings(KEY)
+		ns.Guard(Profiler)
+	end
 end)
 
 -- ---------------------------------------------------------------------------------------------

@@ -10,7 +10,10 @@
 --     fight, so everything that makes or places a frame on it waits for the fight to end: it's
 --     done once at load, again as it shows (its ShowButton, which only runs out of combat), and
 --     for the loot icons as they're filled, through ns.OutOfCombat. Colors and fonts go on any
---     time.
+--     time. The Wanted alert (RareScanner 1.60.1.13: the same button, filled by ShowWantedOffer,
+--     which never runs ShowButton) is dressed the same as it shows; its reddish parchment is kept
+--     out of sight (it drew over the panel), its little heart by the text stays (it says which
+--     alert this is).
 --   * Its tooltips: the map pins' and chat links' tooltips (LibQTip-1.0RS, plain frames the game's
 --     tooltip skin never sees) take DaylightUI's tooltip look; the library lays its own border
 --     again on every Acquire, so it's put out of sight after each Acquire and on every show (the
@@ -44,7 +47,14 @@
 --     icon pools and the loot list's); the group names and field labels in DaylightUI's inks
 --     (the empty group's black text included), the rare's name and the scan page's heading
 --     bright. The drop chance boxes in its loot filter menu get DaylightUI's input look on a
---     frame of ours behind them (a menu takes no new art while it's open).
+--     frame of ours behind them (a menu takes no new art while it's open). The Wanted settings
+--     panel (1.60.1.13, opened from the heart button by the filters or a rare's heart): the window
+--     shell in place of its tile ground and stone frame, its heart kept, the title bright, the text
+--     in the text ink, DaylightUI's close button and check boxes (Kit.Auto, as it shows), and its
+--     options' labels in the text ink, or the off ink while one can't be changed (it paints them
+--     white or gray on every refresh, so ours goes back on after each). The heart button by the
+--     filters is a DaylightUI button with its heart kept; each rare row's heart keeps its own
+--     on / off picture (a child button, which the row's dressing leaves alone).
 --   * Its settings: the target marker picker (its own AceGUI widget, RS_Markers, which
 --     DaylightUI's Ace3 skin doesn't know) gets DaylightUI's dropdown box and list; the About page
 --     its title and field names in DaylightUI's inks and its copy box DaylightUI's; the custom
@@ -60,12 +70,13 @@
 -- How the pieces are found: the alert, explorer, import dialog and About page by name; the
 -- search box by its mixin, the map button through the map button library's list, tooltips and
 -- popups through their libraries' lists, frames made late by a watch on their names.
--- Hooked (post-hooks only): the alert's ShowButton, OnEnter and OnLeave and its loot pool's
+-- Hooked (post-hooks only): the alert's ShowButton, ShowWantedOffer, OnEnter and OnLeave and its loot pool's
 -- ShowIfReady; LibQTip's Acquire, Show, AddSeparator and SetLineColor (on the library's tooltip
 -- prototype); LibDialog's Spawn and its buttons' clicks; the world map's OnShow and
 -- RefreshOverlayFrames and the map button's OnMenuResponse; the explorer's OnShow, its two lists'
 -- selection changes (made before the explorer first opens, so the lists' own callbacks run
--- through them) and its loot button's refresh; each list's rows as they're filled; AceGUI's
+-- through them), its loot button's refresh and its Wanted settings' Refresh; each list's rows as
+-- they're filled; AceGUI's
 -- RegisterAsWidget, RegisterAsContainer and Release, the marker picker's SetDisabled (which paints
 -- its label gold again), each AceGUI tree's RefreshTree and each AceGUI label's SetText; the
 -- addon compartment's hover; DaylightUI's SettingChanged (tooltip opacity).
@@ -422,6 +433,8 @@ local function Alert(Kit)
 			r:SetColorTexture(0, 0, 0, 0.3)
 		end
 	end
+	-- The Wanted alert's reddish parchment (shown and hidden with SetShown, so its alpha holds).
+	if ns.Usable(BUTTON.WantedBackground) then Kit.Hide(BUTTON.WantedBackground) end
 	ns.Shell(BUTTON, ALERT_LOOK, KEY)
 	AlertText()
 	if ns.Controls(KEY) and ns.Usable(BUTTON.CloseButton) then
@@ -436,6 +449,22 @@ local function Alert(Kit)
 		end
 	end
 	AlertLoot()
+end
+
+-- The Wanted alert, as ShowWantedOffer fills and shows the button (out of combat only). Its text
+-- was laid out before this ran: if the player's font only went on now, the heart's place (worked
+-- out from the text's width) is worked out again by its own SetWantedText.
+local function WantedAlert(Kit)
+	if InCombatLockdown() then return end
+	Alert(Kit)
+	local fs = BUTTON.Description_text
+	local before = ns.Usable(fs) and select(2, fs:GetFont())
+	AlertText()
+	AlertHover(false)
+	local after = ns.Usable(fs) and select(2, fs:GetFont())
+	if before ~= after and BUTTON.wantedOffer and type(BUTTON.SetWantedText) == "function" then
+		pcall(BUTTON.SetWantedText, BUTTON, fs:GetText())
+	end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -853,10 +882,27 @@ local function GoldToLabel(fs)
 	if ns.Usable(fs) and Gold(fs) then Ink(fs, "LABEL") end
 end
 
+-- The Wanted settings' four options: it paints their labels white, or gray while one can't be
+-- changed, on every Refresh. The text ink, or the off ink while it can't be changed.
+local WANTED_CHECKS = { "EnableCheckButton", "HostUnwantedCheckButton", "NotifyOtherMapCheckButton",
+	"NotifyUnwantedCheckButton" }
+local function WantedInks(ws)
+	for _, key in ipairs(WANTED_CHECKS) do
+		local cb = ws[key]
+		if ns.Usable(cb) and ns.Usable(cb.Text) then
+			Font(cb.Text)
+			local on = not (cb.IsEnabled and not cb:IsEnabled())
+			Ink(cb.Text, on and "TEXT" or "OFF")
+		end
+	end
+end
+
 -- The rare list's rows: plain lines, the picked one in the accent. Its collection badges and the
 -- filtered mark stay; its portrait frame is a frame of its own and stays too. The names keep its
 -- colors: a level's difficulty color, its gold for a rare without one (the two golds are too
--- close to tell apart, and the difficulty one means something).
+-- close to tell apart, and the difficulty one means something). Its favorite star and Wanted heart
+-- (1.60.1.13) are child buttons, never touched by the row's strip: each keeps its own on / off
+-- picture and its hover picture (the lit star or heart).
 local RARE_KEEP = { "MountTexture", "PetTexture", "ToyTexture", "AppearanceTexture", "DecorTexture",
 	"CustomTexture", "StateIcon" }
 
@@ -1047,6 +1093,21 @@ local function Explorer(Kit, f)
 			Ink(group.NoItems, "OFF")
 		end
 	end
+	-- The Wanted settings panel (1.60.1.13): it floats over the lists, so it takes the window shell
+	-- (a well would let them show through). Its close button and check boxes are Kit.Auto's, as it
+	-- shows (it starts hidden: listed with the panels below).
+	local ws = f.WantedSettings
+	if ns.Usable(ws) then
+		ns.Kill(ws.BaseFrameBackground)
+		ns.Kill(ws.BoardDropShadow)
+		ns.Kill(ws.Border)
+		ns.Shell(ws, { window = true }, KEY)
+		Font(ws.Title)
+		Ink(ws.Title, "VALUE")
+		Font(ws.Description)
+		Ink(ws.Description, "TEXT")
+		WantedInks(ws)
+	end
 	-- The scan page.
 	local scan = f.ScanRequired
 	if ns.Usable(scan) then Ink(scan.ScanRequiredText, "VALUE") end
@@ -1067,7 +1128,8 @@ local function Explorer(Kit, f)
 	-- Its panels come and go on their own: they're hidden as it opens while it finds your zone
 	-- (or while a scan is needed) and shown a moment later, after the walk over the window has
 	-- passed them by. Each one showing walks the window again.
-	local panels = { f.Filters, f.RareNPCList, f.RareLoot, f.RareInfo, f.Control, f.CustomLoot, f.ScanRequired }
+	local panels = { f.Filters, f.RareNPCList, f.RareLoot, f.RareInfo, f.Control, f.CustomLoot, f.ScanRequired,
+		f.WantedSettings }
 	if ns.Usable(cl) then
 		panels[#panels + 1] = cl.ControlFrame
 		panels[#panels + 1] = cl.GroupInfo
@@ -1356,6 +1418,12 @@ ns.Pack(KEY, nil, function(Kit)
 			AlertHover(false)
 		end)
 	end
+	-- The Wanted alert fills and shows the same button through its own call, never ShowButton.
+	if type(BUTTON.ShowWantedOffer) == "function" then
+		hooksecurefunc(BUTTON, "ShowWantedOffer", function()
+			if ns.Enabled(KEY) then WantedAlert(Kit) end
+		end)
+	end
 	BUTTON:HookScript("OnEnter", function() if ns.Enabled(KEY) then AlertHover(true) end end)
 	BUTTON:HookScript("OnLeave", function() if ns.Enabled(KEY) then AlertHover(false) end end)
 	local pool = BUTTON.LootBar and BUTTON.LootBar.itemFramesPool
@@ -1491,6 +1559,18 @@ ns.Pack(KEY, nil, function(Kit)
 				if not ns.Enabled(KEY) then return end
 				local b = self.Filters and self.Filters.ToggleLootButton
 				if ns.Usable(b) then Grey(b.Arrow, "TEXT") end
+			end, KEY)
+		end
+		-- The Wanted settings panel: its Refresh runs as it opens (just before its Show) and on each
+		-- option clicked. Its controls are dressed right then, before it's seen, and its labels'
+		-- white / gray painted over in our inks after each.
+		local ws = ex.WantedSettings
+		if ns.Usable(ws) and type(ws.Refresh) == "function" then
+			ns.HookOnce(ws, "Refresh", function(self)
+				if not ns.Enabled(KEY) then return end
+				Explorer(Kit, ex)
+				if ns.Controls(KEY) then ns.Guard(Kit.Auto, self, { skip = ownItems }) end
+				WantedInks(self)
 			end, KEY)
 		end
 		ns.ScriptOnce(ex, "OnShow", function(self)

@@ -1,4 +1,5 @@
--- AtlasLoot Continued (the Forever build, 12978): every window it draws in the DaylightUI look.
+-- AtlasLoot Continued (the Forever build, 12978; checked again against Forever-13006): every window it
+-- draws in the DaylightUI look.
 -- Atlas Nav (12987+, its default style, db.GUI.style "nav"): the window, Favourites, the changelog,
 -- the theme chooser and the settings keep AtlasLoot's own Nav look; nothing here touches them. The
 -- legacy style (/al style legacy) is dressed as before. Told apart at hook time, the way AtlasLoot

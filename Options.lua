@@ -141,7 +141,8 @@ local function addonPage(addon)
 	local caps = ns.caps[addon] or {}
 	local label = ns.targets[addon]
 	local hasText, hasLook = caps.text, caps.window or caps.controls
-	if not hasText and not hasLook then return nil end
+	-- (A pack with only settings of its own, such as RestedXP's dock, still gets its cards.)
+	if not hasText and not hasLook and type(caps.extra) ~= "function" then return nil end
 	local tabs = hasText and hasLook
 	local groups = {}
 	if hasText then
@@ -270,6 +271,8 @@ pages[#pages + 1] = { id = "look", label = L["Look and Feel"],
 	desc = L["Fonts, text, accent and window looks for each addon you dress."],
 	groups = looks }
 
+-- RestedXP's guide dock (Packs/RXPGuides.lua), on the first page while RestedXP Guides is loaded.
+if ns.RXPGroup and pages[1] then table.insert(pages[1].groups, ns.RXPGroup()) end
 -- The "Tell me when a newer version is out" switch (Update.lua), on the first page.
 if ns.UpdateGroup and pages[1] then table.insert(pages[1].groups, ns.UpdateGroup()) end
 -- Where each addon stands, the report to copy and the way to retry broken skins (Status.lua).

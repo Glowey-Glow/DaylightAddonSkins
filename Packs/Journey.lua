@@ -18,6 +18,10 @@
 -- The hardcore progress bar keeps Journey's red. The link colors also reach what Journey copied
 -- out as it loaded ("do" and "start" steps, and the items, places, flights and red words of the
 -- text steps).
+-- Journey 4.00.14: the location labels (the HUD arrow's label and TomTom's waypoint title) are written
+-- in a second set of colors, each *_ALT (white in Journey) and NPCAltColor for an NPC's reaction;
+-- with Custom Link Colors on they follow the same picks as the step text's (Journey's white back
+-- with it off). The logo's ring (IconBorder, shown by some of its brands) hides with the logo.
 -- Nothing is written to Journey's saved settings but the one conflict below (accepting and turning
 -- in the guide's quests), and none of its files are touched.
 local _, ns = ...
@@ -37,15 +41,16 @@ end
 
 -- setting = { label, Journey's color names it stands for, its default }
 local LINKS = {
-	{ "linkQuest", L["Quests to Do"], { "QUEST", "QUEST_DO", "QUEST_STARTWORK" }, Hex("0084EB") },
+	{ "linkQuest", L["Quests to Do"], { "QUEST", "QUEST_DO", "QUEST_STARTWORK", "QUEST_ALT" }, Hex("0084EB") },
 	{ "linkAccept", L["Quests to Accept"], { "QUEST_ACCEPT" }, Hex("FFFF00") },
 	{ "linkTurnin", L["Quests to Turn In"], { "QUEST_TURNIN" }, Hex("FFA500") },
-	{ "linkFriendly", L["Friendly NPCs"], { "NPC_FRIENDLY" }, Hex("9DFF9D") },
-	{ "linkHostile", L["Hostile NPCs"], { "NPC_HOSTILE" }, Hex("FF6363") },
-	{ "linkNeutral", L["Neutral NPCs"], { "NPC_NEUTRAL" }, Hex("FFD100") },
-	{ "linkObject", L["Items, Objects, Spells and Other NPCs"], { "ITEM", "GAME_OBJECT", "SPELL", "SKILL", "NPC", "SEARCH_TERM" }, Hex("E36EE4") },
-	{ "linkPlace", L["Places and Zones"], { "AREA", "ZONE", "WMOAREA" }, Hex("FFD100") },
-	{ "linkTravel", L["Flights and Inns"], { "TAXI", "INN" }, Hex("FFA500") },
+	{ "linkFriendly", L["Friendly NPCs"], { "NPC_FRIENDLY", "NPC_FRIENDLY_ALT" }, Hex("9DFF9D") },
+	{ "linkHostile", L["Hostile NPCs"], { "NPC_HOSTILE", "NPC_HOSTILE_ALT" }, Hex("FF6363") },
+	{ "linkNeutral", L["Neutral NPCs"], { "NPC_NEUTRAL", "NPC_NEUTRAL_ALT" }, Hex("FFD100") },
+	{ "linkObject", L["Items, Objects, Spells and Other NPCs"], { "ITEM", "GAME_OBJECT", "SPELL", "SKILL", "NPC", "SEARCH_TERM",
+		"ITEM_ALT", "GAME_OBJECT_ALT", "NPC_ALT" }, Hex("E36EE4") },
+	{ "linkPlace", L["Places and Zones"], { "AREA", "ZONE", "WMOAREA", "AREA_ALT", "ZONE_ALT", "WMOAREA_ALT" }, Hex("FFD100") },
+	{ "linkTravel", L["Flights and Inns"], { "TAXI", "INN", "TAXI_ALT" }, Hex("FFA500") },
 	{ "linkLevel", L["Levels and Experience"], { "LEVEL", "XP" }, Hex("FFFF00") },
 	{ "linkWarn", L["Warnings and Tips"], { "TIP", "RED_TEXT", "GET_OUT", "QUEST_SKIPPED", "SKIPPED_HEADING" }, Hex("FF0000") },
 }
@@ -414,7 +419,11 @@ local function PaintProgress()
 end
 
 local function PaintLogo()
-	if logo then logo:SetAlpha((On() and Look("showLogo") == false) and 0 or 1) end
+	local a = (On() and Look("showLogo") == false) and 0 or 1
+	if logo then logo:SetAlpha(a) end
+	-- (4.00.14: the ring round it, when its brand shows one. Its Hide / Show stay Journey's.)
+	local ring = header and header.IconBorder
+	if ns.Usable(ring) and ring.SetAlpha then ring:SetAlpha(a) end
 end
 
 local function Header(f)
@@ -670,6 +679,12 @@ local function ApplyColors()
 	local npc = rawget(env, "NPCColor")
 	if type(npc) == "table" then
 		npc[1], npc[2], npc[3], npc[4] = Color.NPC, Color.NPC_HOSTILE, Color.NPC_FRIENDLY, Color.NPC_NEUTRAL
+	end
+	-- (4.00.14: the location labels' set, copied out of Color as it loaded, the same way. Only where
+	-- this Journey has it.)
+	local npcAlt = rawget(env, "NPCAltColor")
+	if type(npcAlt) == "table" and original.NPC_ALT then
+		npcAlt[1], npcAlt[2], npcAlt[3], npcAlt[4] = Color.NPC_ALT, Color.NPC_HOSTILE_ALT, Color.NPC_FRIENDLY_ALT, Color.NPC_NEUTRAL_ALT
 	end
 	local mark = rawget(env, "MarkAllDirty")
 	if type(mark) == "function" then pcall(mark) end

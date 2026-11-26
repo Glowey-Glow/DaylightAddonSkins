@@ -2968,14 +2968,27 @@ function ns.RegisterSettings(pages)
 		defaults.look[addon] = look
 	end
 	Guard(function()
-		DUI:RegisterPlugin(ADDON, {
-			title = ns.L["Addon Skins"],
-			icon = "Interface\\AddOns\\" .. ADDON .. "\\Media\\icon-glyph.png",
-			needs = { 1, 1 },
-			short = ns.L["Addons"],
-			blurb = ns.L["Your other addons' windows in the Daylight UI look."],
-		})
-		DUI:RegisterModule(ADDON, { plugin = ADDON, label = ns.L["Addon Skins"], defaults = defaults,
-			options = pages and { pages = pages } or nil })
+		-- (With another of Glowey's plugins on, its pages go under one "Glowey's" entry on the
+		-- options rail: Hub.lua.)
+		local L = ns.L
+		local spec = { addon = ADDON, dui = DUI,
+			plugin = {
+				title = L["Addon Skins"],
+				icon = "Interface\\AddOns\\" .. ADDON .. "\\Media\\icon-glyph.png",
+				needs = { 1, 1 },
+				short = L["Addons"],
+				blurb = L["Your other addons' windows in the Daylight UI look."],
+			},
+			module = { plugin = ADDON, label = L["Addon Skins"], defaults = defaults,
+				options = pages and { pages = pages } or nil },
+			words = { open = L["Open"], pages = L["Its settings, a page each."] },
+			hubIcon = "Interface\\AddOns\\" .. ADDON .. "\\Media\\glowey-hub.png",
+			hubBlurb = L["Glowey's plugins, in one place."],
+			hubDesc = L["Glowey's plugins, in one place."],
+		}
+		if ns.Hub then ns.Hub.Join(spec) else
+			DUI:RegisterPlugin(ADDON, spec.plugin)
+			DUI:RegisterModule(ADDON, spec.module)
+		end
 	end)
 end

@@ -1,5 +1,22 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.20.0
+- RestedXP Guides: a Guide Window choice on its page docks RestedXP's guide to the quest tracker (Daylight UI's, or the game's): under the list at its width, or in the tracker's place with the tracker put away. It follows the tracker by itself, and RestedXP still saves the spot you gave the guide. Off by default.
+- RestedXP Guides: the dock's Guide Window choice is on the All Windows page in a RestedXP Guides section, it no longer keeps resizing the guide when there isn't room under the tracker, and it leaves room for RestedXP's current-step panel so it doesn't sit over the minimap.
+- Leatrix Plus: the redesigned Sell Junk exceptions and Mute Game Sounds panels match Daylight UI: their search and ID boxes, sort headings, picked rows, Add, Play and Stop buttons, help overlays and tabs. Dragging an item over the list shows an accent outline, and the bag and bank counts in the right-click menu read as information again.
+- RareScanner: Wanted alerts show on the same dark panel as other rare alerts (no red parchment over it, the heart stays), and the explorer's new Wanted settings panel is dressed like the rest of the explorer.
+- Polestar: the guide window's edge tabs and side strip look like tabs joined to the window, a toast border set in Polestar no longer draws over the Daylight UI frame, and Polestar Arcade's Tetris window is dressed.
+- Questie: the tracker's quest tooltip (shown in a group) and the profiler window are dressed.
+- Shortest Path Forever: the Quick Nearby button on the world map is dressed.
+- Forever Leveling BiS: the stat weights editor's "Save your changes?" question has the Daylight UI look.
+- Spoken: the Contribute button on the world map's quest details has the Daylight UI look.
+- ALL THE THINGS: the redesigned Information settings page is dressed the moment it opens, folds open or shows search results.
+- Details!: the link copy box and the copy-value box have the Daylight UI look.
+- Journey Guides: Custom Link Colors also color the arrow's location labels, and the logo's ring hides with the logo.
+- Removed the dead Get Addon link for Mastercraft (its CurseForge page is gone) and checks for windows Questie and Shortest Path Forever no longer have.
+- Dungeon Journal 2.1.7: the new menus (a quest row's Share and Abandon, the PvP icon's Hide, Edit Mode's Reorder and View), Edit Mode's Reset UI question and first-time note, and the Honor & Ranks class list are dressed like its other popups.
+- With another of Glowey's plugins on, Addon Skins' pages sit under one "Glowey's" entry on Daylight UI's options rail.
+
 ## 1.19.2
 - The game's Options window: rows are dressed for a moment after each click, scroll, key or hover onto a control, instead of ten times a second for as long as the mouse rested on the window.
 - Shortest Path Forever: the tracker's departure countdown restyles without making new tables each second, and leaves the section head alone when its words haven't changed.

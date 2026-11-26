@@ -9,7 +9,7 @@
 ## X-Curse-Project-ID: 1799579
 ## Version: @project-version@
 ## Dependencies: DaylightUI
-## OptionalDeps: DaylightUI_Skins, DaylightUI_Bags, CampingKit, DoesItDie, KeepOrToss, LootTriage, OpenMap, Spoken, ForeverFishing, Polestar, ForeverLevelingBiS, Journey, OneForAll, Questie, DialogueUI, ShortestPathForever, ForeverCore, ForeverDungeonJournal, totalRP3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFGForever, Guildy, Details, AtlasLootContinued, AtlasLootContinued_Favourites, Pawn, AllTheThings, Auctionator, AddonFactory, Altoholic, Curator
+## OptionalDeps: DaylightUI_Skins, DaylightUI_Bags, CampingKit, DoesItDie, KeepOrToss, LootTriage, OpenMap, Spoken, ForeverFishing, Polestar, ForeverLevelingBiS, Journey, OneForAll, Questie, DialogueUI, ShortestPathForever, ForeverCore, ForeverDungeonJournal, totalRP3, RareScanner, LayerSwap, BugSack, TrueshotLodge, Kerzo Classic Quest Log, Kerzo Quest Expansion, LFGForever, Guildy, Details, AtlasLootContinued, AtlasLootContinued_Favourites, Pawn, AllTheThings, Auctionator, AddonFactory, Altoholic, Curator, RXPGuides
 ## SavedVariables: DaylightAddonSkinsDB
 # Mastercraft stays out of OptionalDeps: its pack sets Mastercraft's style before Mastercraft loads.
 # Leatrix_Plus stays out of OptionalDeps: its pack writes handed-over settings into LeaPlusDB before Leatrix Plus reads them.
@@ -23,6 +23,7 @@ Locales\ruRU.lua
 Locales\koKR.lua
 Locales\zhCN.lua
 Update.lua
+Hub.lua
 Core.lua
 Windows.lua
 MenuFonts.lua
@@ -74,6 +75,7 @@ Packs\CuratorAlbum.lua
 Packs\CuratorMarket.lua
 Packs\CuratorScenes.lua
 Packs\CuratorWindows.lua
+Packs\RXPGuides.lua
 Auto.lua
 Grid.lua
 Status.lua

@@ -1,9 +1,9 @@
 -- ALL THE THINGS (folder "AllTheThings"): its list windows, its text dialog, its tabs on the auction
 -- house and the profession window and the box beside its tooltips in the Daylight UI look.
 -- Presentation only: nothing of its data, filters, rows' order or settings is changed (but for the
--- one hand-over below). Built against ALL THE THINGS 5.4.14, checked again for 5.4.18 (the Forever build: AllTheThings.toc,
--- src/UI/Window Definitions.lua, src/base.lua, src/UI/Game Tooltip.lua, src/UI/Windows/Auctions.lua,
--- src/UI/Windows/Retail/Tradeskills.lua, src/Settings).
+-- one hand-over below). Built against ALL THE THINGS 5.4.14, checked again for 5.4.18 and 5.4.19 (the Forever
+-- build: AllTheThings.toc, src/UI/Window Definitions.lua, src/base.lua, src/UI/Game Tooltip.lua,
+-- src/UI/Windows/Auctions.lua, src/UI/Windows/Retail/Tradeskills.lua, src/Settings).
 --
 -- Dressed here:
 --   * Every list window (ATTWindow<name>: the main list, the mini list, popouts, the auction and
@@ -46,6 +46,14 @@
 --     their host: no script of ours runs inside the settings window's showing), the sound pack
 --     dropdown (UIDropDownMenuTemplate) through ns.OldDropdown, the mode menu's arrow button a
 --     chevron, each page's bright header rule a faint hairline.
+--   * 5.4.19's Information page (Interface > Information): its group headers and checkboxes are
+--     made the first time the page shows (and a group's the first time it's folded open or a
+--     search lists it), after the walk above. They are the canvas pass's (its group heading and
+--     checkbox looks); this pack asks for that pass on the next frame after the page's OnShow
+--     (after ALL THE THINGS' own, which fills it), after a header's click and after a change in
+--     its search box, so they don't wait for the window's next pass. (Asked through
+--     ns.SettingsCanvasNow; while that pack doesn't hand it out, the window's own pass a moment
+--     later dresses them, as before.)
 -- Kept as ALL THE THINGS draws them (they carry meaning): every row's icon, portrait ring and
 -- indicator, the collected / not collected colors and every color code in its text, the progress
 -- numbers and percentages, the map-highlight band behind rows of the current zone, its tooltips'
@@ -405,6 +413,56 @@ local function OptionsPages()
 end
 
 -- ---------------------------------------------------------------------------------------------
+-- The Information page (5.4.19, src/Settings/Pages/Interface - Information.lua): one scroll list
+-- (its ScrollFrame named <settings>-InformationScroll) whose group headers and checkboxes its
+-- refresh makes as it first needs them, from the page's OnShow, a header's OnClick and its search
+-- box's OnTextChanged (<page>TBInformationSearch). Dressed by the Game settings window pack's
+-- canvas pass (ns.SettingsCanvasNow, when that pack hands it out); asked for on the next frame
+-- after each of those, out of the game's showing of the window.
+-- ---------------------------------------------------------------------------------------------
+
+local function InfoPage()
+	local app = App()
+	local settings = app and app.Settings
+	if not Usable(settings) or type(settings.GetName) ~= "function" then return nil end
+	local name = settings:GetName()
+	local scroller = type(name) == "string" and _G[name .. "-InformationScroll"] or nil
+	if Kind(scroller) ~= "ScrollFrame" then return nil end
+	local page = scroller:GetParent()
+	if Kind(page) ~= "Frame" then return nil end
+	return page, scroller
+end
+
+local InfoSoon
+local function InfoNow()
+	if not On() or not Controls() or not ns.Enabled("BlizzardSettings") then return end
+	local page, scroller = InfoPage()
+	if not page or not page:IsVisible() then return end
+	-- (Its headers, made by the refresh that just ran: a click folds a group open, which makes
+	-- that group's checkboxes.)
+	local content = scroller.GetScrollChild and scroller:GetScrollChild()
+	if Usable(content) then
+		for _, c in ipairs({ content:GetChildren() }) do
+			if Kind(c) == "Button" and Kind(c.Title) == "FontString" and Kind(c.Count) == "FontString" then
+				ns.ScriptOnce(c, "OnClick", InfoSoon, KEY)
+			end
+		end
+	end
+	if type(ns.SettingsCanvasNow) == "function" then Guard(ns.SettingsCanvasNow, page) end
+end
+InfoSoon = function() ns.Queue("AllTheThings:information", InfoNow, KEY) end
+
+local function InfoHooks()
+	local page = InfoPage()
+	if not page then return end
+	ns.ScriptOnce(page, "OnShow", InfoSoon, KEY)
+	local name = page:GetName()
+	local search = type(name) == "string" and _G[name .. "TBInformationSearch"] or nil
+	if Kind(search) == "EditBox" then ns.ScriptOnce(search, "OnTextChanged", InfoSoon, KEY) end
+	if page:IsVisible() then InfoSoon() end
+end
+
+-- ---------------------------------------------------------------------------------------------
 -- The pack
 -- ---------------------------------------------------------------------------------------------
 
@@ -426,6 +484,8 @@ ns.Pack(KEY, "AllTheThings", function()
 	ns.OutOfCombat(function()
 		if On() then Guard(OptionsPages) end
 	end)
+	-- (5.4.19's Information page: its pieces made on its first show.)
+	InfoHooks()
 end, CAPS)
 
 -- The accent or the inks changed: the washes, grips and inked words follow; the model box follows

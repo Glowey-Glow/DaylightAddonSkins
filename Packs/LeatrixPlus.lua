@@ -1,6 +1,8 @@
 -- Leatrix Plus: its options window, its 31 configuration panels and its own windows in the
 -- DaylightUI look, and its switches DaylightUI also has handed over. Built against Leatrix Plus
--- 1.60.35 (Forever build: Leatrix_Plus.toc, Leatrix_Plus.lua, Leatrix_Plus.xml).
+-- 1.60.35 (Forever build: Leatrix_Plus.toc, Leatrix_Plus.lua, Leatrix_Plus.xml); checked against
+-- 1.60.38, whose redesigned Sell Junk exceptions and Mute Game Sounds custom panels are dressed too
+-- (see "1.60.38" below).
 -- How its windows are found: Leatrix Plus keeps everything in file locals (LeaPlusLC, LeaPlusCB),
 -- so nothing of it can be hooked, and its windows are frames on UIParent with a new random name
 -- every session. It puts every window of its own in UISpecialFrames (so Escape closes it), and
@@ -26,14 +28,32 @@
 --     border box off), scroll bars (MinimalScrollBar), its gold cogwheels in the label ink.
 --   * Its dropdowns' lists (its own pop-up lists, not the game's menu): the shell, the gold tick in
 --     the accent, the picked choice's words in the accent and the rest in the text ink, a faint
---     hover; the tabs on the minimap panels as DaylightUI's tabs; the blue list boxes (scrolling
---     panels, junk and mute lists) as insets, a gold-edged bar frame as a plain outline.
+--     hover, an information-only entry (the bag and bank counts) in the off ink, its gold
+--     dividers a faint line; the panel tabs (MakePanelTab) as DaylightUI's tabs, their gold
+--     sheen off and the tab look put back after Leatrix Plus recolors them (on show, enter and
+--     leave); the blue list boxes (scrolling panels, junk and mute lists) as insets, a gold-edged
+--     bar frame as a plain outline.
+--   * 1.60.38's Sell Junk exceptions and Mute Game Sounds custom panels: the search, item ID,
+--     sound ID and description boxes (plain boxes with a faint fill) as DaylightUI's input box,
+--     their hints in the off ink, their round clear crosses as DaylightUI's X; the sort column
+--     headings in the label ink (light on hover, the sorted column and its arrow in the accent);
+--     list rows in the player's font, a picked row's gold fill and the gold flash on a new row in
+--     the accent, the playing note in the accent; the gold plus, play and stop marks on the Add,
+--     Play and Stop buttons in the text ink; the gold drag-target outlines (MakeDropGlow) kept as
+--     the drop cue, in the accent (never an inset); the help plates (CreateHelpPlate): the help
+--     button in the label ink, its ring and the plate's boxes (hover too) in the accent. Its item
+--     tooltip (LeaPlusSellJunkListTooltip, GameTooltipTemplate) is filled by SetItemByID, so
+--     DaylightUI's tooltip skin (its TooltipDataProcessor post-call) dresses it as GameTooltip.
+--     The rows are made as the list fills: they're left out of the walk and dressed here, again
+--     when the list grows (its scroll child's size change), never by polling.
 --   * Its own windows: the recent chat window, the flight time report and the help panel (their
 --     ground, hairlines and gold accent line off, the shell on), the info card (its backdrop off,
 --     the shell on; its inner layout kept). Their boxes' own fill and outline off: the recent
 --     chat's search box and the one-line copy boxes as DaylightUI's input box, the flight
 --     report's several-line report box as an inset well.
--- Kept as Leatrix Plus draws them: quality and class colors, item icons, the info card's inside,
+-- Kept as Leatrix Plus draws them: quality and class colors, the junk list's action colors (keep,
+-- sell, can't be sold), red sound IDs that won't play, its orange footer messages, the help
+-- plates' info icons and dimmed plate, item icons, the info card's inside,
 -- the panel scale. Left alone on purpose: its minimap button bag (DaylightUI's drawer and the
 -- minimap are the player's own setup), its developer map-pin tool on the world map, the game's
 -- windows it changes (DaylightUI's and this plugin's game-window skins own those).
@@ -221,10 +241,16 @@ local function InkRow(list, row, c, ar, ag, ab)
 			ns.FollowFont(row.Text, KEY)
 			local hl = row.GetHighlightTexture and row:GetHighlightTexture()
 			Wash(hl, 0.08)
+			-- (Its gold divider above an entry: a faint line, as DaylightUI's menus.)
+			if IsTexture(row.Divider) then row.Divider:SetColorTexture(1, 1, 1, 0.08) end
 			ns.ScriptOnce(row, "OnClick", function() InkRows(list) end, KEY)
 		end
 		if ar then row.Check:SetVertexColor(ar, ag, ab, 1) end
-		if row.Check:IsShown() and ar then
+		local off = ns.Colors().OFF
+		if row.IsEnabled and not row:IsEnabled() and off then
+			-- An information-only entry (the bag and bank counts): it can't be clicked.
+			row.Text:SetTextColor(off[1], off[2], off[3])
+		elseif row.Check:IsShown() and ar then
 			row.Text:SetTextColor(ar, ag, ab)
 		elseif c then
 			row.Text:SetTextColor(c[1], c[2], c[3])
@@ -252,16 +278,225 @@ local function PopupList(list)
 	ns.ScriptOnce(list, "OnMouseWheel", function() InkRows(list) end, KEY)
 end
 
--- The tabs on the minimap panels (MakeMiniTab: a backdrop button with its own .text). Which one
--- is picked never changes on a panel: each tab of a pair opens the other panel.
+-- A panel's tabs (MakePanelTab, 1.60.38; MakeMiniTab before it: a backdrop button with its own
+-- .text). Which one is picked never changes on a panel: each tab opens another panel. Leatrix Plus
+-- recolors its words and shows its gold or white sheen (.sheen) on every show, enter and leave
+-- (SetPanelTabStyle, from its scripts): the sheen is masked off for good, and the tab look is put
+-- back after its show (the Kit's own hooks repaint on enter and leave, after its scripts).
+local function PaintTab(tab)
+	local t = ns.Kit and ns.Kit.TabOf(tab)
+	if t and t.Paint then t.Paint(tab:IsMouseOver() == true) end
+end
+
 local function MiniTab(tab)
 	if looked[tab] then return end
 	looked[tab] = true
 	local Kit = ns.Kit
 	Kit.Backdrop(tab)
+	if IsTexture(tab.sheen) then Kit.Erase(tab.sheen) end
 	-- (Kit.Tab reads a tab's words from .Text.)
 	if tab.Text == nil then tab.Text = tab.text end
 	Kit.Tab(tab, function(t) return t.selected == true end)
+	ns.ScriptOnce(tab, "OnShow", function() PaintTab(tab) end, KEY)
+	PaintTab(tab)
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- 1.60.38: the Sell Junk exceptions and Mute Game Sounds custom panels
+-- ---------------------------------------------------------------------------------------------
+
+-- Its gold marks (a sort arrow, a picked row's fill, the plus on a button): repainted when
+-- DaylightUI's style or the accent changes. ink: one of DaylightUI's inks, nil for the accent;
+-- fill: a plain color texture (SetColorTexture), else a picture tinted.
+local marks = setmetatable({}, { __mode = "k" })
+local function PaintMark(tex, m)
+	if m.ink then
+		local c = ns.Colors()[m.ink]
+		if not c then return end
+		if m.fill then tex:SetColorTexture(c[1], c[2], c[3], m.alpha) else tex:SetVertexColor(c[1], c[2], c[3], m.alpha) end
+	elseif m.fill then
+		ns.FillAccent(tex, m.alpha, nil, KEY)
+	else
+		ns.PaintAccent(tex, m.alpha, nil, KEY)
+	end
+end
+
+local function Mark(tex, fill, ink, alpha)
+	if not IsTexture(tex) or marks[tex] then return end
+	local m = { fill = fill and true or false, ink = ink, alpha = alpha or 1 }
+	marks[tex] = m
+	PaintMark(tex, m)
+end
+
+-- A drag-target outline (MakeDropGlow: a 1 px edged backdrop with a pulse, shown while an item is
+-- held over the list or the search box): kept as the drop cue, its gold in the accent, its own
+-- faint fill kept.
+local glows = setmetatable({}, { __mode = "k" })   -- outline -> its fill's alpha
+local function PaintGlow(glow, a)
+	local r, g, b = ns.AccentOf(KEY)
+	glow:SetBackdropColor(r, g, b, a)
+	glow:SetBackdropBorderColor(r, g, b, 1)
+end
+
+local function IsDropGlow(f)
+	return Kind(f) == "Frame" and Kind(f.pulse) == "AnimationGroup" and not IsTexture(f.icon)
+		and f.SetBackdropColor ~= nil
+end
+
+local function DropGlow(f)
+	if glows[f] then return end
+	looked[f] = true
+	local _, _, _, a = f:GetBackdropColor()
+	glows[f] = type(a) == "number" and a or 0.1
+	PaintGlow(f, glows[f])
+end
+
+-- A help plate's box (CreateHelpPlate: edged backdrop with an info icon and its glow): its gold in
+-- the accent, brighter on hover (Leatrix Plus recolors it in its own enter and leave scripts; the
+-- hooks run after them).
+local helpBoxes = setmetatable({}, { __mode = "k" })
+local function PaintHelpBox(box, over)
+	if over == nil then over = box:IsMouseOver() == true end
+	local r, g, b = ns.AccentOf(KEY)
+	box:SetBackdropColor(r, g, b, over and 0.15 or 0.05)
+	box:SetBackdropBorderColor(r, g, b, over and 1 or 0.7)
+end
+
+local function IsHelpBox(f)
+	return Kind(f) == "Frame" and IsTexture(f.icon) and IsTexture(f.glow) and f.SetBackdropColor ~= nil
+end
+
+local function HelpBox(box)
+	if helpBoxes[box] then return end
+	helpBoxes[box] = true
+	looked[box] = true
+	ns.ScriptOnce(box, "OnEnter", function() PaintHelpBox(box, true) end, KEY)
+	ns.ScriptOnce(box, "OnLeave", function() PaintHelpBox(box, false) end, KEY)
+	PaintHelpBox(box)
+end
+
+local function HelpBoxes(plate)
+	Each_(function(c) if IsHelpBox(c) then HelpBox(c) end end, plate:GetChildren())
+end
+
+-- The help button by a panel's title (its gold-tinted info icon in the label ink, its ring while
+-- the help shows in the accent) and its plate, a sibling with a .dim shade: the plate's boxes are
+-- made the first time it shows, so they're dressed from its show (after its own script).
+local function HelpButton(btn)
+	if looked[btn] then return end
+	looked[btn] = true
+	Mark(btn:GetNormalTexture(), false, "LABEL", 1)
+	if btn.ring.SetDesaturated then btn.ring:SetDesaturated(true) end
+	Mark(btn.ring, false, nil, 1)
+	local parent = btn:GetParent()
+	if not Usable(parent) then return end
+	Each_(function(p)
+		if Kind(p) == "Frame" and IsTexture(p.dim) and type(p.fade) == "table" and not looked[p] then
+			looked[p] = true
+			ns.ScriptOnce(p, "OnShow", function() HelpBoxes(p) end, KEY)
+			HelpBoxes(p)
+		end
+	end, parent:GetChildren())
+end
+
+-- A sort column heading (MakeSortHeading: a button with .text and .arrow): the label ink, light on
+-- hover, the sorted one (its arrow shown) in the accent, as DaylightUI's column headers. Leatrix
+-- Plus sets white on enter and gold on leave; the hooks run after.
+local heads = setmetatable({}, { __mode = "k" })
+local function PaintHeading(h, over)
+	if over == nil then over = h:IsMouseOver() == true end
+	if over then
+		Ink(h.text, "VALUE")
+	elseif h.arrow:IsShown() then
+		local r, g, b = ns.AccentOf(KEY)
+		h.text:SetTextColor(r, g, b)
+	else
+		Ink(h.text, "LABEL")
+	end
+end
+
+local function PaintHeadings(parent)
+	for h in pairs(heads) do
+		if h:GetParent() == parent then PaintHeading(h) end
+	end
+end
+
+local function IsHeading(f)
+	return Kind(f) == "Button" and Kind(f.text) == "FontString" and IsTexture(f.arrow)
+end
+
+local function Heading(h)
+	if heads[h] then return PaintHeading(h) end
+	heads[h] = true
+	looked[h] = true
+	ns.FollowFont(h.text, KEY)
+	-- (A drawn triangle is a color texture; without SetVertexOffset it's the game's arrow picture.)
+	Mark(h.arrow, h.arrow.SetVertexOffset ~= nil, nil, 1)
+	ns.ScriptOnce(h, "OnEnter", function() PaintHeading(h, true) end, KEY)
+	ns.ScriptOnce(h, "OnLeave", function() PaintHeading(h, false) end, KEY)
+	-- (A click moves the sort: every heading of the list again.)
+	ns.ScriptOnce(h, "OnClick", function() PaintHeadings(h:GetParent()) end, KEY)
+	PaintHeading(h)
+end
+
+-- The gold marks on its text buttons (the Add button's plus, two bars anchored to an empty .icon;
+-- the Play button's .play and .stop; the heading Stop button's .icon square): the text ink. A
+-- button's .icon picture (the sound finder's atlas icons) stays.
+local function ButtonIcons(b)
+	if looked[b] then return end
+	looked[b] = true
+	local holder = b.icon
+	if IsTexture(holder) then
+		local bars = false
+		Each_(function(r)
+			if IsTexture(r) and r ~= holder and select(2, r:GetPoint(1)) == holder then
+				bars = true
+				Mark(r, true, "TEXT", 1)
+			end
+		end, b:GetRegions())
+		if not bars then
+			local atlas = holder.GetAtlas and holder:GetAtlas()
+			local ok, file = pcall(holder.GetTextureFileID, holder)
+			local picture = (type(atlas) == "string" and atlas ~= "") or (ok and type(file) == "number" and file > 0)
+			if not picture then Mark(holder, true, "TEXT", 1) end
+		end
+	end
+	if IsTexture(b.play) then Mark(b.play, b.play.SetVertexOffset ~= nil, "TEXT", 1) end
+	if IsTexture(b.stop) then Mark(b.stop, true, "TEXT", 1) end
+end
+
+-- Its plain boxes (the search box, the item ID box, the sound ID and description boxes, the inline
+-- description editor: an EditBox with only a faint .bg fill): DaylightUI's input box, the hint
+-- words in the off ink and the player's font, the magnifier in the off ink, the round clear cross
+-- as DaylightUI's X (its picture masked: Leatrix Plus fades it on enter and leave), the drop
+-- outline on the search box in the accent.
+local function PlainBox(eb)
+	if looked[eb] then return end
+	looked[eb] = true
+	local Kit = ns.Kit
+	local controls = Controls()
+	local off = ns.Colors().OFF
+	-- (Its own regions first: the input look adds its own.)
+	Each_(function(r)
+		if Kind(r) == "FontString" then
+			ns.FollowFont(r, KEY)
+		elseif controls and off and r ~= eb.bg and IsTexture(r) and r:GetDrawLayer() == "OVERLAY" then
+			r:SetVertexColor(off[1], off[2], off[3])
+		end
+	end, eb:GetRegions())
+	Kit.InkGameText(eb)
+	Each_(function(c)
+		if IsDropGlow(c) then
+			DropGlow(c)
+		elseif controls and Kind(c) == "Button" and IsTexture(c.icon) then
+			Kit.Erase(c.icon)
+			Kit.Close(c)
+		end
+	end, eb:GetChildren())
+	if controls then
+		Kit.Erase(eb.bg)
+		Kit.EditBox(eb)
+	end
 end
 
 -- A backdrop box inside a window: a blue list box as an inset, a gold-edged frame as an outline.
@@ -277,12 +512,17 @@ local function Box(frame)
 	end
 end
 
--- A button the walk passed over: a menu row, a result row, a minimap panel tab, a cogwheel.
+-- A button the walk passed over: a menu row, a result row, a sort heading, a help button, a panel
+-- tab, a cogwheel.
 local function Button(frame)
 	if IsTexture(frame.t) and IsTexture(frame.s) and Kind(frame.f) == "FontString" then
 		MenuRow(frame)
 	elseif IsTexture(frame.hl) and Kind(frame.f) == "FontString" and Kind(frame.e) == "FontString" then
 		ResultRow(frame)
+	elseif IsHeading(frame) then
+		Heading(frame)
+	elseif IsTexture(frame.ring) and IsTexture(frame:GetNormalTexture()) then
+		HelpButton(frame)
 	elseif Controls() and frame.GetBackdrop and frame:GetBackdrop() and Kind(frame.text) == "FontString" then
 		MiniTab(frame)
 	else
@@ -298,7 +538,12 @@ local function Inner(frame, root)
 		Ink(frame.s, "VALUE")
 	end
 	if frame.GetBackdrop and frame:GetBackdrop() and not looked[frame] then
-		if frame:IsMouseWheelEnabled() and frame:GetFrameStrata() == "FULLSCREEN_DIALOG" then
+		-- (A drag-target outline and a help plate's box are backdrops too: never an inset.)
+		if IsDropGlow(frame) then
+			DropGlow(frame)
+		elseif IsHelpBox(frame) then
+			HelpBox(frame)
+		elseif frame:IsMouseWheelEnabled() and frame:GetFrameStrata() == "FULLSCREEN_DIALOG" then
 			PopupList(frame)
 		else
 			Box(frame)
@@ -322,6 +567,7 @@ local function TextButton(b)
 			ns.Kit.InkGameText(b)
 		end
 	end
+	ButtonIcons(b)
 end
 
 -- A frame's children the walk takes as whole controls: their own parts.
@@ -338,6 +584,8 @@ local function Part(c)
 			end
 		elseif Kind(c.f) == "Frame" then
 			BoxFrame(c)
+		elseif IsTexture(c.bg) then
+			PlainBox(c)
 		end
 	elseif ck == "Button" and IsTexture(c.Arrow) and Kind(c.Text) == "FontString" then
 		DropLabel(c)
@@ -353,6 +601,65 @@ local function Each(frame, root)
 	if k ~= "Frame" then return end
 	if frame ~= root then Inner(frame, root) end
 	Each_(Part, frame:GetChildren())
+end
+
+-- A list's rows (1.60.38's junk and mute lists: buttons with .sel and .idText, made as the list
+-- fills): the player's font, the picked row's gold fill in the accent wash. With them in the
+-- scroll child: the gold flash on a new row (.t) and the playing note (.head / .stem / .flag) in
+-- the accent, the inline description editor as an input box. Each piece once.
+local function ListParts(child)
+	Each_(function(c)
+		local k = Kind(c)
+		if k == "Button" and IsTexture(c.sel) and Kind(c.idText) == "FontString" then
+			if not looked[c] then
+				looked[c] = true
+				Mark(c.sel, true, nil, (ns.Kit and ns.Kit.ROW_PICK) or 0.16)
+				Each_(function(r) if Kind(r) == "FontString" then ns.FollowFont(r, KEY) end end, c:GetRegions())
+			end
+		elseif k == "EditBox" then
+			Part(c)
+		elseif k == "Frame" and not looked[c] then
+			if IsTexture(c.head) and IsTexture(c.stem) and IsTexture(c.flag) then
+				looked[c] = true
+				Mark(c.head, false, nil, 1)
+				Mark(c.stem, true, nil, 1)
+				Mark(c.flag, true, nil, 1)
+			elseif IsTexture(c.t) then
+				looked[c] = true
+				Mark(c.t, true, nil, 0.35)
+			end
+		end
+	end, child:GetChildren())
+end
+
+-- A list box of 1.60.38's panels (the panel's .tabAnchor): its scroll child is left out of the
+-- window's walk (skip) and dressed here, again whenever the list grows (a new row makes the scroll
+-- child taller); its sort headings and drop outline at once.
+local function ListBox(eb, skip)
+	Each_(function(c)
+		local k = Kind(c)
+		if k == "ScrollFrame" and c.GetScrollChild then
+			local child = c:GetScrollChild()
+			if Usable(child) then
+				skip[child] = true
+				ListParts(child)
+				ns.ScriptOnce(child, "OnSizeChanged", function() ListParts(child) end, KEY)
+			end
+		elseif IsHeading(c) then
+			Heading(c)
+		elseif IsDropGlow(c) then
+			DropGlow(c)
+		end
+	end, eb:GetChildren())
+end
+
+-- Everything of the pieces above that follows the accent or DaylightUI's inks, painted again.
+local function Repaint()
+	PaintPicks()
+	for tex, m in pairs(marks) do PaintMark(tex, m) end
+	for glow, a in pairs(glows) do PaintGlow(glow, a) end
+	for box in pairs(helpBoxes) do PaintHelpBox(box) end
+	for h in pairs(heads) do PaintHeading(h) end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -424,8 +731,14 @@ local function Dress(f)
 		Title(f.title)
 	end
 	Closes(f, Kit)
+	-- (1.60.38's list panels: their rows are dressed by the pack, not the walk.)
+	local opts
+	if Usable(f.tabAnchor) and f.tabAnchor:GetParent() == f then
+		opts = { skip = {} }
+		ListBox(f.tabAnchor, opts.skip)
+	end
 	if ns.Walk then
-		ns.Walk(Kit, f, nil, nil, function(frame) Each(frame, f) end, KEY)
+		ns.Walk(Kit, f, opts, nil, function(frame) Each(frame, f) end, KEY)
 	end
 end
 
@@ -498,9 +811,9 @@ ns.Pack(KEY, "Leatrix Plus", function()
 end, CAPS)
 
 ns.me.On("Login", function() if On() then ScanSoon() end end)
-ns.me.On("StyleChanged", function() if On() then PaintPicks() end end)
+ns.me.On("StyleChanged", function() if On() then Repaint() end end)
 ns.me.On("SettingChanged", function(scope)
-	if scope == "DaylightAddonSkins" and On() then PaintPicks() end
+	if scope == "DaylightAddonSkins" and On() then Repaint() end
 end)
 
 -- ---------------------------------------------------------------------------------------------
