@@ -939,13 +939,15 @@ local function DJMarkers(hide)
 		return
 	end
 	-- Only those tucked away can come back: they're found in the list of them, not among every
-	-- pin on the map (the map's corner buttons in it are MapCorner's).
+	-- pin on the map. Every one of them, wherever it is now: a marker the journal took back or
+	-- moved meanwhile would otherwise stay out of sight and take no clicks. (The map's corner
+	-- buttons in the list come back the same way, as MapCorner would.)
 	for m, mouse in pairs(tucked) do
-		if ns.Usable(m) and m._fdjKey ~= nil and m:GetParent() == canvas then
+		if ns.Usable(m) then
 			m:SetAlpha(1)
 			m:EnableMouse(mouse)
-			tucked[m] = nil
 		end
+		tucked[m] = nil
 	end
 end
 
@@ -1080,12 +1082,12 @@ local function View(view, quiet)
 		if ns.Usable(view.gameMap) then ns.ScriptOnce(view.gameMap, "OnClick", GameMapPicked, KEY) end
 		-- (Plain HookScript for its two OnShow hooks: ns.ScriptOnce takes one per frame.)
 		hooked[view] = true
-		view:HookScript("OnShow", Dress)
+		view:HookScript("OnShow", function(self) ns.Guard(Dress, self) end)
 		view:HookScript("OnShow", function(self)
 			openView = self
 			if not ns.Enabled(KEY) then return end
-			DJMarkers(true)
-			MapCorner(true)
+			ns.Guard(DJMarkers, true)
+			ns.Guard(MapCorner, true)
 			C_Timer.After(0, TuckMarkers)
 		end)
 		ns.ScriptOnce(view, "OnHide", function()

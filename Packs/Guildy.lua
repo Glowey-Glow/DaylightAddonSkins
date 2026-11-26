@@ -1598,9 +1598,24 @@ ns.Pack(KEY, "Guildy", function(K)
 		Ding(b)
 	end)
 	-- The game's guild window loads on demand: at 0 from the start, before its first open.
+	-- Opened with Guildy's window not in it (Guildy showing the game's window, or its open failing
+	-- part way): given back at full on the next frame, so it's never an unseen window taking the
+	-- clicks and Escape. Guildy's own OnShow hook embeds it first when it does.
+	local hostHooked = false
+	local function GiveBack()
+		local host = _G.CommunitiesFrame
+		if not (Usable(host) and host:IsShown()) or Embedded() then return end
+		local a = host:GetAlpha()
+		if type(a) == "number" and a < 0.001 then pcall(host.SetAlpha, host, 1) end
+	end
 	local function HostLoaded()
 		local host = _G.CommunitiesFrame
-		if On() and Usable(host) and not host:IsShown() then Clear(host) end
+		if not Usable(host) then return end
+		if not hostHooked then
+			hostHooked = true
+			host:HookScript("OnShow", function() C_Timer.After(0, function() Guard(GiveBack) end) end)
+		end
+		if On() and not host:IsShown() then Clear(host) end
 	end
 	local loaded = CreateFrame("Frame")
 	loaded:RegisterEvent("ADDON_LOADED")

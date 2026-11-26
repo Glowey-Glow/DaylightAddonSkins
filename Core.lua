@@ -1470,7 +1470,7 @@ end
 -- in a fight too, must not start looks.)
 hooksecurefunc("CreateFrame", function(kind, name, parent)
 	if (name ~= nil and names[name]) or (getters > 0 and (parent == nil or parent == UIParent)) then Burst(MADE) end
-	for i = 1, #madeFns do madeFns[i](kind, name, parent) end
+	for i = 1, #madeFns do Guard(madeFns[i], kind, name, parent) end
 end)
 
 local boot = CreateFrame("Frame")
@@ -1601,10 +1601,30 @@ function ns.HookOnce(obj, method, fn, pack, test)
 	return true
 end
 
+-- A mouse script is hooked only onto a frame that already answers the mouse that way (a handler of
+-- its own, or its mouse on): hooking one onto a frame that doesn't can turn its mouse on, and an
+-- unseen frame of another addon's would then take the hover or the clicks meant for what's under it.
+-- (In a block: this file's main chunk is at Lua 5.1's limit of locals.)
+do
+local MOUSE_SCRIPTS = { OnEnter = "motion", OnLeave = "motion", OnMouseDown = "click", OnMouseUp = "click",
+	OnClick = "click", OnDoubleClick = "click", OnMouseWheel = "wheel" }
+function ns.MouseSafe(frame, script)
+	local kind = MOUSE_SCRIPTS[script]
+	if not kind then return true end
+	local ok, have = pcall(frame.GetScript, frame, script)
+	if ok and have then return true end
+	local test = (kind == "motion" and frame.IsMouseMotionEnabled) or (kind == "click" and frame.IsMouseClickEnabled)
+		or (kind == "wheel" and frame.IsMouseWheelEnabled) or frame.IsMouseEnabled
+	local ok2, on = pcall(test, frame)
+	return ok2 and on and true or false
+end
+end
+
 function ns.ScriptOnce(frame, script, fn, pack)
 	pack = pack or current
 	if type(script) ~= "string" or type(fn) ~= "function" or not Unprotected(frame) then return false end
 	if not (frame.HasScript and frame:HasScript(script)) then return false end
+	if not ns.MouseSafe(frame, script) then return false end
 	local id = "script:" .. script .. ":" .. tostring(pack)
 	local set = hookedOnce[frame]
 	if not set then
@@ -2469,15 +2489,17 @@ function ns.DressOnShow(frame, opts, extra, key)
 	local function again()
 		queued = nil
 		-- Hidden again by now: its next show does it.
-		if frame:IsShown() then run() end
+		if frame:IsShown() then Guard(run) end
 	end
 	local function later()
 		if queued then return end
 		queued = true
 		C_Timer.After(0, again)
 	end
-	frame:HookScript("OnShow", function() run() later() end)
-	run()
+	-- (Caught: it runs in another addon's window's OnShow, where an error would stop the hooks
+	-- after ours.)
+	frame:HookScript("OnShow", function() Guard(run) later() end)
+	Guard(run)
 	if frame:IsShown() then later() end
 	return later
 end
@@ -2596,7 +2618,7 @@ function ns.SideTile(tab, opts)
 	local t = { key = key, picked = opts.picked, mouse = mouse, icon = icon, accent = { 1, 1, 1 }, tile = tile }
 	t.shell = Kit.Shell(tile, "tab")
 	tiles[tab] = t
-	local function paint() ns.SideTilePaint(tab) end
+	local function paint() Guard(ns.SideTilePaint, tab) end
 	mouse:HookScript("OnEnter", paint)
 	mouse:HookScript("OnLeave", paint)
 	-- A click anywhere may pick another tab: all of them, next frame.

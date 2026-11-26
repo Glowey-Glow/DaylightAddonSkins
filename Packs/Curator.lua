@@ -121,6 +121,7 @@ end
 function C.Script(frame, script, fn, tag)
 	if type(script) ~= "string" or script == "OnUpdate" or type(fn) ~= "function" then return false end
 	if not ns.Unprotected(frame) or not (frame.HasScript and frame:HasScript(script)) then return false end
+	if not ns.MouseSafe(frame, script) then return false end
 	if Hooked(frame, "script:" .. script .. "|" .. tostring(tag)) then return true end
 	frame:HookScript(script, Run(fn))
 	return true

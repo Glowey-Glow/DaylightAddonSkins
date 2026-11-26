@@ -1,5 +1,12 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.19.1
+- Addon Skins never adds a mouse hook to a frame of another addon that doesn't already take the mouse, so a skinned panel can't start catching hovers and clicks meant for what sits under it (data text panels, addon drawers).
+- An error in a skin while another addon's window opens or is hovered is caught, so that addon's own work goes on.
+- Guildy: if Guildy doesn't take over the guild window, the game's guild window comes back fully visible instead of open but invisible and still in the way of clicks.
+- OpenMap: every Dungeon Journal map marker comes back when the dungeon view closes, including one the journal moved or reused.
+- BugSack reports now end with this addon's name and version on its own errors, so a report says which version it came from.
+
 ## 1.19.0
 - No more checking several times a second while nothing happens. Addon Skins looked for windows to dress twice a second for as long as you played; now it looks only right after something that can open one (a click, an addon loading, a loading screen, a merchant, trainer, Auction House or loot window, the game opening a panel, or a new window being made), for a quarter second and then a few single looks. The Auto Skinner's 2-second check is gone the same way, and so are the menu-font watcher's five looks a second while a game menu is open.
 - Packs that kept watching on a timer now follow their addon's own changes instead: Guildy, Mastercraft, Shortest Path Forever (its tracker dock was re-measured four times a second), the game's Options window (ten times a second while open), Forever Leveling BiS and the LayerSwap minimap button.
