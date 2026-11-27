@@ -9,9 +9,6 @@ A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its 
 ## New in 1.20.2
 - **Every text in all six languages:** German, Spanish, French, Korean, Russian and Chinese.
 
-## New in 1.20.1
-- **RestedXP guide follows the minimap:** docked under the quest tracker, the guide lines up flush with the minimap panel's edges and narrows with it, all the way down to Daylight UI's smallest minimap.
-- **Fades with the tracker:** RestedXP's guide and its current-step panel fade out and back with Daylight UI's quest tracker, by the tracker's own fade choices. On to start: All Windows > RestedXP Guides > Fade with the Quest Tracker.
 ---
 
 ## Addons it skins
