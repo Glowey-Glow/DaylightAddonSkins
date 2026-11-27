@@ -1,5 +1,8 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.20.2
+- Translations: every text is now in all six languages (German, Spanish, French, Korean, Russian and Chinese), the RestedXP Guides settings, the status styles (Rich, Simple) and the Glowey's plugins window included.
+
 ## 1.20.1
 - RestedXP Guides: the docked guide narrows with a small minimap all the way down to Daylight UI's smallest (the quest tracker matches the minimap's width), shrinking to fit instead of leaving the dock below about 177 px.
 - RestedXP Guides: under the quest tracker, the docked guide lines up flush with the minimap panel's outer edges (not the narrower map picture).

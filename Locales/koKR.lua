@@ -447,3 +447,14 @@ L["Skip the Talk at Guild Tabard Vendors"] = "길드 휘장 상인 대화 건너
 L["Skip the Talk at Battlemasters"] = "전투 지휘관 대화 건너뛰기"
 L["Fade with the Quest Tracker"] = "퀘스트 추적기와 함께 흐려짐"
 L["RestedXP's guide and its current-step panel fade out and back with Daylight UI's quest tracker, by the tracker's fade choices, docked or not."] = "RestedXP 가이드와 현재 단계 창이 Daylight UI 퀘스트 추적기의 흐려짐 설정에 따라 함께 흐려지고 다시 나타납니다. 고정 여부와 관계없습니다."
+
+-- Added 2026-11-26 (translation sweep): machine draft.
+L["Docks RestedXP's guide to the quest tracker: under it at its width, or in its place with the tracker put away. Off, the guide stays where you put it. Needs RestedXP Guides switched on under Addons."] = "RestedXP 가이드를 퀘스트 추적기에 고정합니다: 같은 너비로 그 아래에, 또는 추적기를 치우고 그 자리에. 끄면 가이드는 둔 곳에 그대로 있습니다. 애드온에서 RestedXP Guides를 켜야 합니다."
+L["Glowey's plugins, in one place."] = "Glowey 플러그인을 한곳에."
+L["Its settings, a page each."] = "설정마다 페이지가 하나씩."
+L["Open"] = "열기"
+L["Replace Tracker"] = "추적기 대신"
+L["RestedXP Guides"] = "RestedXP Guides"
+L["Rich"] = "풍부하게"
+L["Simple"] = "간단하게"
+L["Under Tracker"] = "추적기 아래"

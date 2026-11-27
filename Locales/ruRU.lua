@@ -447,3 +447,14 @@ L["Skip the Talk at Guild Tabard Vendors"] = "Пропускать диалог 
 L["Skip the Talk at Battlemasters"] = "Пропускать диалог с военачальниками"
 L["Fade with the Quest Tracker"] = "Скрывать вместе с трекером заданий"
 L["RestedXP's guide and its current-step panel fade out and back with Daylight UI's quest tracker, by the tracker's fade choices, docked or not."] = "Гайд RestedXP и его панель текущего шага скрываются и появляются вместе с трекером заданий Daylight UI, по его настройкам затухания, прикреплён он или нет."
+
+-- Added 2026-11-26 (translation sweep): machine draft.
+L["Docks RestedXP's guide to the quest tracker: under it at its width, or in its place with the tracker put away. Off, the guide stays where you put it. Needs RestedXP Guides switched on under Addons."] = "Пристыковывает гайд RestedXP к трекеру заданий: под ним по его ширине или на его месте, а трекер убирается. Если выключено, гайд остаётся там, где вы его поставили. Нужен включённый RestedXP Guides в разделе «Аддоны»."
+L["Glowey's plugins, in one place."] = "Плагины Glowey в одном месте."
+L["Its settings, a page each."] = "Его настройки, по странице на каждую."
+L["Open"] = "Открыть"
+L["Replace Tracker"] = "Вместо трекера"
+L["RestedXP Guides"] = "RestedXP Guides"
+L["Rich"] = "Богатый"
+L["Simple"] = "Простой"
+L["Under Tracker"] = "Под трекером"

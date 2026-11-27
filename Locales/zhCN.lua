@@ -447,3 +447,14 @@ L["Skip the Talk at Guild Tabard Vendors"] = "跳过公会徽章设计师的对�
 L["Skip the Talk at Battlemasters"] = "跳过战场军官的对话"
 L["Fade with the Quest Tracker"] = "随任务追踪淡出"
 L["RestedXP's guide and its current-step panel fade out and back with Daylight UI's quest tracker, by the tracker's fade choices, docked or not."] = "RestedXP 指南及其当前步骤面板会按 Daylight UI 任务追踪的淡出设置与其一同淡出和恢复，无论是否停靠。"
+
+-- Added 2026-11-26 (translation sweep): machine draft.
+L["Docks RestedXP's guide to the quest tracker: under it at its width, or in its place with the tracker put away. Off, the guide stays where you put it. Needs RestedXP Guides switched on under Addons."] = "将RestedXP指南停靠到任务追踪：在其下方并与其同宽，或收起任务追踪并占据其位置。关闭时指南留在你放置的位置。需要在“插件”下开启RestedXP Guides。"
+L["Glowey's plugins, in one place."] = "Glowey的扩展，集中一处。"
+L["Its settings, a page each."] = "它的设置，每项一页。"
+L["Open"] = "打开"
+L["Replace Tracker"] = "替换追踪"
+L["RestedXP Guides"] = "RestedXP Guides"
+L["Rich"] = "丰富"
+L["Simple"] = "简洁"
+L["Under Tracker"] = "追踪下方"

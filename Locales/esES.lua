@@ -448,3 +448,14 @@ L["Skip the Talk at Guild Tabard Vendors"] = "Saltar el diálogo con vendedores 
 L["Skip the Talk at Battlemasters"] = "Saltar el diálogo con maestros de batalla"
 L["Fade with the Quest Tracker"] = "Desvanecer con el Rastreador"
 L["RestedXP's guide and its current-step panel fade out and back with Daylight UI's quest tracker, by the tracker's fade choices, docked or not."] = "La guía de RestedXP y su panel del paso actual se desvanecen y vuelven con el rastreador de misiones de Daylight UI, según sus opciones de desvanecimiento, acoplada o no."
+
+-- Added 2026-11-26 (translation sweep): machine draft.
+L["Docks RestedXP's guide to the quest tracker: under it at its width, or in its place with the tracker put away. Off, the guide stays where you put it. Needs RestedXP Guides switched on under Addons."] = "Acopla la guía de RestedXP al seguimiento de misiones: debajo y con su ancho, o en su lugar con el seguimiento guardado. Desactivado, la guía se queda donde la pusiste. Necesita RestedXP Guides activado en Addons."
+L["Glowey's plugins, in one place."] = "Los complementos de Glowey, en un solo lugar."
+L["Its settings, a page each."] = "Sus ajustes, una página para cada uno."
+L["Open"] = "Abrir"
+L["Replace Tracker"] = "Sustituir seguimiento"
+L["RestedXP Guides"] = "RestedXP Guides"
+L["Rich"] = "Completo"
+L["Simple"] = "Sencillo"
+L["Under Tracker"] = "Bajo el seguimiento"
