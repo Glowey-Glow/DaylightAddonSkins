@@ -445,3 +445,5 @@ L["Skip the Talk at Stable Masters"] = "Gespräch bei Stallmeistern überspringe
 L["Skip the Talk at the Guild Bank"] = "Gespräch an der Gildenbank überspringen"
 L["Skip the Talk at Guild Tabard Vendors"] = "Gespräch bei Gildenwappenrockhändlern überspringen"
 L["Skip the Talk at Battlemasters"] = "Gespräch bei Kampfmeistern überspringen"
+L["Fade with the Quest Tracker"] = "Mit der Questverfolgung ausblenden"
+L["RestedXP's guide and its current-step panel fade out and back with Daylight UI's quest tracker, by the tracker's fade choices, docked or not."] = "Der Guide von RestedXP und sein Feld mit dem aktuellen Schritt blenden mit der Questverfolgung von Daylight UI aus und wieder ein, nach deren Ausblend-Einstellungen, angedockt oder nicht."

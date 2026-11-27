@@ -6,10 +6,9 @@ A plugin for Daylight UI, by Glowey (not part of Daylight UI itself: report its 
 
 ---
 
-## New in 1.20.0
-- **New: RestedXP Guides dock.** RestedXP's guide window can sit under the quest tracker at its width, or take the tracker's place, with room left for its current-step panel. Daylight UI's tracker or the game's. Off to start: All Windows > RestedXP Guides > Guide Window. RestedXP still saves your own spot.
-- **Glowey's on the options rail:** with another of Glowey's plugins on, they all sit under one "Glowey's" entry, each plugin a page there.
-- **Updated for the latest versions:** Dungeon Journal 2.1.7's new menus and Edit Mode, Leatrix Plus's new Sell Junk and Mute Sounds panels, RareScanner's Wanted alerts, plus Polestar, Questie, Shortest Path Forever, Forever Leveling BiS, Spoken, ALL THE THINGS, Details! and Journey Guides.
+## New in 1.20.1
+- **RestedXP guide follows the minimap:** docked under the quest tracker, the guide lines up flush with the minimap panel's edges and narrows with it, all the way down to Daylight UI's smallest minimap.
+- **Fades with the tracker:** RestedXP's guide and its current-step panel fade out and back with Daylight UI's quest tracker, by the tracker's own fade choices. On to start: All Windows > RestedXP Guides > Fade with the Quest Tracker.
 ---
 
 ## Addons it skins

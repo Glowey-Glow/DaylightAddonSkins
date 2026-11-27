@@ -445,3 +445,5 @@ L["Skip the Talk at Stable Masters"] = "Пропускать диалог со �
 L["Skip the Talk at the Guild Bank"] = "Пропускать диалог у банка гильдии"
 L["Skip the Talk at Guild Tabard Vendors"] = "Пропускать диалог с продавцами гербовых накидок"
 L["Skip the Talk at Battlemasters"] = "Пропускать диалог с военачальниками"
+L["Fade with the Quest Tracker"] = "Скрывать вместе с трекером заданий"
+L["RestedXP's guide and its current-step panel fade out and back with Daylight UI's quest tracker, by the tracker's fade choices, docked or not."] = "Гайд RestedXP и его панель текущего шага скрываются и появляются вместе с трекером заданий Daylight UI, по его настройкам затухания, прикреплён он или нет."

@@ -1,5 +1,10 @@
 # Addon Skins (DaylightUI Plugin)
 
+## 1.20.1
+- RestedXP Guides: the docked guide narrows with a small minimap all the way down to Daylight UI's smallest (the quest tracker matches the minimap's width), shrinking to fit instead of leaving the dock below about 177 px.
+- RestedXP Guides: under the quest tracker, the docked guide lines up flush with the minimap panel's outer edges (not the narrower map picture).
+- RestedXP Guides: the guide and its current-step panel fade out and back with Daylight UI's quest tracker, by the tracker's own fade choices (Fade with the Quest Tracker, on by default, in the RestedXP Guides section of All Windows).
+
 ## 1.20.0
 - RestedXP Guides: a Guide Window choice on its page docks RestedXP's guide to the quest tracker (Daylight UI's, or the game's): under the list at its width, or in the tracker's place with the tracker put away. It follows the tracker by itself, and RestedXP still saves the spot you gave the guide. Off by default.
 - RestedXP Guides: the dock's Guide Window choice is on the All Windows page in a RestedXP Guides section, it no longer keeps resizing the guide when there isn't room under the tracker, and it leaves room for RestedXP's current-step panel so it doesn't sit over the minimap.

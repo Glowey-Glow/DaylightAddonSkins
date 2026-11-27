@@ -1,7 +1,8 @@
 -- RestedXP Guides: its guide window docked to the quest tracker, a choice on its page (Guide):
 --   * Off: the guide stays where you put it (the default).
---   * Under Tracker: the guide hangs under the quest list, as wide as it, and follows it as the
---     list grows, shrinks or is moved. When the list is too tall to leave room under it, the guide
+--   * Under Tracker: the guide hangs under the quest list, as wide as it (as wide as the minimap's
+--     panel, flush with its outer edges, when the tracker hangs under the minimap), and follows it as
+--     the list grows, shrinks or is moved. When the list is too tall to leave room under it, the guide
 --     goes back to its own spot until there is room again.
 --   * Replace Tracker: the guide takes the tracker's place (its top edge and width) and the tracker
 --     is put away, with its quest item column; set back to Off, the tracker comes back.
@@ -13,8 +14,9 @@
 -- and sizes with them by itself: nothing is watched over time. It is laid out again only when
 -- something says it changed: this setting, the tracker's list or the guide changing size, showing
 -- or hiding, RestedXP loading a position or its guide window, the UI scale, leaving combat. Where
--- the tracker is narrower than the guide's narrowest, the guide is scaled down to fit (never below
--- two thirds of its own scale: then it stays where it was).
+-- the tracker is narrower than the guide's narrowest, the guide is scaled down to fit (down to 40% of
+-- its own scale, enough for Daylight UI's smallest minimap: so it widens and narrows with the minimap,
+-- which the tracker matches). Wider, it stretches to the tracker's width at its own scale.
 -- RestedXP saves its windows' spots and sizes (addon.settings:SaveFramePositions, on logout and
 -- after a drag). While the guide is docked, the spot, width and scale it had before are written
 -- back over what that saved, so turning this off (or taking Addon Skins out) leaves it where you
@@ -29,10 +31,15 @@ local L = ns.L
 
 local KEY = "RXPGuides"
 local PATH = "look." .. KEY .. ".dock"
+local FADE_PATH = "look." .. KEY .. ".fade"
 local GAP = 6              -- between the tracker's list and the guide
-local MIN_SCALE = 2 / 3    -- of the guide's own scale, the smallest it's shrunk to fit
+-- Of the guide's own scale, the smallest it's shrunk to fit. Low enough that the guide fits the
+-- narrowest minimap Daylight UI allows (its Minimap Size slider starts at 120 px, the tracker matching
+-- it; the guide's narrowest layout is 265 px, 220 for the classic window): it narrows with the
+-- minimap all the way down instead of leaving the dock.
+local MIN_SCALE = 0.4
 
-ns.Target(KEY, "RestedXP Guides", { defaults = { dock = "off" } })
+ns.Target(KEY, "RestedXP Guides", { defaults = { dock = "off", fade = true } })
 
 -- The dock's setting, on the All Windows page in a section of its own (Options.lua), shown while
 -- RestedXP Guides is loaded: a setting of what the guide does, not of its look, so not buried in
@@ -49,6 +56,12 @@ function ns.RXPGroup()
 			  values = { off = L["Off"], under = L["Under Tracker"], replace = L["Replace Tracker"] },
 			  order = { "off", "under", "replace" },
 			  desc = L["Docks RestedXP's guide to the quest tracker: under it at its width, or in its place with the tracker put away. Off, the guide stays where you put it. Needs RestedXP Guides switched on under Addons."] },
+			{ type = "toggle", key = FADE_PATH, label = L["Fade with the Quest Tracker"],
+			  hidden = function()
+				local A = C_AddOns
+				return not (A and A.IsAddOnLoaded and A.IsAddOnLoaded("RXPGuides"))
+			  end,
+			  desc = L["RestedXP's guide and its current-step panel fade out and back with Daylight UI's quest tracker, by the tracker's fade choices, docked or not."] },
 		} }
 end
 
@@ -194,7 +207,80 @@ local function Undock()
 	f:SetWidth(home.width)
 end
 
+-- ---------------------------------------------------------------------------------------------
+-- Fading with the UI
+-- ---------------------------------------------------------------------------------------------
+-- The guide and its current-step panel join Daylight UI's fade (me.RegisterFade) by the quest
+-- tracker's own choices: Daylight UI's tracker (Quests > fade), else the game's tracker under the
+-- minimap (InfoPanel > tracker.fade). So they fade, wait and come back on mouseover with the tracker,
+-- and hush with everything else (a flight path, a campfire). A frame inside another one listed is
+-- left out (it would fade twice). The list is made again in Apply (on the events that can change
+-- it), not each time the fade asks. A window let go is put back to full.
+local fadeList, fadeFrom = {}, nil
+local function FadeSource()
+	local ok, own = pcall(API.GetFrame, "questtracker")
+	if ok and ns.Usable(own) then return "Quests", "fade" end
+	return "InfoPanel", "tracker.fade"
+end
+local function Inside(f, list)
+	local p = f.GetParent and f:GetParent()
+	while p do
+		for _, g in ipairs(list) do if g == p then return true end end
+		p = p.GetParent and p:GetParent()
+	end
+	return false
+end
+local function FollowFade(rxp)
+	local want = {}
+	if rxp and ns.Enabled(KEY) and ns.Setting(FADE_PATH) ~= false then
+		local f = Guide(rxp)
+		local steps = Steps(rxp)
+		for _, c in ipairs({ rxp.RXPFrame or _G.RXPFrame, f, steps }) do
+			if ns.Usable(c) then
+				local dup = false
+				for _, g in ipairs(want) do if g == c then dup = true end end
+				if not dup then want[#want + 1] = c end
+			end
+		end
+		for i = #want, 1, -1 do
+			if Inside(want[i], want) then table.remove(want, i) end
+		end
+	end
+	-- Let go: back to full (the engine only paints what's on its list).
+	for _, g in ipairs(fadeList) do
+		local kept = false
+		for _, c in ipairs(want) do if c == g then kept = true end end
+		if not kept and ns.Usable(g) then g:SetAlpha(1) end
+	end
+	wipe(fadeList)
+	for i, c in ipairs(want) do fadeList[i] = c end
+	local me = ns.me
+	if not (me and type(me.RegisterFade) == "function") then return end
+	local scope, path = FadeSource()
+	local from = scope .. ">" .. path
+	if from == fadeFrom then return end
+	fadeFrom = from
+	pcall(me.RegisterFade, { key = "rxpGuide", frames = function() return fadeList end, scope = scope, path = path })
+end
+
 local Apply
+
+-- The minimap's panel (Daylight UI's, its border and data texts included: API.GetFrame
+-- "infopanel"), left and right edges in screen pixels, when the tracker hangs under it: then the
+-- guide lines up with the panel's outer edges, flush, not with the map picture the list is as wide
+-- as. nil when the tracker is somewhere else (or there's no panel).
+local function PanelSpan(anchor)
+	local ok, panel = pcall(API.GetFrame, "infopanel")
+	if not (ok and ns.Usable(panel) and panel:IsVisible()) then return nil end
+	local ps, as = panel:GetEffectiveScale(), anchor:GetEffectiveScale()
+	local pl, pr, pb = panel:GetLeft(), panel:GetRight(), panel:GetBottom()
+	local al, ar, at = anchor:GetLeft(), anchor:GetRight(), anchor:GetTop()
+	if not (pl and pr and pb and al and ar and at and pr > pl) then return nil end
+	pl, pr, pb, al, ar, at = pl * ps, pr * ps, pb * ps, al * as, ar * as, at * as
+	local mid = (al + ar) / 2
+	if mid < pl or mid > pr or at > pb + 2 then return nil end
+	return pl, pr
+end
 
 -- Whether f is anchored exactly by these points already (so nothing is set again: re-anchoring a
 -- frame that is where it should be is what kept it busy).
@@ -223,6 +309,14 @@ local function Dock(f, name, window, t, mode, steps, stepsBelow)
 	-- which is laid out at the width it gets).
 	local aScale = anchor:GetEffectiveScale()
 	local across = (right - left) * aScale
+	-- Under the minimap's panel: as wide as the panel, edge to edge (its edges' distance from the
+	-- anchor's, in screen pixels: turned into the guide's units once its scale is known).
+	local spanL, spanR = PanelSpan(anchor)
+	local padL, padR = 0, 0
+	if spanL then
+		padL, padR = spanL - left * aScale, spanR - right * aScale
+		across = spanR - spanL
+	end
 	local parent = f:GetEffectiveScale() / f:GetScale()
 	local scale
 	if state.frame == f and state.across and math.abs(state.across - across) < 0.5 then
@@ -252,10 +346,11 @@ local function Dock(f, name, window, t, mode, steps, stepsBelow)
 	state.across, state.scale = across, scale
 	if math.abs(f:GetScale() - scale) > 0.001 then f:SetScale(scale) end
 	local want
+	local xl, xr = padL / px, padR / px
 	if mode == "replace" then
-		want = { { "TOPLEFT", anchor, "TOPLEFT", 0, -drop }, { "TOPRIGHT", anchor, "TOPRIGHT", 0, -drop } }
+		want = { { "TOPLEFT", anchor, "TOPLEFT", xl, -drop }, { "TOPRIGHT", anchor, "TOPRIGHT", xr, -drop } }
 	else
-		want = { { "TOPLEFT", anchor, "BOTTOMLEFT", 0, -GAP - drop }, { "TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -GAP - drop } }
+		want = { { "TOPLEFT", anchor, "BOTTOMLEFT", xl, -GAP - drop }, { "TOPRIGHT", anchor, "BOTTOMRIGHT", xr, -GAP - drop } }
 	end
 	if not Anchored(f, want) then
 		f:ClearAllPoints()
@@ -267,6 +362,7 @@ end
 function Apply()
 	state.pending = false
 	local rxp = RXP()
+	FollowFade(rxp)
 	local mode = rxp and Mode() or "off"
 	local f, name, window
 	if rxp then f, name, window = Guide(rxp) end
@@ -347,6 +443,9 @@ local function WatchTracker()
 		-- (Its box showing or hiding moves the list's bottom.)
 		for _, kid in ipairs({ t.holder:GetChildren() }) do Watch(kid) end
 	end
+	-- (The minimap's panel resized: the guide takes its new width.)
+	local okP, panel = pcall(API.GetFrame, "infopanel")
+	if okP then Watch(panel) end
 end
 
 local function WatchGuide(rxp)
@@ -415,7 +514,7 @@ ns.Pack(KEY, nil, function()
 	end)
 
 	ns.me.On("SettingChanged", function(scope, path)
-		if scope == "DaylightAddonSkins" and (path == PATH or path == KEY) then
+		if scope == "DaylightAddonSkins" and (path == PATH or path == FADE_PATH or path == KEY) then
 			WatchTracker()
 			Soon()
 		elseif scope == "Quests" then
